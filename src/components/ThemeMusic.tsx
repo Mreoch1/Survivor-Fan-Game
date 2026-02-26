@@ -3,12 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 
 /**
- * Royalty-free tribal/adventure theme. Uses Pixabay track when available.
- * Replace audio src with your chosen royalty-free track (e.g. from Pixabay Music).
+ * Theme music: self-hosted /audio/theme.mp3 (Kevin MacLeod – Overworld, CC BY),
+ * Override with NEXT_PUBLIC_THEME_MUSIC_URL if set.
  */
 const THEME_MUSIC_SRC =
-  process.env.NEXT_PUBLIC_THEME_MUSIC_URL ||
-  "https://cdn.pixabay.com/audio/2022/03/10/audio_3a2d2e2c2b.mp3";
+  process.env.NEXT_PUBLIC_THEME_MUSIC_URL || "/audio/theme.mp3";
 
 export function ThemeMusic() {
   const [playing, setPlaying] = useState(false);
@@ -50,15 +49,26 @@ export function ThemeMusic() {
   return (
     <>
       <audio ref={audioRef} src={THEME_MUSIC_SRC} loop />
-      <button
-        type="button"
-        onClick={toggle}
-        className={`survivor-music-toggle ${playing ? "survivor-music-toggle--playing" : ""}`}
-        aria-label={playing ? "Pause theme music" : "Play theme music"}
-        title={playing ? "Pause theme music" : "Play theme music"}
-      >
-        <span aria-hidden>{playing ? "⏸" : "♪"}</span>
-      </button>
+      <div className="survivor-music-wrap">
+        <a
+          href="https://soundcloud.com/aiden-psungo/survivor-theme-song-remix"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="survivor-music-theme-link"
+          title="Survivor theme on SoundCloud"
+        >
+          Survivor theme
+        </a>
+        <button
+          type="button"
+          onClick={toggle}
+          className={`survivor-music-toggle ${playing ? "survivor-music-toggle--playing" : ""}`}
+          aria-label={playing ? "Pause theme music" : "Play theme music"}
+          title={playing ? "Pause theme music" : "Play theme music (Overworld by Kevin MacLeod, CC BY)"}
+        >
+          <span aria-hidden>{playing ? "⏸" : "♪"}</span>
+        </button>
+      </div>
     </>
   );
 }

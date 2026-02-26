@@ -36,6 +36,19 @@ export default async function DashboardPage() {
     .from("episode_points_processed")
     .select("*", { count: "exact", head: true });
 
+  const { data: episodes } = await supabase
+    .from("episodes")
+    .select("episode_number, voted_out_player_id")
+    .eq("season", 50)
+    .order("episode_number", { ascending: true });
+
+  const episodeResults = (episodes ?? []).map((ep) => ({
+    episodeNumber: ep.episode_number,
+    bootName: ep.voted_out_player_id
+      ? PLAYERS.find((p) => p.id === ep.voted_out_player_id)?.name ?? "Unknown"
+      : null,
+  }));
+
   const winnerPlayer = winnerPick?.player_id
     ? PLAYERS.find((p) => p.id === winnerPick.player_id)
     : null;
@@ -122,6 +135,30 @@ export default async function DashboardPage() {
           After elimination, you must pick a new remaining player. Picks lock when the episode starts.
         </p>
       </div>
+
+      <div className="survivor-card">
+        <h2 className="survivor-card__title">Episode results</h2>
+        <p style={{ color: "var(--survivor-text-muted)", fontSize: "0.875rem", marginBottom: "0.75rem" }}>
+          Official boots by episode. Scoring uses this list. Results post on a set time (e.g. Friday 9:00 AM ET).
+        </p>
+        {episodeResults.length === 0 ? (
+          <p style={{ color: "var(--survivor-text-muted)", margin: 0 }}>No results yet.</p>
+        ) : (
+          <>
+            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+              {episodeResults.map(({ episodeNumber, bootName }) => (
+                <li key={episodeNumber} style={{ padding: "0.35rem 0", borderBottom: "1px solid var(--survivor-border)" }}>
+                  <strong>Episode {episodeNumber}:</strong> Boot = {bootName ?? "—"}
+                </li>
+              ))}
+            </ul>
+            <Link href="/dashboard/results" className="survivor-auth__link" style={{ display: "inline-block", marginTop: "0.5rem" }}>
+              View all results →
+            </Link>
+          </>
+        )}
+      </div>
+
       <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
         <Link href="/dashboard/players" className="survivor-btn survivor-btn--secondary">
           View cast

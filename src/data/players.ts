@@ -302,6 +302,12 @@ export const PLAYERS: Player[] = [
   },
 ];
 
+/** DiceBear Initials avatar URL (CC0) when no imageUrl. Seed by player id for consistency. */
+export function getPlayerAvatarUrl(player: { id: string; imageUrl: string | null }): string {
+  if (player.imageUrl) return player.imageUrl;
+  return `https://api.dicebear.com/9.x/initials/svg?seed=${encodeURIComponent(player.id)}`;
+}
+
 /** First letter of first name + first letter of last name for placeholder avatars. */
 export function getPlayerInitials(name: string): string {
   const parts = name.trim().split(/\s+/);

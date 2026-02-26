@@ -154,6 +154,8 @@ vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 ## After each episode
 
+Use a consistent **results publish time** (e.g. Friday 9:00 AM ET) so players know when scoring updates.
+
 1. **Set who was voted out** in Supabase SQL Editor:
 
 ```sql
@@ -189,7 +191,11 @@ Use player IDs from `src/data/players.ts` (e.g. `jenna-lewis-dougherty`, `dee-va
 
 ## Theme music
 
-The in-app music toggle (bottom-right) uses `NEXT_PUBLIC_THEME_MUSIC_URL` when set; otherwise a default track is used. For reliable playback, set a direct MP3 URL (e.g. download from [Pixabay Music – tribal](https://pixabay.com/music/search/tribal/) and host it, or use their direct link per their license).
+The app ships with a self-hosted track at `public/audio/theme.mp3` (Kevin MacLeod – *Overworld*, [CC BY](https://incompetech.com/music/royalty-free/mp3-royaltyfree/Overworld.mp3)). The in-app music toggle (bottom-right) uses it by default. Override with `NEXT_PUBLIC_THEME_MUSIC_URL` to use a different MP3. Attribution: *Overworld* by Kevin MacLeod (incompetech.com), licensed under CC BY.
+
+## Cast photos
+
+Player cards use [DiceBear Initials](https://www.dicebear.com/styles/initials/) (CC0) when no photo is set. To use real cast photos, set `imageUrl` in `src/data/players.ts` to self-hosted or licensed image URLs (e.g. from [Paramount Press Express](https://www.paramountpressexpress.com/cbs-entertainment/shows/survivor/photos/) with appropriate rights).
 
 ---
 

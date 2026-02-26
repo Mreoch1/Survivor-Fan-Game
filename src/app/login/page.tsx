@@ -33,6 +33,10 @@ function LoginForm() {
   return (
     <div className="survivor-page survivor-auth">
       <div className="survivor-auth__card">
+        <Link href="/" className="survivor-auth__logo-link">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/image.png" alt="Survivor 50: In the Hands of the Fans" className="survivor-landing__logo" />
+        </Link>
         <h1 className="survivor-auth__title">Outwit. Outplay. Outlast.</h1>
         <p className="survivor-auth__subtitle">Sign in to your camp</p>
         <form onSubmit={handleSubmit} className="survivor-auth__form">

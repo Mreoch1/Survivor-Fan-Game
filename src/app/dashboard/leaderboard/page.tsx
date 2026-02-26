@@ -67,10 +67,9 @@ export default async function LeaderboardPage() {
           Point system
         </h2>
         <ul style={{ color: "var(--survivor-text-muted)", lineHeight: 1.7, margin: 0, paddingLeft: "1.25rem" }}>
-          <li>+1 point each week your winner pick is still in the game</li>
-          <li>-1 point the week your winner pick is voted out</li>
-          <li>You must pick a new winner from remaining players after elimination</li>
-          <li>If you do not repick in time, you score 0 points until you do</li>
+          <li>+1 each week your current pick survives</li>
+          <li>-1 the week your pick is eliminated</li>
+          <li>After elimination, you must repick from remaining players before next episode</li>
           <li>Picks lock at episode start</li>
         </ul>
       </section>
@@ -81,12 +80,11 @@ export default async function LeaderboardPage() {
             <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>
               <th style={{ textAlign: "left", padding: "0.75rem" }}>Rank</th>
               <th style={{ textAlign: "left", padding: "0.75rem" }}>Player</th>
-              <th style={{ textAlign: "left", padding: "0.75rem" }}>Status</th>
               <th style={{ textAlign: "left", padding: "0.75rem" }}>Current pick</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }}>Weeks survived</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }}>Eliminations hit</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }}>Total points</th>
-              <th style={{ textAlign: "left", padding: "0.75rem" }}>Last week</th>
+              <th style={{ textAlign: "left", padding: "0.75rem" }}>Status</th>
+              <th style={{ textAlign: "right", padding: "0.75rem" }}>Last week</th>
+              <th style={{ textAlign: "right", padding: "0.75rem" }}>Repicks</th>
+              <th style={{ textAlign: "right", padding: "0.75rem" }}>Total</th>
             </tr>
           </thead>
           <tbody>
@@ -94,6 +92,7 @@ export default async function LeaderboardPage() {
               <tr key={row.userId} style={{ borderBottom: "1px solid var(--survivor-border)" }}>
                 <td style={{ padding: "0.75rem" }}>{i + 1}</td>
                 <td style={{ padding: "0.75rem", fontWeight: 600 }}>{row.name}</td>
+                <td style={{ padding: "0.75rem", color: "var(--survivor-text-muted)" }}>{row.currentPick}</td>
                 <td style={{ padding: "0.75rem" }}>
                   <span
                     style={{
@@ -106,21 +105,19 @@ export default async function LeaderboardPage() {
                       color: "var(--survivor-bg)",
                     }}
                   >
-                    {row.status}
+                    {row.status === "SAFE" ? "SAFE" : "OUT, REPICK REQUIRED"}
                   </span>
                 </td>
-                <td style={{ padding: "0.75rem", color: "var(--survivor-text-muted)" }}>{row.currentPick}</td>
-                <td style={{ padding: "0.75rem", textAlign: "right" }}>{row.weeksSurvived}</td>
-                <td style={{ padding: "0.75rem", textAlign: "right" }}>{row.eliminationsHit}</td>
-                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-accent)", fontWeight: 700 }}>
-                  {row.points}
-                </td>
-                <td style={{ padding: "0.75rem", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
                   {row.lastWeekDelta != null
                     ? row.lastWeekDelta >= 0
                       ? `+${row.lastWeekDelta}`
                       : row.lastWeekDelta
                     : "—"}
+                </td>
+                <td style={{ padding: "0.75rem", textAlign: "right" }}>{row.eliminationsHit}</td>
+                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-accent)", fontWeight: 700 }}>
+                  {row.points}
                 </td>
               </tr>
             ))}

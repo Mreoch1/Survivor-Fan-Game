@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Player } from "@/data/players";
-import { TRIBES, getPlayerInitials } from "@/data/players";
+import { TRIBES, getPlayerAvatarUrl } from "@/data/players";
 
 interface FaceCardProps {
   player: Player;
@@ -10,26 +10,17 @@ interface FaceCardProps {
 export function FaceCard({ player, tribeColor }: FaceCardProps) {
   const tribe = TRIBES[player.tribeId];
   const color = tribeColor ?? tribe.color;
+  const avatarUrl = getPlayerAvatarUrl(player);
 
   return (
     <Link href={`/dashboard/players/${player.id}`} className="survivor-facecard">
       <div style={{ aspectRatio: "3/4", background: "var(--survivor-bg-card)", position: "relative" }}>
-        {player.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={player.imageUrl}
-            alt={player.name}
-            className="survivor-facecard__image"
-          />
-        ) : (
-          <div
-            className="survivor-facecard__image survivor-facecard__initials"
-            style={{ background: `${color}33`, color }}
-            aria-hidden
-          >
-            {getPlayerInitials(player.name)}
-          </div>
-        )}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={avatarUrl}
+          alt={player.name}
+          className="survivor-facecard__image"
+        />
         <span
           style={{
             position: "absolute",

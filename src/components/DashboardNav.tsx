@@ -20,6 +20,9 @@ export function DashboardNav({ userEmail }: DashboardNavProps) {
       <Link href="/dashboard/leaderboard" className="survivor-header__link">
         Leaderboard
       </Link>
+      <Link href="/dashboard/results" className="survivor-header__link">
+        Results
+      </Link>
       <Link href="/dashboard/invite" className="survivor-header__link">
         Invite
       </Link>

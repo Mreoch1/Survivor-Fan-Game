@@ -4,10 +4,13 @@ export default function HomePage() {
   return (
     <div className="survivor-page">
       <div className="survivor-auth__card" style={{ maxWidth: "32rem" }}>
-        <h1 className="survivor-auth__title" style={{ fontSize: "1.75rem" }}>
-          Survivor Fan Game
-        </h1>
-        <p className="survivor-auth__subtitle" style={{ marginBottom: "1.5rem" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/image.png"
+          alt="Survivor 50: In the Hands of the Fans"
+          className="survivor-landing__logo"
+        />
+        <p className="survivor-auth__subtitle" style={{ marginBottom: "1.5rem", marginTop: "1rem" }}>
           Season 50: In the Hands of the Fans. Pick the winner, vote each week, choose your tribe. Outwit, outplay, outlast.
         </p>
         <div className="survivor-auth__form" style={{ gap: "0.75rem" }}>

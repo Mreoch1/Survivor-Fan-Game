@@ -17,8 +17,9 @@ export default async function DashboardLayout({
   return (
     <div className="survivor-app">
       <header className="survivor-header">
-        <Link href="/dashboard" className="survivor-header__logo">
-          Survivor Fan Game
+        <Link href="/dashboard" className="survivor-header__logo" aria-label="Survivor Fan Game home">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/image.png" alt="Survivor 50: In the Hands of the Fans" className="survivor-header__logo-img" />
         </Link>
         <DashboardNav userEmail={user.email} />
       </header>

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPlayerById, TRIBES, getPlayerInitials } from "@/data/players";
+import { getPlayerById, TRIBES, getPlayerAvatarUrl } from "@/data/players";
 
 export default async function PlayerDetailPage({
   params,
@@ -24,27 +24,18 @@ export default async function PlayerDetailPage({
               className="survivor-player-detail__photo"
               style={{
                 aspectRatio: "3/4",
-                background: player.imageUrl ? "var(--survivor-bg)" : `${tribe.color}22`,
+                background: "var(--survivor-bg)",
                 borderRadius: "0.5rem",
                 border: `2px solid ${tribe.color}`,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: "4rem",
-                color: player.imageUrl ? undefined : tribe.color,
                 overflow: "hidden",
               }}
             >
-              {player.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={player.imageUrl}
-                  alt={player.name}
-                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                />
-              ) : (
-                getPlayerInitials(player.name)
-              )}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={getPlayerAvatarUrl(player)}
+                alt={player.name}
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
             </div>
             <p style={{ marginTop: "0.5rem", fontSize: "0.875rem", color: tribe.color, fontWeight: 600 }}>
               {tribe.name}

@@ -13,9 +13,17 @@ export default function PlayersPage() {
       <h1 className="survivor-card__title" style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
         Survivor 50 cast
       </h1>
-      <p style={{ color: "var(--survivor-text-muted)", marginBottom: "1.5rem" }}>
+      <p style={{ color: "var(--survivor-text-muted)", marginBottom: "1rem" }}>
         {PLAYERS.length} returning players. Pick your winner and tribe in My picks.
       </p>
+      <div className="survivor-card" style={{ marginBottom: "1.5rem", padding: 0, overflow: "hidden" }}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src="/cast-poster.png"
+          alt="Survivor 50: In the Hands of the Fans — full cast by tribe"
+          className="survivor-cast-poster"
+        />
+      </div>
       {[
         { id: "cila" as TribeId, label: "Cila", players: cila, color: TRIBES.cila.color },
         { id: "kalo" as TribeId, label: "Kalo", players: kalo, color: TRIBES.kalo.color },
