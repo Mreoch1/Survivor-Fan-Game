@@ -84,20 +84,49 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          player_id: string;
+          player_id: string | null;
           season: number;
           created_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
-          player_id: string;
+          player_id?: string | null;
           season: number;
           created_at?: string;
         };
         Update: {
-          player_id?: string;
+          player_id?: string | null;
         };
+      };
+      user_season_points: {
+        Row: {
+          user_id: string;
+          season: number;
+          points: number;
+          weeks_survived: number;
+          eliminations_hit: number;
+          last_week_delta: number | null;
+        };
+        Insert: {
+          user_id: string;
+          season: number;
+          points?: number;
+          weeks_survived?: number;
+          eliminations_hit?: number;
+          last_week_delta?: number | null;
+        };
+        Update: {
+          points?: number;
+          weeks_survived?: number;
+          eliminations_hit?: number;
+          last_week_delta?: number | null;
+        };
+      };
+      episode_points_processed: {
+        Row: { episode_id: string };
+        Insert: { episode_id: string };
+        Update: never;
       };
       vote_out_picks: {
         Row: {

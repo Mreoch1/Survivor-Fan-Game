@@ -18,6 +18,23 @@ export default async function PicksPage() {
     .eq("season", 50)
     .maybeSingle();
 
+  const { data: allEpisodes } = await supabase
+    .from("episodes")
+    .select("voted_out_player_id")
+    .eq("season", 50)
+    .not("voted_out_player_id", "is", null);
+  const eliminatedPlayerIds = new Set(
+    (allEpisodes ?? []).map((e) => e.voted_out_player_id).filter(Boolean) as string[]
+  );
+
+  const { data: pointsRow } = await supabase
+    .from("user_season_points")
+    .select("points")
+    .eq("user_id", user.id)
+    .eq("season", 50)
+    .maybeSingle();
+  const userPoints = pointsRow?.points ?? 0;
+
   const { data: tribePick } = await supabase
     .from("tribe_picks")
     .select("tribe_id")
@@ -45,17 +62,24 @@ export default async function PicksPage() {
     userVoteOutPick = votePick?.player_id ?? null;
   }
 
+  const inGamePlayers = PLAYERS.filter((p) => !eliminatedPlayerIds.has(p.id));
+
   return (
     <>
       <h1 className="survivor-card__title" style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
         My picks
       </h1>
-      <p style={{ color: "var(--survivor-text-muted)", marginBottom: "1.5rem" }}>
-        Set your winner, tribe, and weekly vote-out prediction. Winner and tribe are locked once set (per season rules).
+      <p style={{ color: "var(--survivor-text-muted)", marginBottom: "0.5rem" }}>
+        Pick a player to win. You get +1 point for each week they stay in. If they’re voted out you get -1 and must pick a new winner. Earlier correct picks earn more.
+      </p>
+      <p style={{ color: "var(--survivor-accent)", fontWeight: 600, marginBottom: "1.5rem" }}>
+        Your points: {userPoints}
       </p>
       <PicksForm
         userId={user.id}
         players={PLAYERS}
+        inGamePlayers={inGamePlayers}
+        eliminatedIds={eliminatedPlayerIds}
         tribes={TRIBES}
         initialWinnerId={winnerPick?.player_id ?? null}
         initialTribeId={(tribePick?.tribe_id as TribeId) ?? null}

@@ -10,8 +10,8 @@
   --survivor-accent-dim: #8b7322;
   --survivor-flame: #e85d04;
   --survivor-tribe-cila: #e85d04;
-  --survivor-tribe-kalo: #1d3557;
-  --survivor-tribe-vatu: #2d6a4f;
+  --survivor-tribe-kalo: #0d9488;
+  --survivor-tribe-vatu: #c026d3;
   --survivor-danger: #c53030;
   --survivor-success: #2d6a4f;
   --background: var(--survivor-bg);
@@ -257,6 +257,15 @@ body {
   aspect-ratio: 3/4;
   object-fit: cover;
   background: var(--survivor-bg-card);
+}
+
+.survivor-facecard__initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .survivor-facecard__body {

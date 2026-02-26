@@ -15,6 +15,8 @@ interface Episode {
 interface PicksFormProps {
   userId: string;
   players: Player[];
+  inGamePlayers: Player[];
+  eliminatedIds: Set<string>;
   tribes: typeof TRIBES;
   initialWinnerId: string | null;
   initialTribeId: TribeId | null;
@@ -25,6 +27,8 @@ interface PicksFormProps {
 export function PicksForm({
   userId,
   players,
+  inGamePlayers,
+  eliminatedIds,
   tribes,
   initialWinnerId,
   initialTribeId,
@@ -68,25 +72,38 @@ export function PicksForm({
     : null;
   const isLocked = lockTime ? new Date() >= lockTime : false;
 
+  const needsRepick = !initialWinnerId && eliminatedIds.size > 0;
+
   return (
     <form onSubmit={handleSubmit} className="survivor-card">
       <div style={{ marginBottom: "1.5rem" }}>
+        {needsRepick && (
+          <p className="survivor-auth__message survivor-auth__message--error" style={{ marginBottom: "0.75rem" }}>
+            Your pick was voted out. Choose a new player to win (you get +1 per week they stay in).
+          </p>
+        )}
         <label className="survivor-auth__label" htmlFor="winner">
-          Winner pick (season 50)
+          {needsRepick ? "New winner pick" : "Who do you think will win? (season 50)"}
         </label>
         <select
           id="winner"
           value={winnerId}
           onChange={(e) => setWinnerId(e.target.value)}
           className="survivor-auth__input"
+          required={needsRepick}
         >
-          <option value="">Select a player</option>
-          {players.map((p) => (
+          <option value="">Select a player still in the game</option>
+          {inGamePlayers.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name} ({tribes[p.tribeId].name})
             </option>
           ))}
         </select>
+        {inGamePlayers.length === 0 && (
+          <p style={{ fontSize: "0.875rem", color: "var(--survivor-text-muted)", marginTop: "0.25rem" }}>
+            No players left in the game (season over or no eliminations recorded yet).
+          </p>
+        )}
       </div>
 
       <div style={{ marginBottom: "1.5rem" }}>
@@ -125,7 +142,7 @@ export function PicksForm({
             disabled={isLocked}
           >
             <option value="">Select a player</option>
-            {players.map((p) => (
+            {inGamePlayers.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>

@@ -6,7 +6,19 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "setup": "test -f .env.local || cp .env.example .env.local",
+    "supabase:link": "supabase link",
+    "db:link": "supabase link --project-ref ${SUPABASE_PROJECT_REF}",
+    "db:push": "supabase db push --password \"${SUPABASE_DB_PASSWORD}\"",
+    "db:diff": "supabase db diff",
+    "db:reset": "supabase db reset",
+    "vercel:link": "vercel link",
+    "vercel:deploy": "vercel",
+    "vercel:deploy:prod": "vercel --prod",
+    "vercel:env:pull": "vercel env pull",
+    "deploy": "npm run build && vercel --prod",
+    "deploy:preview": "npm run build && vercel"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

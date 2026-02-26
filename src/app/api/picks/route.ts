@@ -14,22 +14,17 @@ export async function POST(request: Request) {
   const { winnerId, tribeId, episodeId, voteOutId } = body;
 
   if (winnerId) {
-    const { error: deleteErr } = await supabase
-      .from("winner_picks")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("season", 50);
-    if (deleteErr) {
-      return NextResponse.json({ error: deleteErr.message }, { status: 500 });
+    const { error: upsertPickErr } = await supabase.from("winner_picks").upsert(
+      { user_id: user.id, player_id: winnerId, season: 50 },
+      { onConflict: "user_id,season" }
+    );
+    if (upsertPickErr) {
+      return NextResponse.json({ error: upsertPickErr.message }, { status: 500 });
     }
-    const { error: insertErr } = await supabase.from("winner_picks").insert({
-      user_id: user.id,
-      player_id: winnerId,
-      season: 50,
-    });
-    if (insertErr) {
-      return NextResponse.json({ error: insertErr.message }, { status: 500 });
-    }
+    await supabase.from("user_season_points").upsert(
+      { user_id: user.id, season: 50, points: 0 },
+      { onConflict: "user_id,season", ignoreDuplicates: true }
+    );
   }
 
   if (tribeId) {

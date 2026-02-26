@@ -1,6 +1,7 @@
 /**
- * Survivor Season 50 cast (2026). Tribes: Cila (orange), Kalo, Vatu.
- * Accomplishments and stats derived from EW and official sources.
+ * Survivor Season 50 cast (2026). Tribes: Cila (orange), Kalo (teal), Vatu (magenta).
+ * Fan-voted official colors (option B). Accomplishments from EW and official sources.
+ * Add imageUrl (self-hosted or licensed) per player for face card photos.
  */
 export type TribeId = "cila" | "kalo" | "vatu";
 
@@ -27,8 +28,8 @@ export interface Player {
 
 export const TRIBES: Record<TribeId, { name: string; color: string }> = {
   cila: { name: "Cila", color: "#e85d04" },
-  kalo: { name: "Kalo", color: "#1d3557" },
-  vatu: { name: "Vatu", color: "#2d6a4f" },
+  kalo: { name: "Kalo", color: "#0d9488" },
+  vatu: { name: "Vatu", color: "#c026d3" },
 };
 
 export const PLAYERS: Player[] = [
@@ -300,6 +301,17 @@ export const PLAYERS: Player[] = [
     imageUrl: null,
   },
 ];
+
+/** First letter of first name + first letter of last name for placeholder avatars. */
+export function getPlayerInitials(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    const first = parts[0];
+    const last = parts[parts.length - 1].replace(/^["']|["']$/g, "");
+    return (first[0] + (last[0] ?? "")).toUpperCase();
+  }
+  return (name[0] ?? "?").toUpperCase();
+}
 
 export function getPlayerById(id: string): Player | undefined {
   return PLAYERS.find((p) => p.id === id);

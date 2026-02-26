@@ -1,6 +1,6 @@
 # Survivor Fan Game
 
-Family and friends prediction game for **Survivor Season 50** (2026). Users sign up (including via email invite), pick the season winner, choose a tribe, vote each week for who gets voted out, and earn points for correct predictions.
+Family and friends prediction game for **Survivor Season 50** (2026). Users sign up (including via email invite), pick a player to win, and earn survival points: +1 each week their pick stays in, -1 when voted out (then they pick a new winner). Optional tribe and weekly vote-out picks.
 
 ## Stack
 
@@ -85,7 +85,20 @@ Open [http://localhost:3000](http://localhost:3000).
 vercel link
 ```
 
-**Pull env from Vercel** (after setting vars in dashboard once):
+**Add env vars via CLI** (run `vercel login` first if needed):
+
+```bash
+# From project root, after vercel link:
+echo "https://YOUR_PROJECT_REF.supabase.co" | vercel env add NEXT_PUBLIC_SUPABASE_URL production
+echo "YOUR_PUBLISHABLE_OR_ANON_KEY" | vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY production
+# Optional: add to preview deployments too
+echo "https://YOUR_PROJECT_REF.supabase.co" | vercel env add NEXT_PUBLIC_SUPABASE_URL preview
+echo "YOUR_PUBLISHABLE_OR_ANON_KEY" | vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY preview
+```
+
+Then redeploy so the new build picks up the vars: `vercel --prod` or redeploy from the dashboard.
+
+**Pull env from Vercel** (after setting vars in dashboard or CLI once):
 
 ```bash
 npm run vercel:env:pull
@@ -139,9 +152,9 @@ vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 ---
 
-## After each episode (CLI or SQL)
+## After each episode
 
-**Option A – Supabase SQL Editor (dashboard):** Run:
+1. **Set who was voted out** in Supabase SQL Editor:
 
 ```sql
 update public.episodes
@@ -149,14 +162,26 @@ set voted_out_player_id = 'player-id-from-data-players', updated_at = now()
 where season = 50 and episode_number = 1;
 ```
 
-To add the next episode:
+2. **Apply survival points** (so users get +1 for pick staying in, -1 and clear pick if voted out). Call the API once per episode (idempotent):
+
+```bash
+curl -X POST https://your-app.vercel.app/api/process-episode \
+  -H "Content-Type: application/json" \
+  -d '{"episodeId":"EPISODE_UUID"}' \
+  --cookie "sb-access-token=YOUR_SESSION"
+```
+
+Or from the app while logged in (e.g. in browser console):  
+`fetch('/api/process-episode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ episodeId: 'EPISODE_UUID' }), credentials: 'include' })`
+
+Get `EPISODE_UUID` from Supabase Table Editor → episodes.
+
+3. **Add the next episode** when needed:
 
 ```sql
 insert into public.episodes (season, episode_number, vote_out_lock_at)
 values (50, 2, '2026-03-04 19:00:00-05');
 ```
-
-**Option B – CLI:** Save SQL to a file and run with Supabase (e.g. `supabase db execute` if available, or use `psql` with the connection string from `supabase status` for local). For remote, the dashboard SQL Editor is the standard approach.
 
 Use player IDs from `src/data/players.ts` (e.g. `jenna-lewis-dougherty`, `dee-valladares`).
 
@@ -164,7 +189,7 @@ Use player IDs from `src/data/players.ts` (e.g. `jenna-lewis-dougherty`, `dee-va
 
 ## Theme music
 
-Optional: set `NEXT_PUBLIC_THEME_MUSIC_URL` to a royalty-free MP3 (e.g. [Pixabay Music](https://pixabay.com/music/search/tribal/)).
+The in-app music toggle (bottom-right) uses `NEXT_PUBLIC_THEME_MUSIC_URL` when set; otherwise a default track is used. For reliable playback, set a direct MP3 URL (e.g. download from [Pixabay Music – tribal](https://pixabay.com/music/search/tribal/) and host it, or use their direct link per their license).
 
 ---
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Player } from "@/data/players";
-import { TRIBES } from "@/data/players";
+import { TRIBES, getPlayerInitials } from "@/data/players";
 
 interface FaceCardProps {
   player: Player;
@@ -23,17 +23,11 @@ export function FaceCard({ player, tribeColor }: FaceCardProps) {
           />
         ) : (
           <div
-            className="survivor-facecard__image"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "2.5rem",
-              color: "var(--survivor-text-muted)",
-            }}
+            className="survivor-facecard__image survivor-facecard__initials"
+            style={{ background: `${color}33`, color }}
             aria-hidden
           >
-            ?
+            {getPlayerInitials(player.name)}
           </div>
         )}
         <span

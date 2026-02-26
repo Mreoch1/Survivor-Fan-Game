@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPlayerById, TRIBES } from "@/data/players";
+import { getPlayerById, TRIBES, getPlayerInitials } from "@/data/players";
 
 export default async function PlayerDetailPage({
   params,
@@ -21,19 +21,30 @@ export default async function PlayerDetailPage({
         <div style={{ display: "flex", flexWrap: "wrap", gap: "1.5rem", alignItems: "flex-start" }}>
           <div style={{ width: "200px", flexShrink: 0 }}>
             <div
+              className="survivor-player-detail__photo"
               style={{
                 aspectRatio: "3/4",
-                background: "var(--survivor-bg)",
+                background: player.imageUrl ? "var(--survivor-bg)" : `${tribe.color}22`,
                 borderRadius: "0.5rem",
-                border: "2px solid var(--survivor-border)",
+                border: `2px solid ${tribe.color}`,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 fontSize: "4rem",
-                color: "var(--survivor-text-muted)",
+                color: player.imageUrl ? undefined : tribe.color,
+                overflow: "hidden",
               }}
             >
-              ?
+              {player.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={player.imageUrl}
+                  alt={player.name}
+                  style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                />
+              ) : (
+                getPlayerInitials(player.name)
+              )}
             </div>
             <p style={{ marginTop: "0.5rem", fontSize: "0.875rem", color: tribe.color, fontWeight: 600 }}>
               {tribe.name}

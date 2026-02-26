@@ -1,134 +1,153 @@
 import { createClient } from "@/lib/supabase/server";
 import { PLAYERS } from "@/data/players";
 
-const POINTS = {
-  voteOutCorrect: 15,
-  winnerCorrect: 100,
-  tribeHasWinner: 25,
-  tribeFinalist: 10,
-} as const;
+const SEASON = 50;
 
 export default async function LeaderboardPage() {
   const supabase = await createClient();
 
-  const { data: episodes } = await supabase
-    .from("episodes")
-    .select("id, episode_number, voted_out_player_id")
-    .eq("season", 50)
-    .not("voted_out_player_id", "is", null);
+  const { data: pointsRows } = await supabase
+    .from("user_season_points")
+    .select("user_id, points, weeks_survived, eliminations_hit, last_week_delta")
+    .eq("season", SEASON)
+    .order("points", { ascending: false });
 
-  const { data: voteOutPicks } = await supabase
-    .from("vote_out_picks")
-    .select("user_id, episode_id, player_id");
-
-  const { data: winnerPicks } = await supabase
+  const { data: picks } = await supabase
     .from("winner_picks")
     .select("user_id, player_id")
-    .eq("season", 50);
-
-  const { data: tribePicks } = await supabase
-    .from("tribe_picks")
-    .select("user_id, tribe_id")
-    .eq("season", 50);
-
-  const episodeMap = new Map(episodes?.map((e) => [e.id, e]) ?? []);
-  const correctVoteOutsByUser = new Map<string, number>();
-
-  voteOutPicks?.forEach((pick) => {
-    const ep = episodeMap.get(pick.episode_id);
-    if (!ep?.voted_out_player_id) return;
-    const correct = pick.player_id === ep.voted_out_player_id;
-    if (correct) {
-      correctVoteOutsByUser.set(
-        pick.user_id,
-        (correctVoteOutsByUser.get(pick.user_id) ?? 0) + 1
-      );
-    }
-  });
+    .eq("season", SEASON);
 
   const userIds = new Set<string>();
-  winnerPicks?.forEach((p) => userIds.add(p.user_id));
-  tribePicks?.forEach((p) => userIds.add(p.user_id));
-  voteOutPicks?.forEach((p) => userIds.add(p.user_id));
+  pointsRows?.forEach((r) => userIds.add(r.user_id));
+  picks?.forEach((p) => userIds.add(p.user_id));
 
-  const ids = Array.from(userIds);
-  const { data: profiles } = ids.length
-    ? await supabase.from("profiles").select("id, display_name, email").in("id", ids)
-    : { data: [] };
+  const { data: profiles } =
+    userIds.size > 0
+      ? await supabase.from("profiles").select("id, display_name, email").in("id", Array.from(userIds))
+      : { data: [] };
 
   const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
+  const pointsMap = new Map(pointsRows?.map((r) => [r.user_id, r]) ?? []);
+  const pickMap = new Map(picks?.map((p) => [p.user_id, p]) ?? []);
 
-  const seasonWinnerId: string | null = null;
-  const finalistIds: string[] = [];
-
-  const rows: { userId: string; name: string; voteOutPts: number; winnerPts: number; tribePts: number }[] = [];
-
-  userIds.forEach((userId) => {
+  const rows = Array.from(userIds).map((userId) => {
+    const pts = pointsMap.get(userId);
+    const pick = pickMap.get(userId);
     const profile = profileMap.get(userId);
+    const currentPickId = pick?.player_id ?? null;
+    const currentPick = currentPickId ? PLAYERS.find((p) => p.id === currentPickId) : null;
     const name = profile?.display_name || profile?.email || "Player";
-    const voteOutPts = (correctVoteOutsByUser.get(userId) ?? 0) * POINTS.voteOutCorrect;
-    const wp = winnerPicks?.find((p) => p.user_id === userId);
-    const winnerPts = seasonWinnerId && wp?.player_id === seasonWinnerId ? POINTS.winnerCorrect : 0;
-    const tp = tribePicks?.find((p) => p.user_id === userId);
-    let tribePts = 0;
-    if (tp && seasonWinnerId) {
-      const winnerPlayer = PLAYERS.find((p) => p.id === seasonWinnerId);
-      if (winnerPlayer?.tribeId === tp.tribe_id) tribePts += POINTS.tribeHasWinner;
-      finalistIds.forEach((fid) => {
-        const fp = PLAYERS.find((p) => p.id === fid);
-        if (fp?.tribeId === tp.tribe_id) tribePts += POINTS.tribeFinalist;
-      });
-    }
-    rows.push({ userId, name, voteOutPts, winnerPts, tribePts });
+    const status = currentPickId ? "SAFE" : "OUT – REPICK REQUIRED";
+    return {
+      userId,
+      name,
+      currentPick: currentPick?.name ?? "—",
+      weeksSurvived: pts?.weeks_survived ?? 0,
+      eliminationsHit: pts?.eliminations_hit ?? 0,
+      points: pts?.points ?? 0,
+      lastWeekDelta: pts?.last_week_delta ?? null,
+      status,
+    };
   });
 
-  const withTotal = rows.map((r) => ({
-    ...r,
-    total: r.voteOutPts + r.winnerPts + r.tribePts,
-  }));
-  withTotal.sort((a, b) => b.total - a.total);
+  rows.sort((a, b) => b.points - a.points);
+
+  const { count: episodesProcessed } = await supabase
+    .from("episode_points_processed")
+    .select("*", { count: "exact", head: true });
 
   return (
     <>
       <h1 className="survivor-card__title" style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
         Leaderboard
       </h1>
-      <p style={{ color: "var(--survivor-text-muted)", marginBottom: "1.5rem" }}>
-        Points: 15 per correct vote-out, 100 for correct winner, 25 if your tribe has the winner, 10 per tribe finalist. Winner and finalist points are added at season end.
-      </p>
+
+      <section className="survivor-card" style={{ marginBottom: "1.5rem" }}>
+        <h2 className="survivor-card__title" style={{ fontSize: "1.125rem", marginBottom: "0.75rem" }}>
+          Point system
+        </h2>
+        <ul style={{ color: "var(--survivor-text-muted)", lineHeight: 1.7, margin: 0, paddingLeft: "1.25rem" }}>
+          <li>+1 point each week your winner pick is still in the game</li>
+          <li>-1 point the week your winner pick is voted out</li>
+          <li>You must pick a new winner from remaining players after elimination</li>
+          <li>If you do not repick in time, you score 0 points until you do</li>
+          <li>Picks lock at episode start</li>
+        </ul>
+      </section>
+
       <div className="survivor-card" style={{ overflowX: "auto" }}>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>
-              <th style={{ textAlign: "left", padding: "0.75rem" }}>#</th>
+              <th style={{ textAlign: "left", padding: "0.75rem" }}>Rank</th>
               <th style={{ textAlign: "left", padding: "0.75rem" }}>Player</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }}>Vote-out</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }}>Winner</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }}>Tribe</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }}>Total</th>
+              <th style={{ textAlign: "left", padding: "0.75rem" }}>Status</th>
+              <th style={{ textAlign: "left", padding: "0.75rem" }}>Current pick</th>
+              <th style={{ textAlign: "right", padding: "0.75rem" }}>Weeks survived</th>
+              <th style={{ textAlign: "right", padding: "0.75rem" }}>Eliminations hit</th>
+              <th style={{ textAlign: "right", padding: "0.75rem" }}>Total points</th>
+              <th style={{ textAlign: "left", padding: "0.75rem" }}>Last week</th>
             </tr>
           </thead>
           <tbody>
-            {withTotal.map((row, i) => (
+            {rows.map((row, i) => (
               <tr key={row.userId} style={{ borderBottom: "1px solid var(--survivor-border)" }}>
                 <td style={{ padding: "0.75rem" }}>{i + 1}</td>
                 <td style={{ padding: "0.75rem", fontWeight: 600 }}>{row.name}</td>
-                <td style={{ padding: "0.75rem", textAlign: "right" }}>{row.voteOutPts}</td>
-                <td style={{ padding: "0.75rem", textAlign: "right" }}>{row.winnerPts}</td>
-                <td style={{ padding: "0.75rem", textAlign: "right" }}>{row.tribePts}</td>
+                <td style={{ padding: "0.75rem" }}>
+                  <span
+                    style={{
+                      display: "inline-block",
+                      padding: "0.25rem 0.5rem",
+                      borderRadius: "0.25rem",
+                      fontSize: "0.75rem",
+                      fontWeight: 600,
+                      background: row.status === "SAFE" ? "var(--survivor-success)" : "var(--survivor-danger)",
+                      color: "var(--survivor-bg)",
+                    }}
+                  >
+                    {row.status}
+                  </span>
+                </td>
+                <td style={{ padding: "0.75rem", color: "var(--survivor-text-muted)" }}>{row.currentPick}</td>
+                <td style={{ padding: "0.75rem", textAlign: "right" }}>{row.weeksSurvived}</td>
+                <td style={{ padding: "0.75rem", textAlign: "right" }}>{row.eliminationsHit}</td>
                 <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-accent)", fontWeight: 700 }}>
-                  {row.total}
+                  {row.points}
+                </td>
+                <td style={{ padding: "0.75rem", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+                  {row.lastWeekDelta != null
+                    ? row.lastWeekDelta >= 0
+                      ? `+${row.lastWeekDelta}`
+                      : row.lastWeekDelta
+                    : "—"}
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
-        {withTotal.length === 0 && (
+        {rows.length === 0 && (
           <p style={{ color: "var(--survivor-text-muted)", padding: "1rem" }}>
-            No picks yet. Be the first to make your picks.
+            No points yet. Make your winner pick to start earning.
           </p>
         )}
       </div>
+
+      {(episodesProcessed ?? 0) === 0 && (
+        <p style={{ marginTop: "1rem", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+          Week 1 results pending. Once episode results are in, the leaderboard will update.
+        </p>
+      )}
+
+      <section className="survivor-card" style={{ marginTop: "1.5rem" }}>
+        <h2 className="survivor-card__title" style={{ fontSize: "1rem", marginBottom: "0.5rem" }}>
+          How scoring works
+        </h2>
+        <p style={{ color: "var(--survivor-text-muted)", lineHeight: 1.6, margin: 0 }}>
+          Pick one castaway to win the season. Each week they survive: +1 point. If they are voted out: -1 point.
+          After elimination, you must pick a new remaining player. Picks lock when the episode starts.
+        </p>
+      </section>
     </>
   );
 }

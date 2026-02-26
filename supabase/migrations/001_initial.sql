@@ -74,11 +74,16 @@ alter table public.vote_out_picks enable row level security;
 alter table public.tribe_picks enable row level security;
 
 -- Profiles: users can read all (for leaderboard), update own
+drop policy if exists "Profiles read" on public.profiles;
+drop policy if exists "Profiles update own" on public.profiles;
+drop policy if exists "Profiles insert own" on public.profiles;
 create policy "Profiles read" on public.profiles for select using (true);
 create policy "Profiles update own" on public.profiles for update using (auth.uid() = id);
 create policy "Profiles insert own" on public.profiles for insert with check (auth.uid() = id);
 
 -- Invites: only inviter can create and read their own
+drop policy if exists "Invites insert own" on public.invites;
+drop policy if exists "Invites read own" on public.invites;
 create policy "Invites insert own" on public.invites for insert with check (auth.uid() = inviter_id);
 create policy "Invites read own" on public.invites for select using (auth.uid() = inviter_id);
 
@@ -105,20 +110,32 @@ end;
 $$;
 
 -- Episodes: authenticated users can read
+drop policy if exists "Episodes read" on public.episodes;
 create policy "Episodes read" on public.episodes for select to authenticated using (true);
--- Insert/update episodes via SQL or service role (e.g. add new episodes, set voted_out_player_id after each episode)
 
 -- Picks: users manage own
+drop policy if exists "Winner picks read" on public.winner_picks;
+drop policy if exists "Winner picks insert own" on public.winner_picks;
+drop policy if exists "Winner picks update own" on public.winner_picks;
+drop policy if exists "Winner picks delete own" on public.winner_picks;
 create policy "Winner picks read" on public.winner_picks for select using (true);
 create policy "Winner picks insert own" on public.winner_picks for insert with check (auth.uid() = user_id);
 create policy "Winner picks update own" on public.winner_picks for update using (auth.uid() = user_id);
 create policy "Winner picks delete own" on public.winner_picks for delete using (auth.uid() = user_id);
 
+drop policy if exists "Vote out picks read" on public.vote_out_picks;
+drop policy if exists "Vote out picks insert own" on public.vote_out_picks;
+drop policy if exists "Vote out picks update own" on public.vote_out_picks;
+drop policy if exists "Vote out picks delete own" on public.vote_out_picks;
 create policy "Vote out picks read" on public.vote_out_picks for select using (true);
 create policy "Vote out picks insert own" on public.vote_out_picks for insert with check (auth.uid() = user_id);
 create policy "Vote out picks update own" on public.vote_out_picks for update using (auth.uid() = user_id);
 create policy "Vote out picks delete own" on public.vote_out_picks for delete using (auth.uid() = user_id);
 
+drop policy if exists "Tribe picks read" on public.tribe_picks;
+drop policy if exists "Tribe picks insert own" on public.tribe_picks;
+drop policy if exists "Tribe picks update own" on public.tribe_picks;
+drop policy if exists "Tribe picks delete own" on public.tribe_picks;
 create policy "Tribe picks read" on public.tribe_picks for select using (true);
 create policy "Tribe picks insert own" on public.tribe_picks for insert with check (auth.uid() = user_id);
 create policy "Tribe picks update own" on public.tribe_picks for update using (auth.uid() = user_id);
