@@ -131,8 +131,8 @@ export default async function DashboardPage() {
       <div className="survivor-card">
         <h2 className="survivor-card__title">How scoring works</h2>
         <p style={{ color: "var(--survivor-text-muted)", lineHeight: 1.6, marginBottom: "0.5rem" }}>
-          Pick one castaway to win the season. Each week they survive: +1 point. If they are voted out: -1 point.
-          After elimination, you must pick a new remaining player. Picks lock when the episode starts.
+          Pick one castaway to win the season. Each week they survive: +1 point. If they are voted out, injured, or removed from the show: -1 point.
+          After elimination (including injury/removal), you must pick a new remaining player. Picks lock when the episode starts.
         </p>
       </div>
 

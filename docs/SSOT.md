@@ -16,8 +16,8 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 ## Point system (survival)
 
 - **+1** for each week your winner pick stays in the game.
-- **-1** when your pick is voted out; you must then pick a new winner.
-- This continues until the finals. Picking the eventual winner in week 1 earns the most points; repicking after a vote-out lets you keep earning.
+- **-1** when your pick is voted out, injured, or removed from the show; you must then pick a new winner.
+- This continues until the finals. Picking the eventual winner in week 1 earns the most points; repicking after a vote-out (or injury/removal) lets you keep earning.
 
 Lock rules: picks lock at episode start. Set a consistent "results publish time" (e.g. Friday 9:00 AM ET) so scoring updates are predictable.
 
@@ -48,7 +48,7 @@ Lock rules: picks lock at episode start. Set a consistent "results publish time"
 
 ## Episode results and automation
 
-- **What we need per week:** Only who was eliminated (voted out / quit / medevac). Set `voted_out_player_id` on the episode in Supabase. Scoring then runs automatically or via manual API.
+- **What we need per week:** Who was eliminated (voted out, quit, medevac, or otherwise removed). Set `voted_out_player_id` on the episode in Supabase for that player. Injury/removal is treated the same as voted out for scoring. Scoring then runs automatically or via manual API.
 - **Results publish time:** Friday 9:00 AM ET (14:00 UTC). Vercel Cron runs `GET /api/cron/process-pending-episodes` every Friday; it processes every Season 50 episode that has `voted_out_player_id` set and is not yet in `episode_points_processed`. Idempotent.
 - **Env for automation:** `SUPABASE_SERVICE_ROLE_KEY` (required for process-episode and cron). `CRON_SECRET` in Vercel (Vercel sends it when invoking the cron; route rejects requests without it).
 - **Manual trigger:** `POST /api/process-episode` with body `{ "episodeId": "uuid" }` (logged-in user; uses service role under the hood).

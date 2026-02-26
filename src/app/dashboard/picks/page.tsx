@@ -70,7 +70,7 @@ export default async function PicksPage() {
         My picks
       </h1>
       <p style={{ color: "var(--survivor-text-muted)", marginBottom: "0.5rem" }}>
-        Pick a player to win. You get +1 point for each week they stay in. If they’re voted out you get -1 and must pick a new winner. Earlier correct picks earn more.
+        Pick a player to win. You get +1 point for each week they stay in. If they’re voted out, injured, or removed from the show you get -1 and must pick a new winner. Earlier correct picks earn more.
       </p>
       <p style={{ color: "var(--survivor-accent)", fontWeight: 600, marginBottom: "1.5rem" }}>
         Your points: {userPoints}

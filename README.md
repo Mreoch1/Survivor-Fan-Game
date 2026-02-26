@@ -1,6 +1,6 @@
 # Survivor Fan Game
 
-Family and friends prediction game for **Survivor Season 50** (2026). Users sign up (including via email invite), pick a player to win, and earn survival points: +1 each week their pick stays in, -1 when voted out (then they pick a new winner). Optional tribe and weekly vote-out picks.
+Family and friends prediction game for **Survivor Season 50** (2026). Users sign up (including via email invite), pick a player to win, and earn survival points: +1 each week their pick stays in, -1 when voted out or removed (injury/quit/medevac; then they pick a new winner). Optional tribe and weekly vote-out picks.
 
 ## Stack
 
