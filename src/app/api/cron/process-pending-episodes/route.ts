@@ -29,7 +29,8 @@ export async function GET(request: Request) {
   const { data: processed } = await supabase
     .from("episode_points_processed")
     .select("episode_id");
-  const processedIds = new Set((processed ?? []).map((r) => r.episode_id));
+  const rows = (processed ?? []) as { episode_id: string }[];
+  const processedIds = new Set(rows.map((r) => r.episode_id));
 
   const { data: episodes, error: epErr } = await supabase
     .from("episodes")
@@ -42,7 +43,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: epErr.message }, { status: 500 });
   }
 
-  const pending = (episodes ?? []).filter((ep) => !processedIds.has(ep.id));
+  const episodeRows = (episodes ?? []) as { id: string; episode_number: number }[];
+  const pending = episodeRows.filter((ep) => !processedIds.has(ep.id));
   const results: { episodeId: string; episodeNumber: number; ok: boolean; error?: string }[] = [];
 
   for (const ep of pending) {

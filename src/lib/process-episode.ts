@@ -3,6 +3,15 @@ import type { Database } from "@/types/database";
 
 const SEASON = 50;
 
+type SeasonPointsRow = {
+  user_id: string;
+  season: number;
+  points: number;
+  weeks_survived: number;
+  eliminations_hit: number;
+  last_week_delta: number | null;
+};
+
 /**
  * Applies survival points for one episode: +1 for pick staying in, -1 and clear pick if voted out.
  * Idempotent per episode. Uses service-role client so all users’ rows can be updated.
@@ -11,15 +20,17 @@ export async function processEpisode(
   supabase: SupabaseClient<Database>,
   episodeId: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  const { data: episode, error: epErr } = await supabase
+  const { data: episodeData, error: epErr } = await supabase
     .from("episodes")
     .select("id, season, voted_out_player_id")
     .eq("id", episodeId)
     .single();
 
-  if (epErr || !episode) {
+  if (epErr || !episodeData) {
     return { ok: false, error: "Episode not found" };
   }
+
+  const episode = episodeData as { id: string; season: number; voted_out_player_id: string | null };
   if (episode.season !== SEASON) {
     return { ok: false, error: "Wrong season" };
   }
@@ -39,12 +50,13 @@ export async function processEpisode(
     return { ok: true };
   }
 
-  const { data: picks } = await supabase
+  const { data: picksData } = await supabase
     .from("winner_picks")
     .select("user_id, player_id")
     .eq("season", SEASON);
 
-  for (const pick of picks ?? []) {
+  const picks = (picksData ?? []) as { user_id: string; player_id: string | null }[];
+  for (const pick of picks) {
     if (!pick.player_id) continue;
     const { data: existing } = await supabase
       .from("user_season_points")
@@ -53,7 +65,8 @@ export async function processEpisode(
       .eq("season", SEASON)
       .maybeSingle();
     if (!existing) {
-      await supabase.from("user_season_points").insert({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase.from("user_season_points") as any).insert({
         user_id: pick.user_id,
         season: SEASON,
         points: 0,
@@ -63,7 +76,7 @@ export async function processEpisode(
     }
   }
 
-  for (const pick of picks ?? []) {
+  for (const pick of picks) {
     if (!pick.player_id) continue;
     const { data: row } = await supabase
       .from("user_season_points")
@@ -72,46 +85,40 @@ export async function processEpisode(
       .eq("season", SEASON)
       .single();
 
-    const points = row?.points ?? 0;
-    const weeksSurvived = row?.weeks_survived ?? 0;
-    const eliminationsHit = row?.eliminations_hit ?? 0;
+    const rowTyped = row as SeasonPointsRow | null;
+    const points = rowTyped?.points ?? 0;
+    const weeksSurvived = rowTyped?.weeks_survived ?? 0;
+    const eliminationsHit = rowTyped?.eliminations_hit ?? 0;
+
+    const upsertRow = (payload: Record<string, unknown>) =>
+      // Type workaround: SupabaseClient<Database> infers never for some table mutators
+      (supabase.from("user_season_points") as any).upsert(payload, { onConflict: "user_id,season" });
 
     if (pick.player_id === votedOutId) {
-      await supabase
-        .from("user_season_points")
-        .upsert(
-          {
-            user_id: pick.user_id,
-            season: SEASON,
-            points: points - 1,
-            weeks_survived: 0,
-            eliminations_hit: eliminationsHit + 1,
-            last_week_delta: -1,
-          },
-          { onConflict: "user_id,season" }
-        );
-      await supabase
-        .from("winner_picks")
+      await upsertRow({
+        user_id: pick.user_id,
+        season: SEASON,
+        points: points - 1,
+        weeks_survived: 0,
+        eliminations_hit: eliminationsHit + 1,
+        last_week_delta: -1,
+      });
+      await (supabase.from("winner_picks") as any)
         .update({ player_id: null })
         .eq("user_id", pick.user_id)
         .eq("season", SEASON);
     } else {
-      await supabase
-        .from("user_season_points")
-        .upsert(
-          {
-            user_id: pick.user_id,
-            season: SEASON,
-            points: points + 1,
-            weeks_survived: weeksSurvived + 1,
-            eliminations_hit: eliminationsHit,
-            last_week_delta: 1,
-          },
-          { onConflict: "user_id,season" }
-        );
+      await upsertRow({
+        user_id: pick.user_id,
+        season: SEASON,
+        points: points + 1,
+        weeks_survived: weeksSurvived + 1,
+        eliminations_hit: eliminationsHit,
+        last_week_delta: 1,
+      });
     }
   }
 
-  await supabase.from("episode_points_processed").insert({ episode_id: episodeId });
+  await (supabase.from("episode_points_processed") as any).insert({ episode_id: episodeId });
   return { ok: true };
 }
