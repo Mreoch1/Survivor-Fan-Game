@@ -55,25 +55,35 @@ export default async function DashboardPage() {
   const tribe = tribePick ? TRIBES[tribePick.tribe_id as keyof typeof TRIBES] : null;
   const userPoints = pointsRow?.points ?? 0;
   const lastWeekDelta = pointsRow?.last_week_delta ?? null;
-  const statusThisWeek = winnerPlayer ? "SAFE" : winnerPick ? "ELIMINATED" : null;
+  const statusThisWeek: "SAFE" | "OUT" | null = winnerPlayer
+    ? "SAFE"
+    : winnerPick
+      ? "OUT"
+      : null;
 
   return (
-    <>
-      <h1 className="survivor-card__title" style={{ fontSize: "1.5rem", marginBottom: "1rem" }}>
-        Welcome to the island
-      </h1>
-      {(episodesProcessed ?? 0) === 0 && (
-        <p style={{ color: "var(--survivor-text-muted)", fontSize: "0.875rem", marginBottom: "1rem" }}>
-          Week 1 results pending. Once episode results are in, your points will update.
+    <div className="survivor-dashboard">
+      <section className="survivor-dashboard__welcome" aria-labelledby="dashboard-welcome">
+        <h1 id="dashboard-welcome" className="survivor-dashboard__welcome-title">
+          Welcome to the island
+        </h1>
+        <p className="survivor-dashboard__welcome-subtext">
+          You can find your picks, scoring system, and episode updates here.
         </p>
-      )}
-      {profile && !profile.display_name && (
-        <SetDisplayName />
-      )}
-      <div className="survivor-card">
-        <h2 className="survivor-card__title">Your picks at a glance</h2>
-        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-          <li style={{ marginBottom: "0.75rem" }}>
+        {(episodesProcessed ?? 0) === 0 && (
+          <p className="survivor-dashboard__welcome-subtext">
+            Week 1 results pending. Once episode results are in, your points will update.
+          </p>
+        )}
+        {profile && !profile.display_name && <SetDisplayName />}
+      </section>
+
+      <section className="survivor-card" aria-labelledby="picks-at-a-glance">
+        <h2 id="picks-at-a-glance" className="survivor-card__title">
+          Your picks at a glance
+        </h2>
+        <ul className="survivor-dashboard__list">
+          <li className="survivor-dashboard__list-item">
             <strong>Current winner pick:</strong>{" "}
             {winnerPlayer ? (
               <Link href="/dashboard/players" className="survivor-auth__link">
@@ -81,40 +91,46 @@ export default async function DashboardPage() {
               </Link>
             ) : (
               <Link href="/dashboard/picks" className="survivor-auth__link">
-                {winnerPick ? "Your pick was voted out — pick again →" : "Set your winner pick →"}
+                {winnerPick
+                  ? "Your pick was voted out. Pick again →"
+                  : "No pick selected"}
               </Link>
             )}
           </li>
-          {statusThisWeek && (
-            <li style={{ marginBottom: "0.75rem" }}>
-              <strong>Status this week:</strong>{" "}
-              <span
-                style={{
-                  display: "inline-block",
-                  padding: "0.2rem 0.5rem",
-                  borderRadius: "0.25rem",
-                  fontSize: "0.875rem",
-                  fontWeight: 600,
-                  background: statusThisWeek === "SAFE" ? "var(--survivor-success)" : "var(--survivor-danger)",
-                  color: "var(--survivor-bg)",
-                }}
-              >
-                {statusThisWeek}
+          <li className="survivor-dashboard__list-item">
+            <strong>Status this week:</strong>{" "}
+            {statusThisWeek === "SAFE" ? (
+              <span className="survivor-dashboard__status-badge survivor-dashboard__status-badge--safe">
+                SAFE
               </span>
-            </li>
-          )}
-          <li style={{ marginBottom: "0.75rem" }}>
+            ) : statusThisWeek === "OUT" ? (
+              <span className="survivor-dashboard__status-badge survivor-dashboard__status-badge--out">
+                OUT, REPICK REQUIRED
+              </span>
+            ) : (
+              "—"
+            )}
+          </li>
+          <li className="survivor-dashboard__list-item">
             <strong>Points this week:</strong>{" "}
-            {lastWeekDelta != null ? (lastWeekDelta >= 0 ? `+${lastWeekDelta}` : lastWeekDelta) : "—"}
+            {lastWeekDelta != null
+              ? lastWeekDelta >= 0
+                ? `+${lastWeekDelta}`
+                : lastWeekDelta
+              : "—"}
           </li>
-          <li style={{ marginBottom: "0.75rem" }}>
+          <li className="survivor-dashboard__list-item">
             <strong>Total points:</strong>{" "}
-            <span style={{ color: "var(--survivor-accent)", fontWeight: 700 }}>{userPoints}</span>
+            <span className="survivor-dashboard__total-value">{userPoints}</span>
           </li>
-          <li style={{ marginBottom: "0.75rem" }}>
+          <li className="survivor-dashboard__list-item">
             <strong>Tribe:</strong>{" "}
             {tribe ? (
-              <span style={{ color: tribe.color }}>{tribe.name}</span>
+              <span
+                className={`survivor-dashboard__tribe-name--${tribePick?.tribe_id ?? ""}`}
+              >
+                {tribe.name}
+              </span>
             ) : (
               <Link href="/dashboard/picks" className="survivor-auth__link">
                 Choose your tribe →
@@ -122,51 +138,66 @@ export default async function DashboardPage() {
             )}
           </li>
         </ul>
-        <div style={{ marginTop: "1rem" }}>
+        <div className="survivor-dashboard__card-actions">
           <Link href="/dashboard/picks" className="survivor-btn survivor-btn--primary">
             Edit my picks
           </Link>
         </div>
-      </div>
-      <div className="survivor-card">
-        <h2 className="survivor-card__title">How scoring works</h2>
-        <p style={{ color: "var(--survivor-text-muted)", lineHeight: 1.6, marginBottom: "0.5rem" }}>
-          Pick one castaway to win the season. Each week they survive: +1 point. If they are voted out, injured, or removed from the show: -1 point.
-          After elimination (including injury/removal), you must pick a new remaining player. Picks lock when the episode starts.
-        </p>
-      </div>
+      </section>
 
-      <div className="survivor-card">
-        <h2 className="survivor-card__title">Episode results</h2>
-        <p style={{ color: "var(--survivor-text-muted)", fontSize: "0.875rem", marginBottom: "0.75rem" }}>
-          Official boots by episode. Scoring uses this list. Results post on a set time (e.g. Friday 9:00 AM ET).
+      <section className="survivor-card" aria-labelledby="how-scoring-works">
+        <h2 id="how-scoring-works" className="survivor-card__title">
+          How scoring works
+        </h2>
+        <p className="survivor-dashboard__card-body">
+          Pick one castaway to win the season. Each week they survive: +1 point. If they are voted
+          out, injured, or removed from the show: -1 point. After elimination (including
+          injury/removal), you must pick a new remaining player. Picks lock when the episode
+          starts.
+        </p>
+      </section>
+
+      <section className="survivor-card" aria-labelledby="episode-results">
+        <h2 id="episode-results" className="survivor-card__title">
+          Episode results
+        </h2>
+        <p className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
+          Official boots by episode. Scoring uses this list. Results publish Friday 9:00 AM ET.
         </p>
         {episodeResults.length === 0 ? (
-          <p style={{ color: "var(--survivor-text-muted)", margin: 0 }}>No results yet.</p>
+          <p className="survivor-dashboard__card-body survivor-dashboard__card-body--no-margin">
+            No results yet.
+          </p>
         ) : (
           <>
-            <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+            <ul className="survivor-dashboard__list">
               {episodeResults.map(({ episodeNumber, bootName }) => (
-                <li key={episodeNumber} style={{ padding: "0.35rem 0", borderBottom: "1px solid var(--survivor-border)" }}>
+                <li
+                  key={episodeNumber}
+                  className="survivor-dashboard__episode-row"
+                >
                   <strong>Episode {episodeNumber}:</strong> Boot = {bootName ?? "—"}
                 </li>
               ))}
             </ul>
-            <Link href="/dashboard/results" className="survivor-auth__link" style={{ display: "inline-block", marginTop: "0.5rem" }}>
+            <Link
+              href="/dashboard/results"
+              className="survivor-auth__link survivor-dashboard__link-block"
+            >
               View all results →
             </Link>
           </>
         )}
-      </div>
+      </section>
 
-      <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
+      <nav className="survivor-dashboard__actions-row" aria-label="Dashboard actions">
         <Link href="/dashboard/players" className="survivor-btn survivor-btn--secondary">
           View cast
         </Link>
         <Link href="/dashboard/leaderboard" className="survivor-btn survivor-btn--secondary">
           Leaderboard
         </Link>
-      </div>
-    </>
+      </nav>
+    </div>
   );
 }

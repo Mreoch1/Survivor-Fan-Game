@@ -27,12 +27,13 @@ export function DashboardNav({ userEmail }: DashboardNavProps) {
         Invite
       </Link>
       {userEmail && (
-        <span className="survivor-header__link" style={{ fontSize: "0.875rem", color: "var(--survivor-text-muted)" }}>
-          {userEmail}
-        </span>
+        <span className="survivor-header__user-email">{userEmail}</span>
       )}
       <form action={signOut}>
-        <button type="submit" className="survivor-btn survivor-btn--secondary" style={{ padding: "0.375rem 0.75rem", fontSize: "0.875rem" }}>
+        <button
+          type="submit"
+          className="survivor-btn survivor-btn--secondary survivor-header__signout"
+        >
           Sign out
         </button>
       </form>

@@ -184,9 +184,22 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  position: relative;
+}
+
+/* Full-screen background behind all dashboard content */
+.survivor-app::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgba(12, 22, 16, 0.4) 0%, rgba(12, 22, 16, 0.65) 100%),
+    url("/cast-page-bg.png") center / cover no-repeat;
 }
 
 .survivor-header {
+  position: relative;
+  z-index: 1;
   background: var(--survivor-bg-card);
   border-bottom: 1px solid var(--survivor-border);
   padding: 0.75rem 1.5rem;
@@ -239,25 +252,48 @@ body {
   color: var(--survivor-text);
 }
 
+.survivor-header__user-email {
+  font-size: 0.875rem;
+  color: var(--survivor-text-muted);
+}
+
+.survivor-header__signout {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.survivor-header__link:focus-visible,
+.survivor-btn:focus-visible,
+.survivor-auth__link:focus-visible {
+  outline: 2px solid var(--survivor-accent);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .survivor-facecard,
+  .survivor-btn,
+  .survivor-auth__submit {
+    transition: none;
+  }
+}
+
 .survivor-main {
+  position: relative;
+  z-index: 1;
   flex: 1;
   padding: 1.5rem;
   max-width: 72rem;
   margin: 0 auto;
   width: 100%;
   min-height: calc(100vh - 4rem);
-  background: linear-gradient(180deg, rgba(12, 22, 16, 0.5) 0%, rgba(12, 22, 16, 0.7) 100%),
-    url("/cast-page-bg.png") center / cover no-repeat;
 }
 
-/* Cast page: same island bg, lighter overlay so image is clearly visible */
+/* Cast page: no extra bg; uses app full-screen layer */
 .survivor-cast-page {
   position: relative;
   margin: -1.5rem -1.5rem 0;
   padding: 1.5rem 1.5rem 2rem;
   min-height: calc(100vh - 4rem);
-  background: linear-gradient(180deg, rgba(12, 22, 16, 0.45) 0%, rgba(12, 22, 16, 0.6) 100%),
-    url("/cast-page-bg.png") center / cover no-repeat;
   border-radius: 0;
 }
 
@@ -275,6 +311,112 @@ body {
   font-weight: 700;
   color: var(--survivor-accent);
   margin-bottom: 1rem;
+}
+
+/* Dashboard home: sections and lists */
+.survivor-dashboard__welcome-title {
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+  font-weight: 700;
+  color: var(--survivor-accent);
+  margin-bottom: 0.5rem;
+}
+
+.survivor-dashboard__welcome-subtext {
+  color: var(--survivor-text-muted);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  margin-bottom: 1.5rem;
+}
+
+.survivor-dashboard__list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.survivor-dashboard__list-item {
+  margin-bottom: 0.75rem;
+}
+
+.survivor-dashboard__list-item:last-child {
+  margin-bottom: 0;
+}
+
+.survivor-dashboard__status-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--survivor-bg);
+}
+
+.survivor-dashboard__status-badge--safe {
+  background: var(--survivor-success);
+}
+
+.survivor-dashboard__status-badge--out {
+  background: var(--survivor-danger);
+}
+
+.survivor-dashboard__card-actions {
+  margin-top: 1rem;
+}
+
+.survivor-dashboard__card-footer {
+  margin-top: 0.75rem;
+}
+
+.survivor-dashboard__card-body {
+  color: var(--survivor-text-muted);
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+
+.survivor-dashboard__card-body--sm {
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.survivor-dashboard__card-body--no-margin {
+  margin: 0;
+}
+
+.survivor-dashboard__episode-row {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid var(--survivor-border);
+}
+
+.survivor-dashboard__episode-row:last-child {
+  border-bottom: none;
+}
+
+.survivor-dashboard__link-block {
+  display: inline-block;
+  margin-top: 0.5rem;
+}
+
+.survivor-dashboard__actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.survivor-dashboard__total-value {
+  color: var(--survivor-accent);
+  font-weight: 700;
+}
+
+.survivor-dashboard__tribe-name--cila {
+  color: var(--survivor-tribe-cila);
+}
+
+.survivor-dashboard__tribe-name--kalo {
+  color: var(--survivor-tribe-kalo);
+}
+
+.survivor-dashboard__tribe-name--vatu {
+  color: var(--survivor-tribe-vatu);
 }
 
 /* Face cards */
