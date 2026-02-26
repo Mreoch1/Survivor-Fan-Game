@@ -18,25 +18,36 @@ function SignupForm() {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: inviteToken
-          ? `${window.location.origin}/auth/callback?invite=${encodeURIComponent(inviteToken)}`
-          : `${window.location.origin}/auth/callback`,
-      },
-    });
-    setLoading(false);
-    if (error) {
-      setMessage({ type: "error", text: error.message });
-      return;
+    const timeoutMs = 20000;
+    try {
+      const supabase = createClient();
+      const signUpPromise = supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: inviteToken
+            ? `${window.location.origin}/auth/callback?invite=${encodeURIComponent(inviteToken)}`
+            : `${window.location.origin}/auth/callback`,
+        },
+      });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Request timed out. Please try again.")), timeoutMs)
+      );
+      const { error } = await Promise.race([signUpPromise, timeoutPromise]);
+      if (error) {
+        setMessage({ type: "error", text: error.message });
+        return;
+      }
+      setMessage({
+        type: "success",
+        text: "Check your email for the confirmation link, then sign in.",
+      });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Something went wrong. Check your connection and try again.";
+      setMessage({ type: "error", text: msg });
+    } finally {
+      setLoading(false);
     }
-    setMessage({
-      type: "success",
-      text: "Check your email for the confirmation link, then sign in.",
-    });
   }
 
   return (
