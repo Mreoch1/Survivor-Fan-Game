@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <div className="survivor-page">
+    <div className="survivor-page survivor-page--home">
       <div className="survivor-auth__card" style={{ maxWidth: "32rem" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

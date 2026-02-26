@@ -50,7 +50,7 @@ export const PLAYERS: Player[] = [
   {
     id: "colby-donaldson",
     name: "Colby Donaldson",
-    tribeId: "kalo",
+    tribeId: "vatu",
     order: 2,
     previousSeasons: [
       "Survivor: The Australian Outback (2nd)",
@@ -136,7 +136,7 @@ export const PLAYERS: Player[] = [
   {
     id: "chrissy-hofbeck",
     name: "Chrissy Hofbeck",
-    tribeId: "cila",
+    tribeId: "kalo",
     order: 8,
     previousSeasons: ["Survivor: Heroes vs. Healers vs. Hustlers (2nd)"],
     accomplishment: "HHH runner-up; dominant end-game strategist.",
@@ -156,7 +156,7 @@ export const PLAYERS: Player[] = [
   {
     id: "angelina-keeley",
     name: "Angelina Keeley",
-    tribeId: "kalo",
+    tribeId: "vatu",
     order: 10,
     previousSeasons: ["Survivor: David vs. Goliath (3rd)"],
     accomplishment: "DvG finalist; memorable negotiator.",
@@ -166,7 +166,7 @@ export const PLAYERS: Player[] = [
   {
     id: "mike-white",
     name: "Mike White",
-    tribeId: "cila",
+    tribeId: "kalo",
     order: 11,
     previousSeasons: ["Survivor: David vs. Goliath (2nd)"],
     accomplishment: "DvG runner-up; The White Lotus creator.",
@@ -206,7 +206,7 @@ export const PLAYERS: Player[] = [
   {
     id: "dee-valladares",
     name: "Dee Valladares",
-    tribeId: "vatu",
+    tribeId: "kalo",
     order: 15,
     previousSeasons: ["Survivor 45 (Winner)"],
     accomplishment: "Survivor 45 winner.",
@@ -237,7 +237,7 @@ export const PLAYERS: Player[] = [
   {
     id: "tiffany-ervin",
     name: "Tiffany Ervin",
-    tribeId: "vatu",
+    tribeId: "kalo",
     order: 18,
     previousSeasons: ["Survivor 46 (8th)"],
     accomplishment: "Survivor 46 eighth place.",
@@ -247,7 +247,7 @@ export const PLAYERS: Player[] = [
   {
     id: "genevieve-mushaluk",
     name: "Genevieve Mushaluk",
-    tribeId: "kalo",
+    tribeId: "vatu",
     order: 19,
     previousSeasons: ["Survivor 47 (5th)"],
     accomplishment: "Survivor 47 fifth place.",

@@ -9,7 +9,7 @@ export default function PlayersPage() {
   const vatu = getPlayersByTribe("vatu" as TribeId);
 
   return (
-    <>
+    <div className="survivor-cast-page">
       <h1 className="survivor-card__title" style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
         Survivor 50 cast
       </h1>
@@ -41,6 +41,6 @@ export default function PlayersPage() {
           </div>
         </section>
       ))}
-    </>
+    </div>
   );
 }

@@ -154,9 +154,11 @@ vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 ## After each episode
 
-Use a consistent **results publish time** (e.g. Friday 9:00 AM ET) so players know when scoring updates.
+**Results publish time:** Friday 9:00 AM ET. Set who was voted out in Supabase; scoring runs automatically at that time (or you can trigger it manually).
 
-1. **Set who was voted out** in Supabase SQL Editor:
+### 1. Set who was voted out (before Friday 9 AM)
+
+In Supabase SQL Editor or Table Editor, set `voted_out_player_id` for the episode:
 
 ```sql
 update public.episodes
@@ -164,28 +166,26 @@ set voted_out_player_id = 'player-id-from-data-players', updated_at = now()
 where season = 50 and episode_number = 1;
 ```
 
-2. **Apply survival points** (so users get +1 for pick staying in, -1 and clear pick if voted out). Call the API once per episode (idempotent):
+Use player IDs from `src/data/players.ts` (e.g. `jenna-lewis-dougherty`, `dee-valladares`).
 
-```bash
-curl -X POST https://your-app.vercel.app/api/process-episode \
-  -H "Content-Type: application/json" \
-  -d '{"episodeId":"EPISODE_UUID"}' \
-  --cookie "sb-access-token=YOUR_SESSION"
-```
+### 2. Scoring (automated or manual)
 
-Or from the app while logged in (e.g. in browser console):  
-`fetch('/api/process-episode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ episodeId: 'EPISODE_UUID' }), credentials: 'include' })`
+- **Automated:** A Vercel Cron job runs **every Friday at 14:00 UTC** (9 AM EST). It processes every Season 50 episode that has `voted_out_player_id` set and is not yet in `episode_points_processed`. No action needed once the cron and env are set (see below).
+- **Manual:** While logged in, call the API to process one episode:  
+  `POST /api/process-episode` with body `{ "episodeId": "EPISODE_UUID" }`.  
+  Get `EPISODE_UUID` from Supabase → episodes.
 
-Get `EPISODE_UUID` from Supabase Table Editor → episodes.
+**Required for automation:** In Vercel project settings, set:
 
-3. **Add the next episode** when needed:
+- `SUPABASE_SERVICE_ROLE_KEY` — Supabase Dashboard → Settings → API → `service_role` (secret).
+- `CRON_SECRET` — Any secret (e.g. `openssl rand -hex 32`). Vercel sends it when invoking the cron so the route can reject unauthorized callers.
+
+### 3. Add the next episode when needed
 
 ```sql
 insert into public.episodes (season, episode_number, vote_out_lock_at)
 values (50, 2, '2026-03-04 19:00:00-05');
 ```
-
-Use player IDs from `src/data/players.ts` (e.g. `jenna-lewis-dougherty`, `dee-valladares`).
 
 ---
 

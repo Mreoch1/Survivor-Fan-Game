@@ -1,6 +1,6 @@
 # Survivor Fan Game – Single Source of Truth
 
-**Last updated:** 2026-02-25
+**Last updated:** 2026-02-26
 
 ## Project overview
 
@@ -48,9 +48,10 @@ Lock rules: picks lock at episode start. Set a consistent "results publish time"
 
 ## Episode results and automation
 
-- **What we need per week:** Only who was eliminated (voted out / quit / medevac). Set `voted_out_player_id` on the episode, then call `POST /api/process-episode` with that episode id.
-- **Results publish time:** Pick a consistent time (e.g. Friday 9:00 AM ET) and document it so players trust when scoring updates.
-- **Options:** (A) Automated: fetch recap pages, AI extracts boot, verify with 2+ sources and cast list, then publish or flag for manual approval. (B) Semi-automatic: you enter "Voted out: [name]" each week; scoring and repicks are automatic. (C) Fully manual: enter all episode fields. For current gameplay, (B) is lowest effort and very reliable.
+- **What we need per week:** Only who was eliminated (voted out / quit / medevac). Set `voted_out_player_id` on the episode in Supabase. Scoring then runs automatically or via manual API.
+- **Results publish time:** Friday 9:00 AM ET (14:00 UTC). Vercel Cron runs `GET /api/cron/process-pending-episodes` every Friday; it processes every Season 50 episode that has `voted_out_player_id` set and is not yet in `episode_points_processed`. Idempotent.
+- **Env for automation:** `SUPABASE_SERVICE_ROLE_KEY` (required for process-episode and cron). `CRON_SECRET` in Vercel (Vercel sends it when invoking the cron; route rejects requests without it).
+- **Manual trigger:** `POST /api/process-episode` with body `{ "episodeId": "uuid" }` (logged-in user; uses service role under the hood).
 
 ## TODOs / unresolved
 
