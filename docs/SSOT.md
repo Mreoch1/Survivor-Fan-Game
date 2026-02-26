@@ -27,7 +27,6 @@ Lock rules: winner pick locked at season start; vote-out picks lock at a set tim
 ## Auth
 
 - Login, sign up, password reset via Supabase Auth
-- **Game code:** optional `GAME_CODE` env var; when set, signup requires the code (share with family/friends).
 - Invite-by-email: inviter sends email; invitee gets link with token; sign up or login completes invite acceptance
 
 ## Data
@@ -40,6 +39,7 @@ Lock rules: winner pick locked at season start; vote-out picks lock at a set tim
 
 - 2026-02-25: Project created. Point system and stack chosen. SSOT added.
 - 2026-02-25: Invite flow: store invites in Supabase; invite link contains token; signup/login with token marks invite used and links user to inviter.
+- 2026-02-26: CLI-first: all setup and deploy via npm scripts, Supabase CLI, and Vercel CLI. README rewritten for terminal-only workflow.
 
 ## Theme music
 

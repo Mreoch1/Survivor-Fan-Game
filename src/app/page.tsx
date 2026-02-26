@@ -19,7 +19,7 @@ export default function HomePage() {
           </Link>
         </div>
         <p className="survivor-auth__subtitle" style={{ marginTop: "1rem", fontSize: "0.8125rem" }}>
-          Have a game code? Use it when you create an account. Invited? Use the link from your invite email.
+          Invited? Use the link from your invite email to sign up.
         </p>
       </div>
     </div>

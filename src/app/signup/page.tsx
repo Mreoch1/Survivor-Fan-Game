@@ -9,7 +9,6 @@ function SignupForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
-  const [gameCode, setGameCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
   const searchParams = useSearchParams();
@@ -19,17 +18,6 @@ function SignupForm() {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
-    const codeRes = await fetch("/api/validate-game-code", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: gameCode }),
-    });
-    const codeData = await codeRes.json();
-    if (!codeRes.ok) {
-      setLoading(false);
-      setMessage({ type: "error", text: codeData.error ?? "Invalid game code" });
-      return;
-    }
     const supabase = createClient();
     const { error } = await supabase.auth.signUp({
       email,
@@ -80,18 +68,6 @@ function SignupForm() {
             className="survivor-auth__input"
             required
             autoComplete="email"
-          />
-          <label className="survivor-auth__label" htmlFor="gameCode">
-            Game code
-          </label>
-          <input
-            id="gameCode"
-            type="text"
-            value={gameCode}
-            onChange={(e) => setGameCode(e.target.value)}
-            className="survivor-auth__input"
-            placeholder="Ask your host for the code"
-            autoComplete="off"
           />
           <label className="survivor-auth__label" htmlFor="password">
             Password (min 6 characters)
