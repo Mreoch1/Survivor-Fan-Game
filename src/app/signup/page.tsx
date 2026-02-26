@@ -18,6 +18,11 @@ function SignupForm() {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      setMessage({ type: "error", text: "This site is missing configuration. Please try the main URL or contact the site owner." });
+      setLoading(false);
+      return;
+    }
     const timeoutMs = 20000;
     try {
       const supabase = createClient();
