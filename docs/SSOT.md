@@ -56,5 +56,6 @@ Lock rules: picks lock at episode start. Set a consistent "results publish time"
 
 - [ ] Add episode lock times (e.g. Wednesday 7pm ET before air) per episode in DB.
 - [ ] Optional: email sending via Resend/Supabase Edge for invite emails (or copy-link for now).
+- Themed auth emails: copy HTML from `docs/email-templates/` into Supabase Dashboard → Authentication → Email Templates (Confirm signup, Reset password, Invite, Magic link). See `docs/email-templates/README.md`.
 - [ ] Optional: set `imageUrl` in `src/data/players.ts` for real cast photos (licensed/self-hosted); cards use DiceBear Initials (CC0) until then.
 - [ ] At season end: set season winner and finalists for tribe/winner bonus points.

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getPlayerById, TRIBES, getPlayerAvatarUrl } from "@/data/players";
+import { getPlayerById, TRIBES, getPlayerAvatarUrl, CASTAWAYS_PAGE_URL } from "@/data/players";
 
 export default async function PlayerDetailPage({
   params,
@@ -57,6 +57,16 @@ export default async function PlayerDetailPage({
             <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--survivor-text-muted)" }}>
               Times played: {player.stats.timesPlayed} · Best finish: #{player.stats.bestFinish}
               {player.stats.isWinner && " · Winner"}
+            </p>
+            <p style={{ marginTop: "1rem" }}>
+              <a
+                href={CASTAWAYS_PAGE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="survivor-auth__link"
+              >
+                View on Survivor 50 Challenge →
+              </a>
             </p>
           </div>
         </div>

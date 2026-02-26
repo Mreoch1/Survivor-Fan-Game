@@ -199,6 +199,10 @@ Player cards use [DiceBear Initials](https://www.dicebear.com/styles/initials/) 
 
 ---
 
+## Auth email templates (Survivor themed)
+
+Signup and password-reset emails use Survivor Fan Game styling (dark green, gold CTA). **CLI:** add `SUPABASE_ACCESS_TOKEN` to `.env.local` (from [Account → Access Tokens](https://supabase.com/dashboard/account/tokens)), then run `npm run email-templates`. **Manual:** copy HTML from `docs/email-templates/` into Supabase Dashboard → Authentication → Email Templates. See `docs/email-templates/README.md`.
+
 ## Single source of truth
 
 See **`docs/SSOT.md`** for point system, decisions, and TODOs.

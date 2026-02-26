@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PLAYERS, TRIBES, getPlayersByTribe } from "@/data/players";
+import { PLAYERS, TRIBES, getPlayersByTribe, CASTAWAYS_PAGE_URL } from "@/data/players";
 import type { TribeId } from "@/data/players";
 import { FaceCard } from "@/components/FaceCard";
 
@@ -14,7 +14,10 @@ export default function PlayersPage() {
         Survivor 50 cast
       </h1>
       <p style={{ color: "var(--survivor-text-muted)", marginBottom: "1rem" }}>
-        {PLAYERS.length} returning players. Pick your winner and tribe in My picks.
+        {PLAYERS.length} returning players. Pick your winner and tribe in My picks.{" "}
+        <a href={CASTAWAYS_PAGE_URL} target="_blank" rel="noopener noreferrer" className="survivor-auth__link">
+          Meet the cast on Survivor 50 Challenge
+        </a>
       </p>
       <div className="survivor-card" style={{ marginBottom: "1.5rem", padding: 0, overflow: "hidden" }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
