@@ -212,13 +212,6 @@ body {
   margin: 0 auto;
 }
 
-.survivor-cast-poster {
-  width: 100%;
-  height: auto;
-  display: block;
-  vertical-align: middle;
-}
-
 .survivor-auth__logo-link {
   display: block;
   margin-bottom: 0.5rem;
@@ -355,30 +348,12 @@ body {
   cursor: not-allowed;
 }
 
-/* Music toggle and Survivor theme link */
+/* Music toggle (self-hosted /audio/theme.mp3 or NEXT_PUBLIC_THEME_MUSIC_URL) */
 .survivor-music-wrap {
   position: fixed;
   bottom: 1.5rem;
   right: 1.5rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.5rem;
   z-index: 50;
-}
-
-.survivor-music-theme-link {
-  font-size: 0.75rem;
-  color: var(--survivor-text-muted);
-  text-decoration: none;
-  padding: 0.25rem 0.5rem;
-  border-radius: 0.25rem;
-  background: var(--survivor-bg-card);
-  border: 1px solid var(--survivor-border);
-}
-
-.survivor-music-theme-link:hover {
-  color: var(--survivor-accent);
 }
 
 .survivor-music-toggle {

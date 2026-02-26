@@ -19,14 +19,6 @@ export default function PlayersPage() {
           Meet the cast on Survivor 50 Challenge
         </a>
       </p>
-      <div className="survivor-card" style={{ marginBottom: "1.5rem", padding: 0, overflow: "hidden" }}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/cast-poster.png"
-          alt="Survivor 50: In the Hands of the Fans — full cast by tribe"
-          className="survivor-cast-poster"
-        />
-      </div>
       {[
         { id: "cila" as TribeId, label: "Cila", players: cila, color: TRIBES.cila.color },
         { id: "kalo" as TribeId, label: "Kalo", players: kalo, color: TRIBES.kalo.color },

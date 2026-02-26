@@ -3,11 +3,11 @@
 import { useState, useRef, useEffect } from "react";
 
 /**
- * Theme music: self-hosted /audio/theme.mp3 (Kevin MacLeod – Overworld, CC BY),
+ * Theme music: self-hosted /audio/Theme.mp3.
  * Override with NEXT_PUBLIC_THEME_MUSIC_URL if set.
  */
 const THEME_MUSIC_SRC =
-  process.env.NEXT_PUBLIC_THEME_MUSIC_URL || "/audio/theme.mp3";
+  process.env.NEXT_PUBLIC_THEME_MUSIC_URL || "/audio/Theme.mp3";
 
 export function ThemeMusic() {
   const [playing, setPlaying] = useState(false);
@@ -50,21 +50,12 @@ export function ThemeMusic() {
     <>
       <audio ref={audioRef} src={THEME_MUSIC_SRC} loop />
       <div className="survivor-music-wrap">
-        <a
-          href="https://soundcloud.com/aiden-psungo/survivor-theme-song-remix"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="survivor-music-theme-link"
-          title="Survivor theme on SoundCloud"
-        >
-          Survivor theme
-        </a>
         <button
           type="button"
           onClick={toggle}
           className={`survivor-music-toggle ${playing ? "survivor-music-toggle--playing" : ""}`}
           aria-label={playing ? "Pause theme music" : "Play theme music"}
-          title={playing ? "Pause theme music" : "Play theme music (Overworld by Kevin MacLeod, CC BY)"}
+          title={playing ? "Pause theme music" : "Play theme music"}
         >
           <span aria-hidden>{playing ? "⏸" : "♪"}</span>
         </button>
