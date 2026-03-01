@@ -14,20 +14,19 @@ async function requireAdmin() {
   return supabase;
 }
 
-export async function updateEpisodeLock(episodeId: string, formData: FormData) {
+export async function updateEpisodeLock(episodeId: string, formData: FormData): Promise<void> {
   const voteOutLockAt = formData.get("voteOutLockAt") as string | null;
-  if (!voteOutLockAt) return { error: "Lock time required" };
+  if (!voteOutLockAt) throw new Error("Lock time required");
   const supabase = await requireAdmin();
   const { error } = await supabase
     .from("episodes")
     .update({ vote_out_lock_at: voteOutLockAt, updated_at: new Date().toISOString() })
     .eq("id", episodeId);
-  if (error) return { error: error.message };
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin");
-  return {};
 }
 
-export async function updateEpisodeResult(episodeId: string, formData: FormData) {
+export async function updateEpisodeResult(episodeId: string, formData: FormData): Promise<void> {
   const votedOutPlayerId = (formData.get("votedOutPlayerId") as string) || null;
   const immunityWinningTribeId = (formData.get("immunityWinningTribeId") as string) || null;
   const supabase = await requireAdmin();
@@ -39,25 +38,23 @@ export async function updateEpisodeResult(episodeId: string, formData: FormData)
       updated_at: new Date().toISOString(),
     })
     .eq("id", episodeId);
-  if (error) return { error: error.message };
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin");
-  return {};
 }
 
-export async function updateUserProfile(userId: string, formData: FormData) {
+export async function updateUserProfile(userId: string, formData: FormData): Promise<void> {
   const displayName = (formData.get("displayName") as string) || null;
   const supabase = await requireAdmin();
   const { error } = await supabase
     .from("profiles")
     .update({ display_name: displayName, updated_at: new Date().toISOString() })
     .eq("id", userId);
-  if (error) return { error: error.message };
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/leaderboard");
-  return {};
 }
 
-export async function updateUserScores(userId: string, formData: FormData) {
+export async function updateUserScores(userId: string, formData: FormData): Promise<void> {
   const survival_points = Number(formData.get("survival_points")) || 0;
   const tribe_immunity_points = Number(formData.get("tribe_immunity_points")) || 0;
   const individual_immunity_points = Number(formData.get("individual_immunity_points")) || 0;
@@ -78,32 +75,29 @@ export async function updateUserScores(userId: string, formData: FormData) {
       },
       { onConflict: "user_id,season" }
     );
-  if (error) return { error: error.message };
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/leaderboard");
-  return {};
 }
 
-export async function deactivateUser(userId: string) {
+export async function deactivateUser(userId: string): Promise<void> {
   const supabase = await requireAdmin();
   const { error } = await supabase
     .from("profiles")
     .update({ deactivated_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", userId);
-  if (error) return { error: error.message };
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/leaderboard");
-  return {};
 }
 
-export async function restoreUser(userId: string) {
+export async function restoreUser(userId: string): Promise<void> {
   const supabase = await requireAdmin();
   const { error } = await supabase
     .from("profiles")
     .update({ deactivated_at: null, updated_at: new Date().toISOString() })
     .eq("id", userId);
-  if (error) return { error: error.message };
+  if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/leaderboard");
-  return {};
 }
