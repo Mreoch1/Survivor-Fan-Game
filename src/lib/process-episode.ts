@@ -7,6 +7,9 @@ type SeasonPointsRow = {
   user_id: string;
   season: number;
   points: number;
+  survival_points: number;
+  tribe_immunity_points: number;
+  individual_immunity_points: number;
   weeks_survived: number;
   eliminations_hit: number;
   last_week_delta: number | null;
@@ -60,7 +63,7 @@ export async function processEpisode(
     if (!pick.player_id) continue;
     const { data: existing } = await supabase
       .from("user_season_points")
-      .select("points, weeks_survived, eliminations_hit")
+      .select("survival_points, tribe_immunity_points, individual_immunity_points, weeks_survived, eliminations_hit")
       .eq("user_id", pick.user_id)
       .eq("season", SEASON)
       .maybeSingle();
@@ -70,6 +73,9 @@ export async function processEpisode(
         user_id: pick.user_id,
         season: SEASON,
         points: 0,
+        survival_points: 0,
+        tribe_immunity_points: 0,
+        individual_immunity_points: 0,
         weeks_survived: 0,
         eliminations_hit: 0,
       });
@@ -80,25 +86,33 @@ export async function processEpisode(
     if (!pick.player_id) continue;
     const { data: row } = await supabase
       .from("user_season_points")
-      .select("points, weeks_survived, eliminations_hit")
+      .select("survival_points, tribe_immunity_points, individual_immunity_points, weeks_survived, eliminations_hit")
       .eq("user_id", pick.user_id)
       .eq("season", SEASON)
       .single();
 
-    const rowTyped = row as SeasonPointsRow | null;
-    const points = rowTyped?.points ?? 0;
+    const rowTyped = row as Pick<SeasonPointsRow, "survival_points" | "tribe_immunity_points" | "individual_immunity_points" | "weeks_survived" | "eliminations_hit"> | null;
+    const survivalPoints = rowTyped?.survival_points ?? 0;
+    const tribeImmunityPoints = rowTyped?.tribe_immunity_points ?? 0;
+    const individualImmunityPoints = rowTyped?.individual_immunity_points ?? 0;
     const weeksSurvived = rowTyped?.weeks_survived ?? 0;
     const eliminationsHit = rowTyped?.eliminations_hit ?? 0;
+
+    const totalPoints = (s: number, t: number, i: number) => s + t + i;
 
     const upsertRow = (payload: Record<string, unknown>) =>
       // Type workaround: SupabaseClient<Database> infers never for some table mutators
       (supabase.from("user_season_points") as any).upsert(payload, { onConflict: "user_id,season" });
 
     if (pick.player_id === votedOutId) {
+      const newSurvival = survivalPoints - 1;
       await upsertRow({
         user_id: pick.user_id,
         season: SEASON,
-        points: points - 1,
+        survival_points: newSurvival,
+        tribe_immunity_points: tribeImmunityPoints,
+        individual_immunity_points: individualImmunityPoints,
+        points: totalPoints(newSurvival, tribeImmunityPoints, individualImmunityPoints),
         weeks_survived: 0,
         eliminations_hit: eliminationsHit + 1,
         last_week_delta: -1,
@@ -108,10 +122,14 @@ export async function processEpisode(
         .eq("user_id", pick.user_id)
         .eq("season", SEASON);
     } else {
+      const newSurvival = survivalPoints + 1;
       await upsertRow({
         user_id: pick.user_id,
         season: SEASON,
-        points: points + 1,
+        survival_points: newSurvival,
+        tribe_immunity_points: tribeImmunityPoints,
+        individual_immunity_points: individualImmunityPoints,
+        points: totalPoints(newSurvival, tribeImmunityPoints, individualImmunityPoints),
         weeks_survived: weeksSurvived + 1,
         eliminations_hit: eliminationsHit,
         last_week_delta: 1,

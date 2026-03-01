@@ -8,7 +8,7 @@ export default async function LeaderboardPage() {
 
   const { data: pointsRows } = await supabase
     .from("user_season_points")
-    .select("user_id, points, weeks_survived, eliminations_hit, last_week_delta")
+    .select("user_id, points, survival_points, tribe_immunity_points, individual_immunity_points, weeks_survived, eliminations_hit, last_week_delta")
     .eq("season", SEASON)
     .order("points", { ascending: false });
 
@@ -44,6 +44,9 @@ export default async function LeaderboardPage() {
       currentPick: currentPick?.name ?? "—",
       weeksSurvived: pts?.weeks_survived ?? 0,
       eliminationsHit: pts?.eliminations_hit ?? 0,
+      survivalPoints: pts?.survival_points ?? 0,
+      tribeImmunityPoints: pts?.tribe_immunity_points ?? 0,
+      individualImmunityPoints: pts?.individual_immunity_points ?? 0,
       points: pts?.points ?? 0,
       lastWeekDelta: pts?.last_week_delta ?? null,
       status,
@@ -84,6 +87,9 @@ export default async function LeaderboardPage() {
               <th style={{ textAlign: "left", padding: "0.75rem" }}>Status</th>
               <th style={{ textAlign: "right", padding: "0.75rem" }}>Last week</th>
               <th style={{ textAlign: "right", padding: "0.75rem" }}>Repicks</th>
+              <th style={{ textAlign: "right", padding: "0.75rem" }} title="Winner pick">Survival</th>
+              <th style={{ textAlign: "right", padding: "0.75rem" }} title="Tribe immunity (pre-merge)">Tribe imm.</th>
+              <th style={{ textAlign: "right", padding: "0.75rem" }} title="Individual immunity (post-merge)">Ind. imm.</th>
               <th style={{ textAlign: "right", padding: "0.75rem" }}>Total</th>
             </tr>
           </thead>
@@ -116,6 +122,15 @@ export default async function LeaderboardPage() {
                     : "—"}
                 </td>
                 <td style={{ padding: "0.75rem", textAlign: "right" }}>{row.eliminationsHit}</td>
+                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+                  {row.survivalPoints}
+                </td>
+                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+                  {row.tribeImmunityPoints}
+                </td>
+                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+                  {row.individualImmunityPoints}
+                </td>
                 <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-accent)", fontWeight: 700 }}>
                   {row.points}
                 </td>

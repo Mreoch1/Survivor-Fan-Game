@@ -104,6 +104,9 @@ export interface Database {
           user_id: string;
           season: number;
           points: number;
+          survival_points: number;
+          tribe_immunity_points: number;
+          individual_immunity_points: number;
           weeks_survived: number;
           eliminations_hit: number;
           last_week_delta: number | null;
@@ -112,12 +115,18 @@ export interface Database {
           user_id: string;
           season: number;
           points?: number;
+          survival_points?: number;
+          tribe_immunity_points?: number;
+          individual_immunity_points?: number;
           weeks_survived?: number;
           eliminations_hit?: number;
           last_week_delta?: number | null;
         };
         Update: {
           points?: number;
+          survival_points?: number;
+          tribe_immunity_points?: number;
+          individual_immunity_points?: number;
           weeks_survived?: number;
           eliminations_hit?: number;
           last_week_delta?: number | null;
