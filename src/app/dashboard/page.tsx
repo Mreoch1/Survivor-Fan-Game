@@ -149,11 +149,23 @@ export default async function DashboardPage() {
         <h2 id="how-scoring-works" className="survivor-card__title">
           How scoring works
         </h2>
-        <p className="survivor-dashboard__card-body">
-          Pick one castaway to win the season. Each week they survive: +1 point. If they are voted
-          out, injured, or removed from the show: -1 point. After elimination (including
-          injury/removal), you must pick a new remaining player. Picks lock when the episode
-          starts.
+        <ul className="survivor-dashboard__list survivor-dashboard__list--mb">
+          <li className="survivor-dashboard__list-item">
+            <strong>Winner pick:</strong> Pick one castaway to win the season. Each week they
+            survive: +1 point. If they are voted out, injured, or removed: -1 point; then pick a
+            new remaining player. Picks lock when the episode starts.
+          </li>
+          <li className="survivor-dashboard__list-item">
+            <strong>Tribe immunity (pre-merge):</strong> Each week before the merge, pick which
+            tribe wins immunity. Correct pick = points. (Coming soon.)
+          </li>
+          <li className="survivor-dashboard__list-item">
+            <strong>Individual immunity (post-merge):</strong> After the merge, pick which castaway
+            wins immunity each week. Correct pick = points. (Coming soon.)
+          </li>
+        </ul>
+        <p className="survivor-dashboard__card-body survivor-dashboard__card-body--no-margin">
+          All picks lock when the episode starts.
         </p>
       </section>
 

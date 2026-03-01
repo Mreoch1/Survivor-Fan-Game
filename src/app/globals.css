@@ -342,6 +342,10 @@ body {
   margin-bottom: 0;
 }
 
+.survivor-dashboard__list--mb {
+  margin-bottom: 0.5rem;
+}
+
 .survivor-dashboard__status-badge {
   display: inline-block;
   padding: 0.2rem 0.5rem;
