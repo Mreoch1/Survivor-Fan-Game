@@ -169,6 +169,8 @@ where id = (select id from auth.users where email = 'mreoch82@hotmail.com');
 ```
 Replace the email with the user's login email. Then do a **hard refresh** (Ctrl+Shift+R / Cmd+Shift+R) or sign out and back in to see the Admin link.
 
+**If Admin still doesn't appear:** In Supabase go to **Table Editor → profiles**, find your row (filter by your email), and confirm **is_admin** is checked. If it's not, run the SQL again with your exact login email and hard refresh.
+
 **By profile email** (only if `profiles.email` is set for that user):
 ```sql
 update public.profiles set is_admin = true where email = 'THEIR-EMAIL@example.com';

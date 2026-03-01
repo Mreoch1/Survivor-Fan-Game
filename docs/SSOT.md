@@ -69,6 +69,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-02-26: Tribe immunity implemented: migration 005 adds `immunity_winning_tribe_id` to episodes and table `tribe_immunity_picks` (user_id, episode_id, tribe_id). Picks page: "Which tribe wins immunity?" for current episode; API saves/clears pick; same lock as vote-out. process-episode awards +1 tribe_immunity_points when episode has immunity_winning_tribe_id set. Copy updated: tribe immunity live; individual immunity "coming when the show switches."
 - 2026-02-26: Vote-out pick scoring: migration 007 adds `vote_out_points` to user_season_points. process-episode awards +2 per correct vote-out pick (POINTS_PER_CORRECT_VOTE_OUT; change to 10 in code if desired). Leaderboard and dashboard copy updated.
 - 2026-02-26: Admin: migration 008 adds profiles.is_admin, profiles.deactivated_at, RLS for admin update on episodes/profiles/user_season_points. Admin page at /dashboard/admin: episodes (lock, results, process), users (names, scores, remove/restore). process-episode API restricted to admins. Leaderboard excludes deactivated users. Cast cards and player detail show red X and "Eliminated — Episode N" for voted-out players.
+- 2026-02-26: Leaderboard names: dashboard layout syncs current user's email to their profile on load; migration 009 backfills profile email from auth.users so existing users show email (or display_name) instead of "Player".
 
 ## Theme music
 

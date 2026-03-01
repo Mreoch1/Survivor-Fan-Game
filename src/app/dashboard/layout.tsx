@@ -16,6 +16,11 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  await supabase
+    .from("profiles")
+    .update({ email: user.email ?? null, updated_at: new Date().toISOString() })
+    .eq("id", user.id);
+
   const { data: profile } = await supabase
     .from("profiles")
     .select("is_admin")
