@@ -14,6 +14,8 @@ export interface Database {
           id: string;
           email: string | null;
           display_name: string | null;
+          is_admin: boolean;
+          deactivated_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -21,6 +23,8 @@ export interface Database {
           id: string;
           email?: string | null;
           display_name?: string | null;
+          is_admin?: boolean;
+          deactivated_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -28,6 +32,8 @@ export interface Database {
           id?: string;
           email?: string | null;
           display_name?: string | null;
+          is_admin?: boolean;
+          deactivated_at?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -110,6 +116,7 @@ export interface Database {
           survival_points: number;
           tribe_immunity_points: number;
           individual_immunity_points: number;
+          vote_out_points: number;
           weeks_survived: number;
           eliminations_hit: number;
           last_week_delta: number | null;
@@ -121,6 +128,7 @@ export interface Database {
           survival_points?: number;
           tribe_immunity_points?: number;
           individual_immunity_points?: number;
+          vote_out_points?: number;
           weeks_survived?: number;
           eliminations_hit?: number;
           last_week_delta?: number | null;
@@ -130,6 +138,7 @@ export interface Database {
           survival_points?: number;
           tribe_immunity_points?: number;
           individual_immunity_points?: number;
+          vote_out_points?: number;
           weeks_survived?: number;
           eliminations_hit?: number;
           last_week_delta?: number | null;

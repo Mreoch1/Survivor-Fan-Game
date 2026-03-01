@@ -25,11 +25,23 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 
 - Each week before the merge, you pick which tribe wins immunity. Correct pick = +1 point. Set `immunity_winning_tribe_id` on the episode when results are in; process-episode awards tribe_immunity_points. Picks lock with vote-out (same episode lock).
 
-**3. Individual immunity (post-merge)** — planned
+**3. Vote-out pick** — implemented
+
+- Each week you pick who gets voted out. Correct pick = +2 points (configurable: `POINTS_PER_CORRECT_VOTE_OUT` in `src/lib/process-episode.ts`; set to 10 if you want vote-out to weigh more). Awarded when episode is processed.
+
+**4. Individual immunity (post-merge)** — planned
 
 - After the merge, you pick which castaway wins individual immunity each week. Correct pick = points (e.g. +1 per episode). Requires episode-level "immunity winner" player and user picks per episode; scoring in process-episode.
 
 **Lock rules:** All picks lock at episode start. Set a consistent "results publish time" (e.g. Friday 9:00 AM ET) so scoring updates are predictable.
+
+## Admin
+
+- **Who:** Any user with `profiles.is_admin = true` (set in Supabase or via SQL). Typically the group creator / first user.
+- **Where:** Dashboard → Admin (link only visible to admins). Requires migration 008 (is_admin, deactivated_at, RLS).
+- **Episodes:** Unlock/lock picks (set vote_out_lock_at), set voted_out_player_id and immunity_winning_tribe_id, run Process episode to apply scoring.
+- **Users:** Edit display names, adjust score breakdown (survival, tribe imm., vote-out, ind. imm.), remove from group (sets deactivated_at; user is hidden from leaderboard) or restore.
+- **Cast:** Eliminated players (voted_out_player_id set on an episode) show a red X overlay and "Eliminated — Episode N" on cast cards and player detail.
 
 ## Auth
 
@@ -41,7 +53,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - **Season 50 cast:** 24 players, 3 tribes with fan-voted colors: Cila (orange #e85d04), Kalo (teal #0d9488), Vatu (magenta #c026d3). Stored in app as static data. Player cards show initials when `imageUrl` is null; set `imageUrl` in `src/data/players.ts` for self-hosted or licensed photos.
 - **Episodes:** Episode number, lock time, **voted_out_player_id** (who was eliminated; required for survival scoring), **immunity_winning_tribe_id** (tribe that won immunity this episode; optional, used for tribe immunity scoring). Planned: immunity_winning_player_id (post-merge) for individual immunity.
 - **User picks:** winner_picks, vote_out_picks (per episode), **tribe_immunity_picks** (user_id, episode_id, tribe_id; one per user per episode), tribe_picks (season-long tribe choice), profiles.
-- **user_season_points:** Points per user per season with breakdown: `survival_points` (winner pick), `tribe_immunity_points`, `individual_immunity_points`; `points` = sum of the three. Also `weeks_survived`, `eliminations_hit`, `last_week_delta`. **episode_points_processed:** Tracks which episodes have had points applied (idempotent).
+- **user_season_points:** Points per user per season with breakdown: `survival_points`, `tribe_immunity_points`, `individual_immunity_points`, `vote_out_points`; `points` = sum of all four. Also `weeks_survived`, `eliminations_hit`, `last_week_delta`. **episode_points_processed:** Tracks which episodes have had points applied (idempotent).
 
 ## Decisions log
 
@@ -55,6 +67,8 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-02-26: Point system expanded in SSOT: (1) winner pick survival (implemented), (2) tribe immunity pre-merge (planned), (3) individual immunity post-merge (planned). Dashboard "How scoring works" and leaderboard copy updated to describe all three. TODOs added for tribe/individual immunity schema and scoring.
 - 2026-02-26: Leaderboard points breakdown: migration 004 adds `survival_points`, `tribe_immunity_points`, `individual_immunity_points` to user_season_points; `points` = sum. process-episode writes survival_points and recomputes points. Leaderboard table shows Survival, Tribe imm., Ind. imm., Total columns.
 - 2026-02-26: Tribe immunity implemented: migration 005 adds `immunity_winning_tribe_id` to episodes and table `tribe_immunity_picks` (user_id, episode_id, tribe_id). Picks page: "Which tribe wins immunity?" for current episode; API saves/clears pick; same lock as vote-out. process-episode awards +1 tribe_immunity_points when episode has immunity_winning_tribe_id set. Copy updated: tribe immunity live; individual immunity "coming when the show switches."
+- 2026-02-26: Vote-out pick scoring: migration 007 adds `vote_out_points` to user_season_points. process-episode awards +2 per correct vote-out pick (POINTS_PER_CORRECT_VOTE_OUT; change to 10 in code if desired). Leaderboard and dashboard copy updated.
+- 2026-02-26: Admin: migration 008 adds profiles.is_admin, profiles.deactivated_at, RLS for admin update on episodes/profiles/user_season_points. Admin page at /dashboard/admin: episodes (lock, results, process), users (names, scores, remove/restore). process-episode API restricted to admins. Leaderboard excludes deactivated users. Cast cards and player detail show red X and "Eliminated — Episode N" for voted-out players.
 
 ## Theme music
 

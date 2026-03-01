@@ -138,6 +138,9 @@ export default async function DashboardPage() {
             tribe wins immunity. Correct pick = +1 point.
           </li>
           <li className="survivor-dashboard__list-item">
+            <strong>Vote-out:</strong> Pick who gets voted out each week. Correct pick = +2 points.
+          </li>
+          <li className="survivor-dashboard__list-item">
             <strong>Individual immunity (post-merge):</strong> After the merge, pick which castaway
             wins immunity each week. Correct pick = points. (Coming soon.)
           </li>

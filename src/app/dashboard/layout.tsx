@@ -14,6 +14,12 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("is_admin")
+    .eq("id", user.id)
+    .single();
+
   return (
     <div className="survivor-app">
       <header className="survivor-header">
@@ -21,7 +27,7 @@ export default async function DashboardLayout({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/image.png" alt="Survivor 50: In the Hands of the Fans" className="survivor-header__logo-img" />
         </Link>
-        <DashboardNav userEmail={user.email} />
+        <DashboardNav userEmail={user.email} isAdmin={profile?.is_admin ?? false} />
       </header>
       <main className="survivor-main">{children}</main>
     </div>

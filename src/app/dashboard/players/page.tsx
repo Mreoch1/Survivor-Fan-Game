@@ -1,9 +1,23 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
 import { PLAYERS, TRIBES, getPlayersByTribe, CASTAWAYS_PAGE_URL } from "@/data/players";
 import type { TribeId } from "@/data/players";
 import { FaceCard } from "@/components/FaceCard";
 
-export default function PlayersPage() {
+export default async function PlayersPage() {
+  const supabase = await createClient();
+  const { data: episodes } = await supabase
+    .from("episodes")
+    .select("episode_number, voted_out_player_id")
+    .eq("season", 50)
+    .not("voted_out_player_id", "is", null)
+    .order("episode_number", { ascending: true });
+
+  const eliminatedByEpisode = new Map<string, number>();
+  episodes?.forEach((ep) => {
+    if (ep.voted_out_player_id) eliminatedByEpisode.set(ep.voted_out_player_id, ep.episode_number);
+  });
+
   const cila = getPlayersByTribe("cila" as TribeId);
   const kalo = getPlayersByTribe("kalo" as TribeId);
   const vatu = getPlayersByTribe("vatu" as TribeId);
@@ -36,7 +50,12 @@ export default function PlayersPage() {
             }}
           >
             {players.map((player) => (
-              <FaceCard key={player.id} player={player} tribeColor={color} />
+              <FaceCard
+                key={player.id}
+                player={player}
+                tribeColor={color}
+                eliminatedEpisodeNumber={eliminatedByEpisode.get(player.id) ?? null}
+              />
             ))}
           </div>
         </section>

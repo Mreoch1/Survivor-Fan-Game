@@ -16,6 +16,10 @@ export async function POST(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+  if (!profile?.is_admin) {
+    return NextResponse.json({ error: "Admin only" }, { status: 403 });
+  }
 
   const body = await request.json();
   const episodeId = typeof body.episodeId === "string" ? body.episodeId : null;

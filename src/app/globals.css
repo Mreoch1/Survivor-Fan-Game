@@ -494,6 +494,13 @@ body {
   font-weight: 700;
 }
 
+.survivor-admin-inline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .survivor-dashboard__tribe-name--cila {
   color: var(--survivor-tribe-cila);
 }
@@ -557,6 +564,46 @@ body {
   color: var(--survivor-text-muted);
   margin-top: 0.5rem;
   line-height: 1.35;
+}
+
+.survivor-facecard--eliminated {
+  opacity: 0.65;
+}
+
+.survivor-facecard--eliminated .survivor-facecard__image-wrap {
+  position: relative;
+}
+
+.survivor-facecard__eliminated-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.survivor-facecard__eliminated-x {
+  width: 50%;
+  height: 50%;
+  stroke: var(--survivor-danger);
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(0, 0, 0, 0.8));
+}
+
+.survivor-facecard__eliminated-label {
+  position: absolute;
+  bottom: 0.25rem;
+  left: 0.25rem;
+  right: 0.25rem;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--survivor-bg);
+  background: var(--survivor-danger);
+  padding: 0.2rem 0.35rem;
+  border-radius: 0.25rem;
+  text-align: center;
 }
 
 /* Buttons */

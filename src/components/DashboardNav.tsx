@@ -4,9 +4,10 @@ import { ThemePicker } from "./ThemePicker";
 
 interface DashboardNavProps {
   userEmail?: string | null;
+  isAdmin?: boolean;
 }
 
-export function DashboardNav({ userEmail }: DashboardNavProps) {
+export function DashboardNav({ userEmail, isAdmin }: DashboardNavProps) {
   return (
     <nav className="survivor-header__nav">
       <ThemePicker />
@@ -28,6 +29,11 @@ export function DashboardNav({ userEmail }: DashboardNavProps) {
       <Link href="/dashboard/invite" className="survivor-header__link">
         Invite
       </Link>
+      {isAdmin && (
+        <Link href="/dashboard/admin" className="survivor-header__link">
+          Admin
+        </Link>
+      )}
       {userEmail && (
         <span className="survivor-header__user-email">{userEmail}</span>
       )}

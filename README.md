@@ -157,6 +157,18 @@ vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 ---
 
+## Admin (group starter)
+
+The group creator or first user should be made an admin so they can manage episodes, users, and scoring from **Dashboard → Admin**. Run once in Supabase SQL Editor (replace the UUID with the user's `id` from `auth.users` or `public.profiles`):
+
+```sql
+update public.profiles set is_admin = true where id = 'YOUR-USER-UUID';
+```
+
+After migration 008, admins can unlock/lock picks, set episode results, run Process episode, edit user names and scores, and remove or restore users from the group.
+
+---
+
 ## Unlock / lock episode picks
 
 Picks for an episode are locked when the current time is past that episode’s `vote_out_lock_at`. To **unlock** week 1 (or any episode) so new users can submit picks, run in Supabase SQL Editor:

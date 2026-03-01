@@ -8,7 +8,7 @@ export default async function LeaderboardPage() {
 
   const { data: pointsRows } = await supabase
     .from("user_season_points")
-    .select("user_id, points, survival_points, tribe_immunity_points, individual_immunity_points, weeks_survived, eliminations_hit, last_week_delta")
+    .select("user_id, points, survival_points, tribe_immunity_points, individual_immunity_points, vote_out_points, weeks_survived, eliminations_hit, last_week_delta")
     .eq("season", SEASON)
     .order("points", { ascending: false });
 
@@ -23,14 +23,16 @@ export default async function LeaderboardPage() {
 
   const { data: profiles } =
     userIds.size > 0
-      ? await supabase.from("profiles").select("id, display_name, email").in("id", Array.from(userIds))
+      ? await supabase.from("profiles").select("id, display_name, email, deactivated_at").in("id", Array.from(userIds))
       : { data: [] };
 
   const profileMap = new Map(profiles?.map((p) => [p.id, p]) ?? []);
   const pointsMap = new Map(pointsRows?.map((r) => [r.user_id, r]) ?? []);
   const pickMap = new Map(picks?.map((p) => [p.user_id, p]) ?? []);
 
-  const rows = Array.from(userIds).map((userId) => {
+  const activeUserIds = Array.from(userIds).filter((uid) => !profileMap.get(uid)?.deactivated_at);
+
+  const rows = activeUserIds.map((userId) => {
     const pts = pointsMap.get(userId);
     const pick = pickMap.get(userId);
     const profile = profileMap.get(userId);
@@ -47,6 +49,7 @@ export default async function LeaderboardPage() {
       survivalPoints: pts?.survival_points ?? 0,
       tribeImmunityPoints: pts?.tribe_immunity_points ?? 0,
       individualImmunityPoints: pts?.individual_immunity_points ?? 0,
+      voteOutPoints: pts?.vote_out_points ?? 0,
       points: pts?.points ?? 0,
       lastWeekDelta: pts?.last_week_delta ?? null,
       status,
@@ -72,6 +75,7 @@ export default async function LeaderboardPage() {
         <ul style={{ color: "var(--survivor-text-muted)", lineHeight: 1.7, margin: 0, paddingLeft: "1.25rem" }}>
           <li><strong>Winner pick:</strong> +1 each week your current pick survives; -1 when eliminated (voted out, injured, or removed); repick before next episode.</li>
           <li><strong>Tribe immunity (pre-merge):</strong> Pick which tribe wins immunity; correct pick = +1 point.</li>
+          <li><strong>Vote-out:</strong> Pick who gets voted out each week; correct pick = +2 points.</li>
           <li><strong>Individual immunity (post-merge):</strong> Pick which castaway wins immunity; correct pick = points. (Coming soon.)</li>
           <li>All picks lock at episode start</li>
         </ul>
@@ -90,6 +94,7 @@ export default async function LeaderboardPage() {
               <th style={{ textAlign: "right", padding: "0.75rem" }} title="Winner pick">Survival</th>
               <th style={{ textAlign: "right", padding: "0.75rem" }} title="Tribe immunity (pre-merge)">Tribe imm.</th>
               <th style={{ textAlign: "right", padding: "0.75rem" }} title="Individual immunity (post-merge)">Ind. imm.</th>
+              <th style={{ textAlign: "right", padding: "0.75rem" }} title="Correct vote-out picks">Vote-out</th>
               <th style={{ textAlign: "right", padding: "0.75rem" }}>Total</th>
             </tr>
           </thead>
@@ -131,6 +136,9 @@ export default async function LeaderboardPage() {
                 <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
                   {row.individualImmunityPoints}
                 </td>
+                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+                  {row.voteOutPoints}
+                </td>
                 <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-accent)", fontWeight: 700 }}>
                   {row.points}
                 </td>
@@ -156,7 +164,7 @@ export default async function LeaderboardPage() {
           How scoring works
         </h2>
         <p style={{ color: "var(--survivor-text-muted)", lineHeight: 1.6, margin: 0 }}>
-          Winner pick: +1 per week your pick survives, -1 when eliminated (then repick). Tribe immunity: +1 for correct tribe each week (pre-merge). Individual immunity (post-merge) coming when the show switches. All picks lock when the episode starts.
+          Winner pick: +1 per week your pick survives, -1 when eliminated (then repick). Tribe immunity: +1 for correct tribe (pre-merge). Vote-out: +2 for correct boot pick. Individual immunity (post-merge) coming when the show switches. All picks lock when the episode starts.
         </p>
       </section>
     </>

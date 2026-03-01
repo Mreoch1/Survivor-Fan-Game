@@ -71,7 +71,7 @@ export default async function PicksPage() {
         My picks
       </h1>
       <p style={{ color: "var(--survivor-text-muted)", marginBottom: "0.5rem" }}>
-        Pick a player to win (+1 per week they stay in, -1 when eliminated; then repick). Each week pick which tribe wins immunity for +1 if correct. Picks lock when the episode starts.
+        Pick a player to win (+1 per week they stay in, -1 when eliminated; then repick). Each week pick which tribe wins immunity (+1 if correct) and who gets voted out (+2 if correct). Picks lock when the episode starts.
       </p>
       <p style={{ color: "var(--survivor-accent)", fontWeight: 600, marginBottom: "1.5rem" }}>
         Your points: {userPoints}

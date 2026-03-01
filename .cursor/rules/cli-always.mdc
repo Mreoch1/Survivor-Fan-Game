@@ -1,0 +1,16 @@
+---
+description: Prefer CLI for all operations when a CLI is available
+alwaysApply: true
+---
+
+# Use CLI Always
+
+When a command-line interface exists for a task, use it. Do not suggest manual steps or GUI workflows when the CLI can do the same thing.
+
+- **Dependencies:** `npm install`, `npm run …`, not "open package manager" or manual downloads.
+- **Database:** `npm run db:push`, `supabase …`, not only "run this in the SQL Editor" when a script or migration command exists.
+- **Git:** After making changes, always commit and push: `git add`, `git commit`, `git push`. Do this at the end of the session or after a logical set of changes so the remote is up to date.
+- **Build/lint:** `npm run build`, `npm run lint`, `npm run typecheck` (or equivalent), not "click Build" in the IDE.
+- **Env:** Use `vercel env pull` or project scripts that read/write env, when documented.
+
+Prefer running commands in the terminal (e.g. via the Shell tool) over instructing the user to do steps manually, unless the task genuinely requires manual action (e.g. first-time Supabase dashboard config for URLs).
