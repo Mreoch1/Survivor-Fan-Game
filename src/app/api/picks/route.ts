@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { winnerId, tribeId, episodeId, voteOutId } = body;
+  const { winnerId, tribeId, episodeId, voteOutId, tribeImmunityEpisodeId, tribeImmunityTribeId } = body;
 
   if (winnerId) {
     const { error: upsertPickErr } = await supabase.from("winner_picks").upsert(
@@ -70,6 +70,36 @@ export async function POST(request: Request) {
     });
     if (insertErr) {
       return NextResponse.json({ error: insertErr.message }, { status: 500 });
+    }
+  }
+
+  if (tribeImmunityEpisodeId) {
+    const { data: episode } = await supabase
+      .from("episodes")
+      .select("vote_out_lock_at")
+      .eq("id", tribeImmunityEpisodeId)
+      .single();
+    if (episode && new Date() >= new Date(episode.vote_out_lock_at)) {
+      return NextResponse.json({ error: "Tribe immunity pick is locked for this episode" }, { status: 400 });
+    }
+    if (tribeImmunityTribeId) {
+      const { error: upsertErr } = await supabase.from("tribe_immunity_picks").upsert(
+        {
+          user_id: user.id,
+          episode_id: tribeImmunityEpisodeId,
+          tribe_id: tribeImmunityTribeId,
+        },
+        { onConflict: "user_id,episode_id" }
+      );
+      if (upsertErr) {
+        return NextResponse.json({ error: upsertErr.message }, { status: 500 });
+      }
+    } else {
+      await supabase
+        .from("tribe_immunity_picks")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("episode_id", tribeImmunityEpisodeId);
     }
   }
 

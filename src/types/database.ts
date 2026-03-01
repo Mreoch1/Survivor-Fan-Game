@@ -63,6 +63,7 @@ export interface Database {
           episode_number: number;
           vote_out_lock_at: string;
           voted_out_player_id: string | null;
+          immunity_winning_tribe_id: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -72,11 +73,13 @@ export interface Database {
           episode_number: number;
           vote_out_lock_at: string;
           voted_out_player_id?: string | null;
+          immunity_winning_tribe_id?: string | null;
           created_at?: string;
           updated_at?: string;
         };
         Update: {
           voted_out_player_id?: string | null;
+          immunity_winning_tribe_id?: string | null;
           updated_at?: string;
         };
       };
@@ -169,6 +172,25 @@ export interface Database {
           user_id: string;
           tribe_id: string;
           season: number;
+          created_at?: string;
+        };
+        Update: {
+          tribe_id?: string;
+        };
+      };
+      tribe_immunity_picks: {
+        Row: {
+          id: string;
+          user_id: string;
+          episode_id: string;
+          tribe_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          episode_id: string;
+          tribe_id: string;
           created_at?: string;
         };
         Update: {

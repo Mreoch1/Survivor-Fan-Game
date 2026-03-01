@@ -22,6 +22,7 @@ interface PicksFormProps {
   initialTribeId: TribeId | null;
   currentEpisode: Episode | null;
   initialVoteOutId: string | null;
+  initialTribeImmunityId: TribeId | null;
 }
 
 export function PicksForm({
@@ -34,10 +35,12 @@ export function PicksForm({
   initialTribeId,
   currentEpisode,
   initialVoteOutId,
+  initialTribeImmunityId,
 }: PicksFormProps) {
   const [winnerId, setWinnerId] = useState<string>(initialWinnerId ?? "");
   const [tribeId, setTribeId] = useState<TribeId | "">(initialTribeId ?? "");
   const [voteOutId, setVoteOutId] = useState<string>(initialVoteOutId ?? "");
+  const [tribeImmunityId, setTribeImmunityId] = useState<TribeId | "">(initialTribeImmunityId ?? "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
@@ -54,6 +57,8 @@ export function PicksForm({
           tribeId: tribeId || null,
           voteOutId: currentEpisode && voteOutId ? voteOutId : null,
           episodeId: currentEpisode?.id ?? null,
+          tribeImmunityEpisodeId: currentEpisode?.id ?? null,
+          tribeImmunityTribeId: tribeImmunityId || null,
         }),
       });
       const data = await res.json();
@@ -125,9 +130,38 @@ export function PicksForm({
       </div>
 
       {currentEpisode && (
-        <div style={{ marginBottom: "1.5rem" }}>
-          <label className="survivor-auth__label" htmlFor="voteOut">
-            Who gets voted out this week? (Episode {currentEpisode.episode_number})
+        <>
+          <div style={{ marginBottom: "1.5rem" }}>
+            <label className="survivor-auth__label">Which tribe wins immunity? (Episode {currentEpisode.episode_number})</label>
+            {lockTime && (
+              <span style={{ fontSize: "0.8125rem", color: "var(--survivor-text-muted)", marginLeft: "0.5rem" }}>
+                Locks: {lockTime.toLocaleString()}
+              </span>
+            )}
+            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+              {(Object.keys(tribes) as TribeId[]).map((id) => (
+                <label key={id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+                  <input
+                    type="radio"
+                    name="tribeImmunity"
+                    value={id}
+                    checked={tribeImmunityId === id}
+                    onChange={() => setTribeImmunityId(id)}
+                    disabled={isLocked}
+                  />
+                  <span style={{ color: tribes[id].color, fontWeight: 600 }}>{tribes[id].name}</span>
+                </label>
+              ))}
+            </div>
+            {isLocked && (
+              <p style={{ fontSize: "0.875rem", color: "var(--survivor-text-muted)", marginTop: "0.25rem" }}>
+                Tribe immunity pick is locked for this episode.
+              </p>
+            )}
+          </div>
+          <div style={{ marginBottom: "1.5rem" }}>
+            <label className="survivor-auth__label" htmlFor="voteOut">
+              Who gets voted out this week? (Episode {currentEpisode.episode_number})
             {lockTime && (
               <span style={{ fontSize: "0.8125rem", color: "var(--survivor-text-muted)", marginLeft: "0.5rem" }}>
                 Locks: {lockTime.toLocaleString()}
@@ -146,7 +180,7 @@ export function PicksForm({
               <option key={p.id} value={p.id}>
                 {p.name}
               </option>
-            ))}
+            )            )}
           </select>
           {isLocked && (
             <p style={{ fontSize: "0.875rem", color: "var(--survivor-text-muted)", marginTop: "0.25rem" }}>
@@ -154,6 +188,7 @@ export function PicksForm({
             </p>
           )}
         </div>
+        </>
       )}
 
       {!currentEpisode && (

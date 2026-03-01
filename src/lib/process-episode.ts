@@ -25,7 +25,7 @@ export async function processEpisode(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data: episodeData, error: epErr } = await supabase
     .from("episodes")
-    .select("id, season, voted_out_player_id")
+    .select("id, season, voted_out_player_id, immunity_winning_tribe_id")
     .eq("id", episodeId)
     .single();
 
@@ -33,7 +33,12 @@ export async function processEpisode(
     return { ok: false, error: "Episode not found" };
   }
 
-  const episode = episodeData as { id: string; season: number; voted_out_player_id: string | null };
+  const episode = episodeData as {
+    id: string;
+    season: number;
+    voted_out_player_id: string | null;
+    immunity_winning_tribe_id: string | null;
+  };
   if (episode.season !== SEASON) {
     return { ok: false, error: "Wrong season" };
   }
@@ -134,6 +139,47 @@ export async function processEpisode(
         eliminations_hit: eliminationsHit,
         last_week_delta: 1,
       });
+    }
+  }
+
+  // Tribe immunity: +1 for each user who picked the winning tribe this episode
+  if (episode.immunity_winning_tribe_id) {
+    const { data: tribeCorrectPicks } = await supabase
+      .from("tribe_immunity_picks")
+      .select("user_id")
+      .eq("episode_id", episodeId)
+      .eq("tribe_id", episode.immunity_winning_tribe_id);
+
+    const winnerUserIds = (tribeCorrectPicks ?? []).map((r: { user_id: string }) => r.user_id);
+    for (const uid of winnerUserIds) {
+      const { data: row } = await supabase
+        .from("user_season_points")
+        .select("survival_points, tribe_immunity_points, individual_immunity_points, weeks_survived, eliminations_hit, last_week_delta")
+        .eq("user_id", uid)
+        .eq("season", SEASON)
+        .maybeSingle();
+
+      const r = row as SeasonPointsRow | null;
+      const s = r?.survival_points ?? 0;
+      const t = r?.tribe_immunity_points ?? 0;
+      const i = r?.individual_immunity_points ?? 0;
+      const newTribe = t + 1;
+      const total = s + newTribe + i;
+
+      await (supabase.from("user_season_points") as any).upsert(
+        {
+          user_id: uid,
+          season: SEASON,
+          survival_points: s,
+          tribe_immunity_points: newTribe,
+          individual_immunity_points: i,
+          points: total,
+          weeks_survived: r?.weeks_survived ?? 0,
+          eliminations_hit: r?.eliminations_hit ?? 0,
+          last_week_delta: r?.last_week_delta ?? null,
+        },
+        { onConflict: "user_id,season" }
+      );
     }
   }
 

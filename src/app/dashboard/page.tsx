@@ -157,7 +157,7 @@ export default async function DashboardPage() {
           </li>
           <li className="survivor-dashboard__list-item">
             <strong>Tribe immunity (pre-merge):</strong> Each week before the merge, pick which
-            tribe wins immunity. Correct pick = points. (Coming soon.)
+            tribe wins immunity. Correct pick = +1 point.
           </li>
           <li className="survivor-dashboard__list-item">
             <strong>Individual immunity (post-merge):</strong> After the merge, pick which castaway

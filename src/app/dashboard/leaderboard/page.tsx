@@ -71,7 +71,7 @@ export default async function LeaderboardPage() {
         </h2>
         <ul style={{ color: "var(--survivor-text-muted)", lineHeight: 1.7, margin: 0, paddingLeft: "1.25rem" }}>
           <li><strong>Winner pick:</strong> +1 each week your current pick survives; -1 when eliminated (voted out, injured, or removed); repick before next episode.</li>
-          <li><strong>Tribe immunity (pre-merge):</strong> Pick which tribe wins immunity; correct pick = points. (Coming soon.)</li>
+          <li><strong>Tribe immunity (pre-merge):</strong> Pick which tribe wins immunity; correct pick = +1 point.</li>
           <li><strong>Individual immunity (post-merge):</strong> Pick which castaway wins immunity; correct pick = points. (Coming soon.)</li>
           <li>All picks lock at episode start</li>
         </ul>
@@ -156,7 +156,7 @@ export default async function LeaderboardPage() {
           How scoring works
         </h2>
         <p style={{ color: "var(--survivor-text-muted)", lineHeight: 1.6, margin: 0 }}>
-          Winner pick: +1 per week your pick survives, -1 when eliminated (then repick). Tribe immunity (pre-merge) and individual immunity (post-merge) scoring are coming soon. All picks lock when the episode starts.
+          Winner pick: +1 per week your pick survives, -1 when eliminated (then repick). Tribe immunity: +1 for correct tribe each week (pre-merge). Individual immunity (post-merge) coming when the show switches. All picks lock when the episode starts.
         </p>
       </section>
     </>

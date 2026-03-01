@@ -52,6 +52,7 @@ export default async function PicksPage() {
     (e) => !e.voted_out_player_id
   );
   let userVoteOutPick: string | null = null;
+  let userTribeImmunityPick: TribeId | null = null;
   if (currentEpisode) {
     const { data: votePick } = await supabase
       .from("vote_out_picks")
@@ -60,6 +61,13 @@ export default async function PicksPage() {
       .eq("episode_id", currentEpisode.id)
       .maybeSingle();
     userVoteOutPick = votePick?.player_id ?? null;
+    const { data: tribeImmPick } = await supabase
+      .from("tribe_immunity_picks")
+      .select("tribe_id")
+      .eq("user_id", user.id)
+      .eq("episode_id", currentEpisode.id)
+      .maybeSingle();
+    userTribeImmunityPick = (tribeImmPick?.tribe_id as TribeId) ?? null;
   }
 
   const inGamePlayers = PLAYERS.filter((p) => !eliminatedPlayerIds.has(p.id));
@@ -70,7 +78,7 @@ export default async function PicksPage() {
         My picks
       </h1>
       <p style={{ color: "var(--survivor-text-muted)", marginBottom: "0.5rem" }}>
-        Pick a player to win. You get +1 point for each week they stay in. If they’re voted out, injured, or removed from the show you get -1 and must pick a new winner. Earlier correct picks earn more.
+        Pick a player to win (+1 per week they stay in, -1 when eliminated; then repick). Each week pick which tribe wins immunity for +1 if correct. Picks lock when the episode starts.
       </p>
       <p style={{ color: "var(--survivor-accent)", fontWeight: 600, marginBottom: "1.5rem" }}>
         Your points: {userPoints}
@@ -85,6 +93,7 @@ export default async function PicksPage() {
         initialTribeId={(tribePick?.tribe_id as TribeId) ?? null}
         currentEpisode={currentEpisode ?? null}
         initialVoteOutId={userVoteOutPick}
+        initialTribeImmunityId={userTribeImmunityPick}
       />
     </>
   );
