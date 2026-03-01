@@ -72,7 +72,12 @@ export default async function AdminPage() {
                 <tr key={ep.id} style={{ borderBottom: "1px solid var(--survivor-border)" }}>
                   <td style={{ padding: "0.5rem" }}>{ep.episode_number}</td>
                   <td style={{ padding: "0.5rem" }}>
-                    <form action={updateEpisodeLock.bind(null, ep.id)} className="survivor-admin-inline">
+                    <form
+                      action={async (formData: FormData) => {
+                        await updateEpisodeLock(ep.id, formData);
+                      }}
+                      className="survivor-admin-inline"
+                    >
                       <input
                         type="datetime-local"
                         name="voteOutLockAt"
@@ -86,7 +91,12 @@ export default async function AdminPage() {
                     </form>
                   </td>
                   <td style={{ padding: "0.5rem" }}>
-                    <form action={updateEpisodeResult.bind(null, ep.id)} className="survivor-admin-inline">
+                    <form
+                      action={async (formData: FormData) => {
+                        await updateEpisodeResult(ep.id, formData);
+                      }}
+                      className="survivor-admin-inline"
+                    >
                       <select
                         name="votedOutPlayerId"
                         className="survivor-auth__input"
@@ -163,7 +173,12 @@ export default async function AdminPage() {
                     }}
                   >
                     <td style={{ padding: "0.5rem" }}>
-                      <form action={updateUserProfile.bind(null, pro.id)} className="survivor-admin-inline">
+                      <form
+                        action={async (formData: FormData) => {
+                          await updateUserProfile(pro.id, formData);
+                        }}
+                        className="survivor-admin-inline"
+                      >
                         <input
                           type="text"
                           name="displayName"
@@ -189,7 +204,9 @@ export default async function AdminPage() {
                     <td style={{ padding: "0.5rem", textAlign: "right", fontWeight: 600 }}>{pts?.points ?? 0}</td>
                     <td style={{ padding: "0.5rem" }}>
                       <form
-                        action={updateUserScores.bind(null, pro.id)}
+                        action={async (formData: FormData) => {
+                          await updateUserScores(pro.id, formData);
+                        }}
                         className="survivor-admin-inline"
                         style={{ flexWrap: "wrap" }}
                       >
@@ -202,13 +219,23 @@ export default async function AdminPage() {
                         </button>
                       </form>
                       {pro.deactivated_at ? (
-                        <form action={restoreUser.bind(null, pro.id)} style={{ display: "inline", marginLeft: "0.5rem" }}>
+                        <form
+                          action={async () => {
+                            await restoreUser(pro.id);
+                          }}
+                          style={{ display: "inline", marginLeft: "0.5rem" }}
+                        >
                           <button type="submit" className="survivor-btn survivor-btn--secondary">
                             Restore
                           </button>
                         </form>
                       ) : (
-                        <form action={deactivateUser.bind(null, pro.id)} style={{ display: "inline", marginLeft: "0.5rem" }}>
+                        <form
+                          action={async () => {
+                            await deactivateUser(pro.id);
+                          }}
+                          style={{ display: "inline", marginLeft: "0.5rem" }}
+                        >
                           <button type="submit" className="survivor-btn survivor-btn--secondary">
                             Remove from group
                           </button>
