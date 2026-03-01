@@ -26,6 +26,12 @@ export async function updateEpisodeLock(episodeId: string, formData: FormData): 
   revalidatePath("/dashboard/admin");
 }
 
+export async function updateEpisodeLockForm(formData: FormData): Promise<void> {
+  const episodeId = formData.get("episodeId");
+  if (!episodeId || typeof episodeId !== "string") throw new Error("Missing episodeId");
+  return updateEpisodeLock(episodeId, formData);
+}
+
 export async function updateEpisodeResult(episodeId: string, formData: FormData): Promise<void> {
   const votedOutPlayerId = (formData.get("votedOutPlayerId") as string) || null;
   const immunityWinningTribeId = (formData.get("immunityWinningTribeId") as string) || null;
@@ -42,6 +48,12 @@ export async function updateEpisodeResult(episodeId: string, formData: FormData)
   revalidatePath("/dashboard/admin");
 }
 
+export async function updateEpisodeResultForm(formData: FormData): Promise<void> {
+  const episodeId = formData.get("episodeId");
+  if (!episodeId || typeof episodeId !== "string") throw new Error("Missing episodeId");
+  return updateEpisodeResult(episodeId, formData);
+}
+
 export async function updateUserProfile(userId: string, formData: FormData): Promise<void> {
   const displayName = (formData.get("displayName") as string) || null;
   const supabase = await requireAdmin();
@@ -52,6 +64,12 @@ export async function updateUserProfile(userId: string, formData: FormData): Pro
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/leaderboard");
+}
+
+export async function updateUserProfileForm(formData: FormData): Promise<void> {
+  const userId = formData.get("userId");
+  if (!userId || typeof userId !== "string") throw new Error("Missing userId");
+  return updateUserProfile(userId, formData);
 }
 
 export async function updateUserScores(userId: string, formData: FormData): Promise<void> {
@@ -80,6 +98,12 @@ export async function updateUserScores(userId: string, formData: FormData): Prom
   revalidatePath("/dashboard/leaderboard");
 }
 
+export async function updateUserScoresForm(formData: FormData): Promise<void> {
+  const userId = formData.get("userId");
+  if (!userId || typeof userId !== "string") throw new Error("Missing userId");
+  return updateUserScores(userId, formData);
+}
+
 export async function deactivateUser(userId: string): Promise<void> {
   const supabase = await requireAdmin();
   const { error } = await supabase
@@ -91,6 +115,12 @@ export async function deactivateUser(userId: string): Promise<void> {
   revalidatePath("/dashboard/leaderboard");
 }
 
+export async function deactivateUserForm(formData: FormData): Promise<void> {
+  const userId = formData.get("userId");
+  if (!userId || typeof userId !== "string") throw new Error("Missing userId");
+  return deactivateUser(userId);
+}
+
 export async function restoreUser(userId: string): Promise<void> {
   const supabase = await requireAdmin();
   const { error } = await supabase
@@ -100,4 +130,10 @@ export async function restoreUser(userId: string): Promise<void> {
   if (error) throw new Error(error.message);
   revalidatePath("/dashboard/admin");
   revalidatePath("/dashboard/leaderboard");
+}
+
+export async function restoreUserForm(formData: FormData): Promise<void> {
+  const userId = formData.get("userId");
+  if (!userId || typeof userId !== "string") throw new Error("Missing userId");
+  return restoreUser(userId);
 }

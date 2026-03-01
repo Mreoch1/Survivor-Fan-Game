@@ -5,12 +5,12 @@ import { PLAYERS } from "@/data/players";
 import { TRIBES } from "@/data/players";
 import type { TribeId } from "@/data/players";
 import {
-  updateEpisodeLock,
-  updateEpisodeResult,
-  updateUserProfile,
-  updateUserScores,
-  deactivateUser,
-  restoreUser,
+  updateEpisodeLockForm,
+  updateEpisodeResultForm,
+  updateUserProfileForm,
+  updateUserScoresForm,
+  deactivateUserForm,
+  restoreUserForm,
 } from "./actions";
 import { ProcessEpisodeButton } from "./ProcessEpisodeButton";
 
@@ -57,13 +57,19 @@ function AdminLoadError({ message }: { message: string }) {
 
 export default async function AdminPage() {
   try {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+      return <AdminLoadError message="Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in environment." />;
+    }
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) redirect("/login");
 
-    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+    const { data: profile, error: profileError } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+    if (profileError) {
+      return <AdminLoadError message={`Profile: ${profileError.message}`} />;
+    }
     if (!profile?.is_admin) redirect("/dashboard");
 
     const [episodesRes, profilesRes, pointsRes] = await Promise.all([
@@ -126,12 +132,8 @@ export default async function AdminPage() {
                 <tr key={ep.id} style={{ borderBottom: "1px solid var(--survivor-border)" }}>
                   <td style={{ padding: "0.5rem" }}>{ep.episode_number}</td>
                   <td style={{ padding: "0.5rem" }}>
-                    <form
-                      action={async (formData: FormData) => {
-                        await updateEpisodeLock(ep.id, formData);
-                      }}
-                      className="survivor-admin-inline"
-                    >
+                    <form action={updateEpisodeLockForm} className="survivor-admin-inline">
+                      <input type="hidden" name="episodeId" value={ep.id} />
                       <input
                         type="datetime-local"
                         name="voteOutLockAt"
@@ -145,12 +147,8 @@ export default async function AdminPage() {
                     </form>
                   </td>
                   <td style={{ padding: "0.5rem" }}>
-                    <form
-                      action={async (formData: FormData) => {
-                        await updateEpisodeResult(ep.id, formData);
-                      }}
-                      className="survivor-admin-inline"
-                    >
+                    <form action={updateEpisodeResultForm} className="survivor-admin-inline">
+                      <input type="hidden" name="episodeId" value={ep.id} />
                       <select
                         name="votedOutPlayerId"
                         className="survivor-auth__input"
@@ -227,12 +225,8 @@ export default async function AdminPage() {
                     }}
                   >
                     <td style={{ padding: "0.5rem" }}>
-                      <form
-                        action={async (formData: FormData) => {
-                          await updateUserProfile(pro.id, formData);
-                        }}
-                        className="survivor-admin-inline"
-                      >
+                      <form action={updateUserProfileForm} className="survivor-admin-inline">
+                        <input type="hidden" name="userId" value={pro.id} />
                         <input
                           type="text"
                           name="displayName"
@@ -257,13 +251,8 @@ export default async function AdminPage() {
                     <td style={{ padding: "0.5rem", textAlign: "right" }}>{pts?.vote_out_points ?? 0}</td>
                     <td style={{ padding: "0.5rem", textAlign: "right", fontWeight: 600 }}>{pts?.points ?? 0}</td>
                     <td style={{ padding: "0.5rem" }}>
-                      <form
-                        action={async (formData: FormData) => {
-                          await updateUserScores(pro.id, formData);
-                        }}
-                        className="survivor-admin-inline"
-                        style={{ flexWrap: "wrap" }}
-                      >
+                      <form action={updateUserScoresForm} className="survivor-admin-inline" style={{ flexWrap: "wrap" }}>
+                        <input type="hidden" name="userId" value={pro.id} />
                         <input type="number" name="survival_points" defaultValue={pts?.survival_points ?? 0} min={0} className="survivor-auth__input" style={{ width: "3rem" }} />
                         <input type="number" name="tribe_immunity_points" defaultValue={pts?.tribe_immunity_points ?? 0} min={0} className="survivor-auth__input" style={{ width: "3rem" }} />
                         <input type="number" name="vote_out_points" defaultValue={pts?.vote_out_points ?? 0} min={0} className="survivor-auth__input" style={{ width: "3rem" }} />
@@ -273,23 +262,15 @@ export default async function AdminPage() {
                         </button>
                       </form>
                       {pro.deactivated_at ? (
-                        <form
-                          action={async () => {
-                            await restoreUser(pro.id);
-                          }}
-                          style={{ display: "inline", marginLeft: "0.5rem" }}
-                        >
+                        <form action={restoreUserForm} style={{ display: "inline", marginLeft: "0.5rem" }}>
+                          <input type="hidden" name="userId" value={pro.id} />
                           <button type="submit" className="survivor-btn survivor-btn--secondary">
                             Restore
                           </button>
                         </form>
                       ) : (
-                        <form
-                          action={async () => {
-                            await deactivateUser(pro.id);
-                          }}
-                          style={{ display: "inline", marginLeft: "0.5rem" }}
-                        >
+                        <form action={deactivateUserForm} style={{ display: "inline", marginLeft: "0.5rem" }}>
+                          <input type="hidden" name="userId" value={pro.id} />
                           <button type="submit" className="survivor-btn survivor-btn--secondary">
                             Remove from group
                           </button>
