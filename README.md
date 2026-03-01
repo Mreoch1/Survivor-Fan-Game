@@ -159,7 +159,7 @@ vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 ## Admin (group starter)
 
-The group creator or first user should be made an admin so they can manage episodes, users, and scoring from **Dashboard → Admin**. Run once in Supabase **SQL Editor** (Dashboard → SQL Editor → New query):
+The group creator or first user should be made an admin so they can manage episodes, users, and scoring from **Dashboard → Admin**. Run the SQL below **in Supabase** (not in your Mac terminal): open [Supabase Dashboard](https://supabase.com/dashboard) → your project → **SQL Editor** → New query → paste → Run.
 
 **By login email (recommended)** — uses `auth.users` so it works even if `profiles.email` is missing or out of date:
 ```sql
