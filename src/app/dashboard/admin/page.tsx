@@ -35,11 +35,7 @@ export default async function AdminPage() {
     const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
     if (!profile?.is_admin) redirect("/dashboard");
 
-    const [
-      { data: episodes },
-      { data: profiles },
-      { data: pointsRows },
-    ] = await Promise.all([
+    const [episodesRes, profilesRes, pointsRes] = await Promise.all([
       supabase
         .from("episodes")
         .select("id, episode_number, vote_out_lock_at, voted_out_player_id, immunity_winning_tribe_id")
@@ -52,7 +48,19 @@ export default async function AdminPage() {
         .eq("season", SEASON),
     ]);
 
-    const pointsByUser = new Map(pointsRows?.map((r) => [r.user_id, r]) ?? []);
+    const err =
+      episodesRes.error?.message ? `Episodes: ${episodesRes.error.message}` :
+      profilesRes.error?.message ? `Profiles: ${profilesRes.error.message}` :
+      pointsRes.error?.message ? `Points: ${pointsRes.error.message}` :
+      null;
+    if (err) {
+      throw new Error(err);
+    }
+
+    const episodes = episodesRes.data ?? [];
+    const profiles = profilesRes.data ?? [];
+    const pointsRows = pointsRes.data ?? [];
+    const pointsByUser = new Map(pointsRows.map((r) => [r.user_id, r]));
 
     return (
 
@@ -83,7 +91,7 @@ export default async function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {(episodes ?? []).map((ep) => (
+              {episodes.map((ep) => (
                 <tr key={ep.id} style={{ borderBottom: "1px solid var(--survivor-border)" }}>
                   <td style={{ padding: "0.5rem" }}>{ep.episode_number}</td>
                   <td style={{ padding: "0.5rem" }}>
@@ -151,7 +159,7 @@ export default async function AdminPage() {
             </tbody>
           </table>
         </div>
-        {(!episodes || episodes.length === 0) && (
+        {episodes.length === 0 && (
           <p className="survivor-dashboard__card-body">No episodes. Add one in Supabase.</p>
         )}
       </section>
@@ -177,7 +185,7 @@ export default async function AdminPage() {
               </tr>
             </thead>
             <tbody>
-              {(profiles ?? []).map((pro) => {
+              {profiles.map((pro) => {
                 const pts = pointsByUser.get(pro.id);
                 return (
                   <tr
