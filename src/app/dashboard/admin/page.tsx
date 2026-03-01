@@ -24,6 +24,37 @@ function toDatetimeLocal(value: unknown): string {
   return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(normalized) ? normalized : "";
 }
 
+function AdminLoadError({ message }: { message: string }) {
+  return (
+    <div className="survivor-card" style={{ maxWidth: "32rem", margin: "2rem auto", padding: "1.5rem" }}>
+      <h2 className="survivor-card__title" style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>
+        Admin data could not load
+      </h2>
+      <p style={{ color: "var(--survivor-text-muted)", marginBottom: "1rem" }}>
+        Check that all migrations are applied (e.g. <code>npm run db:push</code>) and that the database has the
+        expected tables and columns.
+      </p>
+      <pre
+        style={{
+          fontSize: "0.75rem",
+          padding: "0.75rem",
+          background: "var(--survivor-bg)",
+          border: "1px solid var(--survivor-border)",
+          borderRadius: "0.25rem",
+          overflow: "auto",
+          marginBottom: "1rem",
+          color: "var(--survivor-danger)",
+        }}
+      >
+        {message}
+      </pre>
+      <Link href="/dashboard" className="survivor-btn survivor-btn--secondary">
+        Back to dashboard
+      </Link>
+    </div>
+  );
+}
+
 export default async function AdminPage() {
   try {
     const supabase = await createClient();
@@ -54,7 +85,7 @@ export default async function AdminPage() {
       pointsRes.error?.message ? `Points: ${pointsRes.error.message}` :
       null;
     if (err) {
-      throw new Error(err);
+      return <AdminLoadError message={err} />;
     }
 
     const episodes = episodesRes.data ?? [];
@@ -281,7 +312,8 @@ export default async function AdminPage() {
     </div>
     );
   } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     console.error("Admin page load error:", err);
-    throw err;
+    return <AdminLoadError message={message} />;
   }
 }
