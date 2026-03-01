@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PLAYERS, TRIBES } from "@/data/players";
+import { PLAYERS } from "@/data/players";
 import { SetDisplayName } from "./SetDisplayName";
 
 export default async function DashboardPage() {
@@ -25,13 +25,6 @@ export default async function DashboardPage() {
     .eq("user_id", user?.id)
     .eq("season", 50)
     .maybeSingle();
-  const { data: tribePick } = await supabase
-    .from("tribe_picks")
-    .select("tribe_id")
-    .eq("user_id", user?.id)
-    .eq("season", 50)
-    .maybeSingle();
-
   const { count: episodesProcessed } = await supabase
     .from("episode_points_processed")
     .select("*", { count: "exact", head: true });
@@ -52,7 +45,6 @@ export default async function DashboardPage() {
   const winnerPlayer = winnerPick?.player_id
     ? PLAYERS.find((p) => p.id === winnerPick.player_id)
     : null;
-  const tribe = tribePick ? TRIBES[tribePick.tribe_id as keyof typeof TRIBES] : null;
   const userPoints = pointsRow?.points ?? 0;
   const lastWeekDelta = pointsRow?.last_week_delta ?? null;
   const statusThisWeek: "SAFE" | "OUT" | null = winnerPlayer
@@ -122,20 +114,6 @@ export default async function DashboardPage() {
           <li className="survivor-dashboard__list-item">
             <strong>Total points:</strong>{" "}
             <span className="survivor-dashboard__total-value">{userPoints}</span>
-          </li>
-          <li className="survivor-dashboard__list-item">
-            <strong>Tribe:</strong>{" "}
-            {tribe ? (
-              <span
-                className={`survivor-dashboard__tribe-name--${tribePick?.tribe_id ?? ""}`}
-              >
-                {tribe.name}
-              </span>
-            ) : (
-              <Link href="/dashboard/picks" className="survivor-auth__link">
-                Choose your tribe →
-              </Link>
-            )}
           </li>
         </ul>
         <div className="survivor-dashboard__card-actions">

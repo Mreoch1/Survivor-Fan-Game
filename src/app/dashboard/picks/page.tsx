@@ -35,13 +35,6 @@ export default async function PicksPage() {
     .maybeSingle();
   const userPoints = pointsRow?.points ?? 0;
 
-  const { data: tribePick } = await supabase
-    .from("tribe_picks")
-    .select("tribe_id")
-    .eq("user_id", user.id)
-    .eq("season", 50)
-    .maybeSingle();
-
   const { data: episodes } = await supabase
     .from("episodes")
     .select("id, episode_number, vote_out_lock_at, voted_out_player_id")
@@ -90,7 +83,6 @@ export default async function PicksPage() {
         eliminatedIds={eliminatedPlayerIds}
         tribes={TRIBES}
         initialWinnerId={winnerPick?.player_id ?? null}
-        initialTribeId={(tribePick?.tribe_id as TribeId) ?? null}
         currentEpisode={currentEpisode ?? null}
         initialVoteOutId={userVoteOutPick}
         initialTribeImmunityId={userTribeImmunityPick}

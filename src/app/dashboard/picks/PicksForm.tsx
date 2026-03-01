@@ -19,7 +19,6 @@ interface PicksFormProps {
   eliminatedIds: Set<string>;
   tribes: typeof TRIBES;
   initialWinnerId: string | null;
-  initialTribeId: TribeId | null;
   currentEpisode: Episode | null;
   initialVoteOutId: string | null;
   initialTribeImmunityId: TribeId | null;
@@ -32,13 +31,11 @@ export function PicksForm({
   eliminatedIds,
   tribes,
   initialWinnerId,
-  initialTribeId,
   currentEpisode,
   initialVoteOutId,
   initialTribeImmunityId,
 }: PicksFormProps) {
   const [winnerId, setWinnerId] = useState<string>(initialWinnerId ?? "");
-  const [tribeId, setTribeId] = useState<TribeId | "">(initialTribeId ?? "");
   const [voteOutId, setVoteOutId] = useState<string>(initialVoteOutId ?? "");
   const [tribeImmunityId, setTribeImmunityId] = useState<TribeId | "">(initialTribeImmunityId ?? "");
   const [saving, setSaving] = useState(false);
@@ -54,7 +51,6 @@ export function PicksForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           winnerId: winnerId || null,
-          tribeId: tribeId || null,
           voteOutId: currentEpisode && voteOutId ? voteOutId : null,
           episodeId: currentEpisode?.id ?? null,
           tribeImmunityEpisodeId: currentEpisode?.id ?? null,
@@ -109,24 +105,6 @@ export function PicksForm({
             No players left in the game (season over or no eliminations recorded yet).
           </p>
         )}
-      </div>
-
-      <div style={{ marginBottom: "1.5rem" }}>
-        <label className="survivor-auth__label">Tribe</label>
-        <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-          {(Object.keys(tribes) as TribeId[]).map((id) => (
-            <label key={id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
-              <input
-                type="radio"
-                name="tribe"
-                value={id}
-                checked={tribeId === id}
-                onChange={() => setTribeId(id)}
-              />
-              <span style={{ color: tribes[id].color, fontWeight: 600 }}>{tribes[id].name}</span>
-            </label>
-          ))}
-        </div>
       </div>
 
       {currentEpisode && (

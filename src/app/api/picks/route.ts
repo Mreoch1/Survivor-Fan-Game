@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { winnerId, tribeId, episodeId, voteOutId, tribeImmunityEpisodeId, tribeImmunityTribeId } = body;
+  const { winnerId, episodeId, voteOutId, tribeImmunityEpisodeId, tribeImmunityTribeId } = body;
 
   if (winnerId) {
     const { error: upsertPickErr } = await supabase.from("winner_picks").upsert(
@@ -25,25 +25,6 @@ export async function POST(request: Request) {
       { user_id: user.id, season: 50, points: 0 },
       { onConflict: "user_id,season", ignoreDuplicates: true }
     );
-  }
-
-  if (tribeId) {
-    const { error: deleteErr } = await supabase
-      .from("tribe_picks")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("season", 50);
-    if (deleteErr) {
-      return NextResponse.json({ error: deleteErr.message }, { status: 500 });
-    }
-    const { error: insertErr } = await supabase.from("tribe_picks").insert({
-      user_id: user.id,
-      tribe_id: tribeId,
-      season: 50,
-    });
-    if (insertErr) {
-      return NextResponse.json({ error: insertErr.message }, { status: 500 });
-    }
   }
 
   if (episodeId && voteOutId) {
