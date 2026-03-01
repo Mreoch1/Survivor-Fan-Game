@@ -67,6 +67,10 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - **Env for automation:** `SUPABASE_SERVICE_ROLE_KEY` (required for process-episode and cron). `CRON_SECRET` in Vercel (Vercel sends it when invoking the cron; route rejects requests without it).
 - **Manual trigger:** `POST /api/process-episode` with body `{ "episodeId": "uuid" }` (logged-in user; uses service role under the hood).
 
+## Troubleshooting
+
+- **Email confirmation "Cannot connect to the server":** Supabase **Authentication → URL Configuration** must have **Site URL** set to the production app URL and **Redirect URLs** including `https://<your-app>/auth/callback` and `https://<your-app>/**`. See `docs/troubleshooting.md`.
+
 ## TODOs / unresolved
 
 - [ ] Add episode lock times (e.g. Wednesday 7pm ET before air) per episode in DB.

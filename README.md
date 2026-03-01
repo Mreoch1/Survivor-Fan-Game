@@ -52,10 +52,15 @@ supabase db push
 SUPABASE_DB_PASSWORD=your-password npm run db:push
 ```
 
-**Auth redirect URLs:** In Supabase **Authentication → URL Configuration**, add:
+**Auth redirect URLs (required for email confirmation):** In Supabase **Authentication → URL Configuration**:
 
-- Site URL: `http://localhost:3000` (dev) or your Vercel URL (prod)
-- Redirect URLs: `http://localhost:3000/auth/callback`, `https://survivor-fan-game.vercel.app/auth/callback`
+- **Site URL:** Set to your **production** app URL (e.g. `https://survivor-fan-game.vercel.app`). If this is wrong or set to localhost, users who click the signup confirmation email will get "Cannot connect to the server."
+- **Redirect URLs:** Add (one per line):
+  - `https://your-production-url.vercel.app/auth/callback`
+  - `https://your-production-url.vercel.app/**`
+  - For local dev: `http://localhost:3000/auth/callback`, `http://localhost:3000/**`
+
+See **`docs/troubleshooting.md`** if confirmation links don’t work.
 
 ### 3. Environment variables
 
@@ -149,6 +154,20 @@ vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 | `npm run vercel:env:pull` | `vercel env pull` | Pull env vars to `.env.local` |
 | `npm run deploy` | `npm run build && vercel --prod` | Build and deploy to production |
 | `npm run deploy:preview` | `npm run build && vercel` | Build and deploy preview |
+
+---
+
+## Unlock / lock episode picks
+
+Picks for an episode are locked when the current time is past that episode’s `vote_out_lock_at`. To **unlock** week 1 (or any episode) so new users can submit picks, run in Supabase SQL Editor:
+
+```sql
+update public.episodes
+set vote_out_lock_at = '2026-03-08 00:00:00-05', updated_at = now()
+where season = 50 and episode_number = 1;
+```
+
+Use a future date/time (e.g. Sunday after that week’s episode). Migration `006_unlock_episode_one.sql` does this for episode 1; run `supabase db push` or run the SQL above manually.
 
 ---
 
