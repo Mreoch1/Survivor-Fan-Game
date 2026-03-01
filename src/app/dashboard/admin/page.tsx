@@ -16,31 +16,46 @@ import { ProcessEpisodeButton } from "./ProcessEpisodeButton";
 
 const SEASON = 50;
 
+/** Format for datetime-local input (YYYY-MM-DDTHH:mm). Handles ISO or Postgres timestamp strings. */
+function toDatetimeLocal(value: unknown): string {
+  if (value == null) return "";
+  const s = typeof value === "string" ? value : String(value);
+  const normalized = s.replace(" ", "T").slice(0, 16);
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(normalized) ? normalized : "";
+}
+
 export default async function AdminPage() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+  try {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) redirect("/login");
 
-  const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
-  if (!profile?.is_admin) redirect("/dashboard");
+    const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", user.id).single();
+    if (!profile?.is_admin) redirect("/dashboard");
 
-  const { data: episodes } = await supabase
-    .from("episodes")
-    .select("id, episode_number, vote_out_lock_at, voted_out_player_id, immunity_winning_tribe_id")
-    .eq("season", SEASON)
-    .order("episode_number", { ascending: true });
+    const [
+      { data: episodes },
+      { data: profiles },
+      { data: pointsRows },
+    ] = await Promise.all([
+      supabase
+        .from("episodes")
+        .select("id, episode_number, vote_out_lock_at, voted_out_player_id, immunity_winning_tribe_id")
+        .eq("season", SEASON)
+        .order("episode_number", { ascending: true }),
+      supabase.from("profiles").select("id, email, display_name, deactivated_at"),
+      supabase
+        .from("user_season_points")
+        .select("user_id, points, survival_points, tribe_immunity_points, individual_immunity_points, vote_out_points")
+        .eq("season", SEASON),
+    ]);
 
-  const { data: profiles } = await supabase.from("profiles").select("id, email, display_name, deactivated_at");
-  const { data: pointsRows } = await supabase
-    .from("user_season_points")
-    .select("user_id, points, survival_points, tribe_immunity_points, individual_immunity_points, vote_out_points")
-    .eq("season", SEASON);
+    const pointsByUser = new Map(pointsRows?.map((r) => [r.user_id, r]) ?? []);
 
-  const pointsByUser = new Map(pointsRows?.map((r) => [r.user_id, r]) ?? []);
+    return (
 
-  return (
     <div className="survivor-dashboard">
       <h1 className="survivor-card__title" style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
         Admin
@@ -81,7 +96,7 @@ export default async function AdminPage() {
                       <input
                         type="datetime-local"
                         name="voteOutLockAt"
-                        defaultValue={ep.vote_out_lock_at?.slice(0, 16)}
+                        defaultValue={toDatetimeLocal(ep.vote_out_lock_at)}
                         className="survivor-auth__input"
                         style={{ width: "auto", minWidth: "12rem" }}
                       />
@@ -256,5 +271,9 @@ export default async function AdminPage() {
         </Link>
       </p>
     </div>
-  );
+    );
+  } catch (err) {
+    console.error("Admin page load error:", err);
+    throw err;
+  }
 }
