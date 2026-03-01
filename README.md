@@ -161,17 +161,22 @@ vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 The group creator or first user should be made an admin so they can manage episodes, users, and scoring from **Dashboard → Admin**. Run once in Supabase **SQL Editor** (Dashboard → SQL Editor → New query):
 
-**By email (easiest):**
+**By login email (recommended)** — uses `auth.users` so it works even if `profiles.email` is missing or out of date:
+```sql
+update public.profiles
+set is_admin = true
+where id = (select id from auth.users where email = 'mreoch82@hotmail.com');
+```
+Replace the email with the user's login email. Then do a **hard refresh** (Ctrl+Shift+R / Cmd+Shift+R) or sign out and back in to see the Admin link.
+
+**By profile email** (only if `profiles.email` is set for that user):
 ```sql
 update public.profiles set is_admin = true where email = 'THEIR-EMAIL@example.com';
 ```
 
-**By user id:** (if you have the UUID from `auth.users` or `public.profiles`)
-```sql
-update public.profiles set is_admin = true where id = 'YOUR-USER-UUID';
-```
+**By user id:** `update public.profiles set is_admin = true where id = 'USER-UUID';`
 
-After running, the user must sign out and sign back in (or refresh) to see the Admin link. Migration 008 must be applied first (`npm run db:push`).
+Migration 008 must be applied first (`npm run db:push`).
 
 ---
 

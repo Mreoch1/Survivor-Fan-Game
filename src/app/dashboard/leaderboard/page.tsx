@@ -93,8 +93,8 @@ export default async function LeaderboardPage() {
               <th style={{ textAlign: "right", padding: "0.75rem" }}>Repicks</th>
               <th style={{ textAlign: "right", padding: "0.75rem" }} title="Winner pick">Survival</th>
               <th style={{ textAlign: "right", padding: "0.75rem" }} title="Tribe immunity (pre-merge)">Tribe imm.</th>
+              <th style={{ textAlign: "right", padding: "0.75rem" }} title="Correct vote-out pick = +2">Vote-out</th>
               <th style={{ textAlign: "right", padding: "0.75rem" }} title="Individual immunity (post-merge)">Ind. imm.</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }} title="Correct vote-out picks">Vote-out</th>
               <th style={{ textAlign: "right", padding: "0.75rem" }}>Total</th>
             </tr>
           </thead>
@@ -134,10 +134,10 @@ export default async function LeaderboardPage() {
                   {row.tribeImmunityPoints}
                 </td>
                 <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
-                  {row.individualImmunityPoints}
+                  {row.voteOutPoints}
                 </td>
                 <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
-                  {row.voteOutPoints}
+                  {row.individualImmunityPoints}
                 </td>
                 <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-accent)", fontWeight: 700 }}>
                   {row.points}
