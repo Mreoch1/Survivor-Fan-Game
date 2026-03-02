@@ -75,7 +75,7 @@ export default async function AdminPage() {
     const [episodesRes, profilesRes, pointsRes] = await Promise.all([
       supabase
         .from("episodes")
-        .select("id, episode_number, vote_out_lock_at, voted_out_player_id, immunity_winning_tribe_id")
+        .select("id, episode_number, vote_out_lock_at, voted_out_player_id, immunity_winning_tribe_id, medevac_player_id")
         .eq("season", SEASON)
         .order("episode_number", { ascending: true }),
       supabase.from("profiles").select("id, email, display_name, deactivated_at"),
@@ -114,7 +114,7 @@ export default async function AdminPage() {
           Episodes
         </h2>
         <p className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
-          Set who was voted out and (optional) which tribe won immunity, then run &quot;Process episode&quot; to apply
+          Set who was voted out, (optional) medevac/injury, and which tribe won immunity, then run &quot;Process episode&quot; to apply
           scoring. Adjust lock time to unlock or lock picks for that episode.
         </p>
         <div style={{ overflowX: "auto" }}>
@@ -123,7 +123,7 @@ export default async function AdminPage() {
               <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>Ep</th>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>Lock at</th>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Voted out / Immunity</th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>Voted out / Medevac / Immunity</th>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>Process</th>
               </tr>
             </thead>
@@ -147,15 +147,30 @@ export default async function AdminPage() {
                     </form>
                   </td>
                   <td style={{ padding: "0.5rem" }}>
-                    <form action={updateEpisodeResultForm} className="survivor-admin-inline">
+                    <form action={updateEpisodeResultForm} className="survivor-admin-inline" style={{ flexWrap: "wrap" }}>
                       <input type="hidden" name="episodeId" value={ep.id} />
                       <select
                         name="votedOutPlayerId"
                         className="survivor-auth__input"
                         style={{ width: "auto", minWidth: "10rem" }}
                         defaultValue={ep.voted_out_player_id ?? ""}
+                        title="Voted out"
                       >
-                        <option value="">—</option>
+                        <option value="">Voted out: —</option>
+                        {PLAYERS.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                      <select
+                        name="medevacPlayerId"
+                        className="survivor-auth__input"
+                        style={{ width: "auto", minWidth: "10rem", marginLeft: "0.25rem" }}
+                        defaultValue={ep.medevac_player_id ?? ""}
+                        title="Medevac / injury"
+                      >
+                        <option value="">Medevac: —</option>
                         {PLAYERS.map((p) => (
                           <option key={p.id} value={p.id}>
                             {p.name}
@@ -165,10 +180,11 @@ export default async function AdminPage() {
                       <select
                         name="immunityWinningTribeId"
                         className="survivor-auth__input"
-                        style={{ width: "auto", marginLeft: "0.5rem" }}
+                        style={{ width: "auto", marginLeft: "0.25rem" }}
                         defaultValue={ep.immunity_winning_tribe_id ?? ""}
+                        title="Tribe immunity"
                       >
-                        <option value="">—</option>
+                        <option value="">Immunity: —</option>
                         {(Object.keys(TRIBES) as TribeId[]).map((id) => (
                           <option key={id} value={id}>
                             {TRIBES[id].name}

@@ -29,7 +29,7 @@ export async function processEpisode(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data: episodeData, error: epErr } = await supabase
     .from("episodes")
-    .select("id, season, voted_out_player_id, immunity_winning_tribe_id")
+    .select("id, season, voted_out_player_id, immunity_winning_tribe_id, medevac_player_id")
     .eq("id", episodeId)
     .single();
 
@@ -42,6 +42,7 @@ export async function processEpisode(
     season: number;
     voted_out_player_id: string | null;
     immunity_winning_tribe_id: string | null;
+    medevac_player_id: string | null;
   };
   if (episode.season !== SEASON) {
     return { ok: false, error: "Wrong season" };
@@ -51,6 +52,7 @@ export async function processEpisode(
   }
 
   const votedOutId = episode.voted_out_player_id;
+  const eliminatedPlayerIds = [votedOutId, episode.medevac_player_id].filter(Boolean) as string[];
 
   const { data: already } = await supabase
     .from("episode_points_processed")
@@ -115,7 +117,7 @@ export async function processEpisode(
       // Type workaround: SupabaseClient<Database> infers never for some table mutators
       (supabase.from("user_season_points") as any).upsert(payload, { onConflict: "user_id,season" });
 
-    if (pick.player_id === votedOutId) {
+    if (eliminatedPlayerIds.includes(pick.player_id)) {
       const newSurvival = survivalPoints - 1;
       await upsertRow({
         user_id: pick.user_id,

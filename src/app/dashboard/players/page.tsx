@@ -8,14 +8,14 @@ export default async function PlayersPage() {
   const supabase = await createClient();
   const { data: episodes } = await supabase
     .from("episodes")
-    .select("episode_number, voted_out_player_id")
+    .select("episode_number, voted_out_player_id, medevac_player_id")
     .eq("season", 50)
-    .not("voted_out_player_id", "is", null)
     .order("episode_number", { ascending: true });
 
   const eliminatedByEpisode = new Map<string, number>();
   episodes?.forEach((ep) => {
     if (ep.voted_out_player_id) eliminatedByEpisode.set(ep.voted_out_player_id, ep.episode_number);
+    if (ep.medevac_player_id) eliminatedByEpisode.set(ep.medevac_player_id, ep.episode_number);
   });
 
   const cila = getPlayersByTribe("cila" as TribeId);

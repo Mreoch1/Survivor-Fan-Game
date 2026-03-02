@@ -71,6 +71,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-02-26: Admin: migration 008 adds profiles.is_admin, profiles.deactivated_at, RLS for admin update on episodes/profiles/user_season_points. Admin page at /dashboard/admin: episodes (lock, results, process), users (names, scores, remove/restore). process-episode API restricted to admins. Leaderboard excludes deactivated users. Cast cards and player detail show red X and "Eliminated — Episode N" for voted-out players.
 - 2026-02-26: Leaderboard names: dashboard layout syncs current user's email to their profile on load; migration 009 backfills profile email from auth.users so existing users show email (or display_name) instead of "Player".
 - 2026-02-26: Episode 1 Season 50 results: Jenna Lewis-Dougherty voted out; Vatu won immunity. Migration 010 sets voted_out_player_id and immunity_winning_tribe_id for episode 1. Run "Process episode" in Admin to update leaderboard.
+- 2026-02-26: Medevac/injury support: episodes.medevac_player_id (migration 011). Same as voted out for winner-pick survival (-1, repick); vote-out points only for voted_out_player_id. Episode 1: Kyle Fraser medevac. Cast and player detail show eliminated for both voted out and medevac. Admin has Medevac dropdown. Migration 012 clears episode 1 from episode_points_processed so Process episode can be run again for both Jenna and Kyle.
 
 ## Theme music
 

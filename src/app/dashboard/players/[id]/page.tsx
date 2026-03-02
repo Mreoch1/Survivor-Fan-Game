@@ -14,13 +14,14 @@ export default async function PlayerDetailPage({
   const tribe = TRIBES[player.tribeId];
 
   const supabase = await createClient();
-  const { data: episode } = await supabase
+  const { data: episodes } = await supabase
     .from("episodes")
     .select("episode_number")
     .eq("season", 50)
-    .eq("voted_out_player_id", id)
-    .maybeSingle();
-  const eliminatedEpisode = episode?.episode_number ?? null;
+    .or(`voted_out_player_id.eq.${id},medevac_player_id.eq.${id}`)
+    .order("episode_number", { ascending: true })
+    .limit(1);
+  const eliminatedEpisode = episodes?.[0]?.episode_number ?? null;
 
   return (
     <>
