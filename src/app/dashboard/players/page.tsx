@@ -6,14 +6,23 @@ import { FaceCard } from "@/components/FaceCard";
 
 export default async function PlayersPage() {
   const supabase = await createClient();
-  const { data: episodes } = await supabase
+  const resWithMedevac = await supabase
     .from("episodes")
     .select("episode_number, voted_out_player_id, medevac_player_id")
     .eq("season", 50)
     .order("episode_number", { ascending: true });
+  const res =
+    resWithMedevac.error && resWithMedevac.error.message?.includes("medevac_player_id")
+      ? await supabase
+          .from("episodes")
+          .select("episode_number, voted_out_player_id")
+          .eq("season", 50)
+          .order("episode_number", { ascending: true })
+      : resWithMedevac;
+  const episodes = (res.data ?? []) as Array<{ episode_number: number; voted_out_player_id?: string | null; medevac_player_id?: string | null }>;
 
   const eliminatedByEpisode = new Map<string, number>();
-  episodes?.forEach((ep) => {
+  episodes.forEach((ep) => {
     if (ep.voted_out_player_id) eliminatedByEpisode.set(ep.voted_out_player_id, ep.episode_number);
     if (ep.medevac_player_id) eliminatedByEpisode.set(ep.medevac_player_id, ep.episode_number);
   });

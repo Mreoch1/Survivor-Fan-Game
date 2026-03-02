@@ -55,8 +55,14 @@ function AdminLoadError({ message }: { message: string }) {
   );
 }
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>;
+}) {
   try {
+    const { error: errorParam } = await searchParams;
+
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       return <AdminLoadError message="Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in environment." />;
     }
@@ -72,12 +78,21 @@ export default async function AdminPage() {
     }
     if (!profile?.is_admin) redirect("/dashboard");
 
-    const [episodesRes, profilesRes, pointsRes] = await Promise.all([
-      supabase
-        .from("episodes")
-        .select("id, episode_number, vote_out_lock_at, voted_out_player_id, immunity_winning_tribe_id, medevac_player_id")
-        .eq("season", SEASON)
-        .order("episode_number", { ascending: true }),
+    const episodesResWithMedevac = await supabase
+      .from("episodes")
+      .select("id, episode_number, vote_out_lock_at, voted_out_player_id, immunity_winning_tribe_id, medevac_player_id")
+      .eq("season", SEASON)
+      .order("episode_number", { ascending: true });
+    const episodesRes =
+      episodesResWithMedevac.error && episodesResWithMedevac.error.message?.includes("medevac_player_id")
+        ? await supabase
+            .from("episodes")
+            .select("id, episode_number, vote_out_lock_at, voted_out_player_id, immunity_winning_tribe_id")
+            .eq("season", SEASON)
+            .order("episode_number", { ascending: true })
+        : episodesResWithMedevac;
+
+    const [profilesRes, pointsRes] = await Promise.all([
       supabase.from("profiles").select("id, email, display_name, deactivated_at"),
       supabase
         .from("user_season_points")
@@ -94,14 +109,42 @@ export default async function AdminPage() {
       return <AdminLoadError message={err} />;
     }
 
-    const episodes = episodesRes.data ?? [];
+    type EpisodeRow = {
+      id: string;
+      episode_number: number;
+      vote_out_lock_at: string | null;
+      voted_out_player_id: string | null;
+      immunity_winning_tribe_id: string | null;
+      medevac_player_id?: string | null;
+    };
+    const episodes = (episodesRes.data ?? []) as EpisodeRow[];
     const profiles = profilesRes.data ?? [];
     const pointsRows = pointsRes.data ?? [];
     const pointsByUser = new Map(pointsRows.map((r) => [r.user_id, r]));
+    const hasMedevacColumn = episodes.length > 0 && "medevac_player_id" in episodes[0];
 
     return (
 
     <div className="survivor-dashboard">
+      {errorParam && (
+        <div
+          role="alert"
+          className="survivor-card"
+          style={{
+            marginBottom: "1rem",
+            padding: "0.75rem 1rem",
+            background: "var(--survivor-danger)",
+            color: "var(--survivor-bg)",
+            borderRadius: "0.5rem",
+          }}
+        >
+          <strong>Save failed:</strong> {decodeURIComponent(errorParam)}
+          <br />
+          <Link href="/dashboard/admin" style={{ color: "var(--survivor-bg)", textDecoration: "underline", fontSize: "0.875rem" }}>
+            Dismiss
+          </Link>
+        </div>
+      )}
       <h1 className="survivor-card__title" style={{ fontSize: "1.5rem", marginBottom: "0.5rem" }}>
         Admin
       </h1>
@@ -163,20 +206,22 @@ export default async function AdminPage() {
                           </option>
                         ))}
                       </select>
-                      <select
-                        name="medevacPlayerId"
-                        className="survivor-auth__input"
-                        style={{ width: "auto", minWidth: "10rem", marginLeft: "0.25rem" }}
-                        defaultValue={ep.medevac_player_id ?? ""}
-                        title="Medevac / injury"
-                      >
-                        <option value="">Medevac: —</option>
-                        {PLAYERS.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
+                      {hasMedevacColumn && (
+                        <select
+                          name="medevacPlayerId"
+                          className="survivor-auth__input"
+                          style={{ width: "auto", minWidth: "10rem", marginLeft: "0.25rem" }}
+                          defaultValue={ep.medevac_player_id ?? ""}
+                          title="Medevac / injury"
+                        >
+                          <option value="">Medevac: —</option>
+                          {PLAYERS.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       <select
                         name="immunityWinningTribeId"
                         className="survivor-auth__input"
