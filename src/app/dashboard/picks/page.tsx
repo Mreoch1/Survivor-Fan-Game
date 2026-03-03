@@ -20,12 +20,14 @@ export default async function PicksPage() {
 
   const { data: allEpisodes } = await supabase
     .from("episodes")
-    .select("voted_out_player_id")
+    .select("episode_number, voted_out_player_id, medevac_player_id")
     .eq("season", 50)
-    .not("voted_out_player_id", "is", null);
-  const eliminatedPlayerIds = new Set(
-    (allEpisodes ?? []).map((e) => e.voted_out_player_id).filter(Boolean) as string[]
-  );
+    .order("episode_number", { ascending: true });
+  const eliminatedPlayerIds = new Set<string>();
+  (allEpisodes ?? []).forEach((e: { voted_out_player_id?: string | null; medevac_player_id?: string | null }) => {
+    if (e.voted_out_player_id) eliminatedPlayerIds.add(e.voted_out_player_id);
+    if (e.medevac_player_id) eliminatedPlayerIds.add(e.medevac_player_id);
+  });
 
   const { data: pointsRow } = await supabase
     .from("user_season_points")
