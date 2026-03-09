@@ -1,6 +1,6 @@
 # Survivor Fan Game – Single Source of Truth
 
-**Last updated:** 2026-02-26
+**Last updated:** 2026-03-09
 
 ## Project overview
 
@@ -73,6 +73,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-02-26: Episode 1 Season 50 results: Jenna Lewis-Dougherty voted out; Vatu won immunity. Migration 010 sets voted_out_player_id and immunity_winning_tribe_id for episode 1. Run "Process episode" in Admin to update leaderboard.
 - 2026-02-26: Medevac/injury support: episodes.medevac_player_id (migration 011). Same as voted out for winner-pick survival (-1, repick); vote-out points only for voted_out_player_id. Episode 1: Kyle Fraser medevac. Cast and player detail show eliminated for both voted out and medevac. Admin has Medevac dropdown. Migration 012 clears episode 1 from episode_points_processed so Process episode can be run again for both Jenna and Kyle.
 - 2026-02-26: Episode 2 Season 50: migration 014 inserts episode 2 with vote_out_lock_at = 2026-03-04 20:00:00-05 (Wed 8 PM ET, when "Therapy Carousel" airs). My picks shows tribe immunity and vote-out for the first episode with no voted_out_player_id (episode 2). Picks page treats medevac players as eliminated for winner dropdown (inGamePlayers excludes both voted_out and medevac).
+- 2026-03-09: Episode 2 Season 50 results: migration 015 sets voted_out_player_id = Savannah Louie (Cila went to Tribal; unanimous blindside). Immunity: Kalo and Vatu both had immunity; schema supports only one tribe per episode, so immunity_winning_tribe_id left null for episode 2 (no tribe immunity points). Run Process episode in Admin to apply scoring.
 
 ## Theme music
 
@@ -92,6 +93,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 ## TODOs / unresolved
 
 - [ ] Add episode lock times (e.g. Wednesday 7pm ET before air) per episode in DB.
+- [ ] Optional: support multiple immunity-winning tribes per episode (e.g. Episode 2 had Kalo and Vatu; currently only one tribe_id stored, so tribe immunity was skipped for that episode).
 - [ ] Individual immunity (post-merge): add episode field (e.g. immunity_winning_player_id), user pick per episode, and scoring in process-episode. Implement when the show switches to individual phase.
 - [ ] Optional: email sending via Resend/Supabase Edge for invite emails (or copy-link for now).
 - Themed auth emails: copy HTML from `docs/email-templates/` into Supabase Dashboard → Authentication → Email Templates (Confirm signup, Reset password, Invite, Magic link). See `docs/email-templates/README.md`.
