@@ -50,7 +50,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 
 ## Data
 
-- **Season 50 cast:** 24 players, 3 tribes with fan-voted colors: Cila (orange #e85d04), Kalo (teal #0d9488), Vatu (magenta #c026d3). Stored in app as static data. Player cards show initials when `imageUrl` is null; set `imageUrl` in `src/data/players.ts` for self-hosted or licensed photos.
+- **Season 50 cast:** 24 players, 3 tribes. Post-swap (Episode 3): Cila (yellow #eab308), Kalo (blue #2563eb), Vatu (red #dc2626). Stored in app as static data. Player cards show initials when `imageUrl` is null; set `imageUrl` in `src/data/players.ts` for self-hosted or licensed photos.
 - **Episodes:** Episode number, lock time, **voted_out_player_id** (who was eliminated; required for survival scoring), **immunity_winning_tribe_id** (tribe that won immunity this episode; optional, used for tribe immunity scoring). Planned: immunity_winning_player_id (post-merge) for individual immunity.
 - **User picks:** winner_picks, vote_out_picks (per episode), **tribe_immunity_picks** (user_id, episode_id, tribe_id; one per user per episode), tribe_picks (season-long tribe choice), profiles.
 - **user_season_points:** Points per user per season with breakdown: `survival_points`, `tribe_immunity_points`, `individual_immunity_points`, `vote_out_points`; `points` = sum of all four. Also `weeks_survived`, `eliminations_hit`, `last_week_delta`. **episode_points_processed:** Tracks which episodes have had points applied (idempotent).
@@ -74,6 +74,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-02-26: Medevac/injury support: episodes.medevac_player_id (migration 011). Same as voted out for winner-pick survival (-1, repick); vote-out points only for voted_out_player_id. Episode 1: Kyle Fraser medevac. Cast and player detail show eliminated for both voted out and medevac. Admin has Medevac dropdown. Migration 012 clears episode 1 from episode_points_processed so Process episode can be run again for both Jenna and Kyle.
 - 2026-02-26: Episode 2 Season 50: migration 014 inserts episode 2 with vote_out_lock_at = 2026-03-04 20:00:00-05 (Wed 8 PM ET, when "Therapy Carousel" airs). My picks shows tribe immunity and vote-out for the first episode with no voted_out_player_id (episode 2). Picks page treats medevac players as eliminated for winner dropdown (inGamePlayers excludes both voted_out and medevac).
 - 2026-03-09: Episode 2 Season 50 results: migration 015 sets voted_out_player_id = Savannah Louie (Cila went to Tribal; unanimous blindside). Immunity: Kalo and Vatu both had immunity; schema supports only one tribe per episode, so immunity_winning_tribe_id left null for episode 2 (no tribe immunity points). Run Process episode in Admin to apply scoring.
+- 2026-03-09: Tribe swap (Episode 3): Updated players.ts with post-swap tribes from Survivor Fandom wiki. New Cila (yellow): Charlie, Cirie, Dee, Jonathan, Kamilla, Rick, Rizo. New Kalo (blue): Aubry, Chrissy, Coach, Colby, Genevieve, Joe, Tiffany. New Vatu (red): Angelina, Christian, Emily, Mike, Ozzy, Q, Stephenie. Eliminated (Jenna, Kyle, Savannah) remain in original tribes for cast display.
 
 ## Theme music
 

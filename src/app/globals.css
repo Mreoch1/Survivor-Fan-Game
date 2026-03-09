@@ -9,9 +9,9 @@
   --survivor-accent: #c9a227;
   --survivor-accent-dim: #8b7322;
   --survivor-flame: #e85d04;
-  --survivor-tribe-cila: #e85d04;
-  --survivor-tribe-kalo: #0d9488;
-  --survivor-tribe-vatu: #c026d3;
+  --survivor-tribe-cila: #eab308;
+  --survivor-tribe-kalo: #2563eb;
+  --survivor-tribe-vatu: #dc2626;
   --survivor-danger: #c53030;
   --survivor-success: #2d6a4f;
   --background: var(--survivor-bg);
@@ -20,18 +20,18 @@
 
 /* Tribe theme overrides (set on <html> by ThemePicker) */
 html[data-theme="cila"] {
-  --survivor-accent: #e85d04;
-  --survivor-accent-dim: #b84a03;
+  --survivor-accent: #eab308;
+  --survivor-accent-dim: #ca8a04;
 }
 
 html[data-theme="kalo"] {
-  --survivor-accent: #0d9488;
-  --survivor-accent-dim: #0f766e;
+  --survivor-accent: #2563eb;
+  --survivor-accent-dim: #1d4ed8;
 }
 
 html[data-theme="vatu"] {
-  --survivor-accent: #c026d3;
-  --survivor-accent-dim: #a21caf;
+  --survivor-accent: #dc2626;
+  --survivor-accent-dim: #b91c1c;
 }
 
 @theme inline {
@@ -334,15 +334,15 @@ body {
 }
 
 .survivor-theme-picker__swatch--cila {
-  background: #e85d04;
+  background: #eab308;
 }
 
 .survivor-theme-picker__swatch--kalo {
-  background: #0d9488;
+  background: #2563eb;
 }
 
 .survivor-theme-picker__swatch--vatu {
-  background: #c026d3;
+  background: #dc2626;
 }
 
 .survivor-header__link:focus-visible,

@@ -1,7 +1,6 @@
 /**
- * Survivor Season 50 cast (2026). Tribes: Cila (orange), Kalo (teal), Vatu (magenta).
- * Fan-voted official colors (option B). Accomplishments from EW and official sources.
- * Add imageUrl (self-hosted or licensed) per player for face card photos.
+ * Survivor Season 50 cast (2026). Post-swap tribes (Episode 3): Cila (yellow), Kalo (blue), Vatu (red).
+ * Tribe swap from Fandom wiki "Switched Tribe" column. Add imageUrl (self-hosted or licensed) per player for face card photos.
  */
 
 /** Official Survivor 50 Challenge castaways page. */
@@ -31,9 +30,9 @@ export interface Player {
 }
 
 export const TRIBES: Record<TribeId, { name: string; color: string }> = {
-  cila: { name: "Cila", color: "#e85d04" },
-  kalo: { name: "Kalo", color: "#0d9488" },
-  vatu: { name: "Vatu", color: "#c026d3" },
+  cila: { name: "Cila", color: "#eab308" },
+  kalo: { name: "Kalo", color: "#2563eb" },
+  vatu: { name: "Vatu", color: "#dc2626" },
 };
 
 export const PLAYERS: Player[] = [
@@ -50,7 +49,7 @@ export const PLAYERS: Player[] = [
   {
     id: "colby-donaldson",
     name: "Colby Donaldson",
-    tribeId: "vatu",
+    tribeId: "kalo",
     order: 2,
     previousSeasons: [
       "Survivor: The Australian Outback (2nd)",
@@ -93,7 +92,7 @@ export const PLAYERS: Player[] = [
   {
     id: "ozzy-lusth",
     name: "Ozzy Lusth",
-    tribeId: "cila",
+    tribeId: "vatu",
     order: 5,
     previousSeasons: [
       "Survivor: Cook Islands (2nd)",
@@ -122,7 +121,7 @@ export const PLAYERS: Player[] = [
   {
     id: "aubry-bracco",
     name: "Aubry Bracco",
-    tribeId: "vatu",
+    tribeId: "kalo",
     order: 7,
     previousSeasons: [
       "Survivor: Kaoh Rong (2nd)",
@@ -146,7 +145,7 @@ export const PLAYERS: Player[] = [
   {
     id: "christian-hubicki",
     name: "Christian Hubicki",
-    tribeId: "cila",
+    tribeId: "vatu",
     order: 9,
     previousSeasons: ["Survivor: David vs. Goliath (7th)"],
     accomplishment: "DvG fan favorite; strategic underdog.",
@@ -166,7 +165,7 @@ export const PLAYERS: Player[] = [
   {
     id: "mike-white",
     name: "Mike White",
-    tribeId: "kalo",
+    tribeId: "vatu",
     order: 11,
     previousSeasons: ["Survivor: David vs. Goliath (2nd)"],
     accomplishment: "DvG runner-up; The White Lotus creator.",
@@ -186,7 +185,7 @@ export const PLAYERS: Player[] = [
   {
     id: "jonathan-young",
     name: "Jonathan Young",
-    tribeId: "kalo",
+    tribeId: "cila",
     order: 13,
     previousSeasons: ["Survivor 42 (4th)"],
     accomplishment: "Survivor 42 fourth place; physical powerhouse.",
@@ -196,7 +195,7 @@ export const PLAYERS: Player[] = [
   {
     id: "emily-flippen",
     name: "Emily Flippen",
-    tribeId: "cila",
+    tribeId: "vatu",
     order: 14,
     previousSeasons: ["Survivor 45 (7th)"],
     accomplishment: "Survivor 45 seventh place; sharp strategist.",
@@ -206,7 +205,7 @@ export const PLAYERS: Player[] = [
   {
     id: "dee-valladares",
     name: "Dee Valladares",
-    tribeId: "kalo",
+    tribeId: "cila",
     order: 15,
     previousSeasons: ["Survivor 45 (Winner)"],
     accomplishment: "Survivor 45 winner.",
@@ -227,7 +226,7 @@ export const PLAYERS: Player[] = [
   {
     id: "charlie-davis",
     name: "Charlie Davis",
-    tribeId: "kalo",
+    tribeId: "cila",
     order: 17,
     previousSeasons: ["Survivor 46 (2nd)"],
     accomplishment: "Survivor 46 runner-up.",
@@ -247,7 +246,7 @@ export const PLAYERS: Player[] = [
   {
     id: "genevieve-mushaluk",
     name: "Genevieve Mushaluk",
-    tribeId: "vatu",
+    tribeId: "kalo",
     order: 19,
     previousSeasons: ["Survivor 47 (5th)"],
     accomplishment: "Survivor 47 fifth place.",
@@ -267,7 +266,7 @@ export const PLAYERS: Player[] = [
   {
     id: "joe-hunter",
     name: "Joe Hunter",
-    tribeId: "cila",
+    tribeId: "kalo",
     order: 21,
     previousSeasons: ["Survivor 48 (3rd)"],
     accomplishment: "Survivor 48 third place.",
@@ -277,7 +276,7 @@ export const PLAYERS: Player[] = [
   {
     id: "kamilla-karthigesu",
     name: "Kamilla Karthigesu",
-    tribeId: "kalo",
+    tribeId: "cila",
     order: 22,
     previousSeasons: ["Survivor 48 (4th)"],
     accomplishment: "Survivor 48 fourth place.",
@@ -297,7 +296,7 @@ export const PLAYERS: Player[] = [
   {
     id: "rizo-velovic",
     name: "Rizo Velovic",
-    tribeId: "vatu",
+    tribeId: "cila",
     order: 24,
     previousSeasons: ["Survivor 49 (4th)"],
     accomplishment: "Survivor 49 fourth place; back-to-back seasons.",
