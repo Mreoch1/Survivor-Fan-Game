@@ -29,7 +29,7 @@ export async function processEpisode(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data: episodeData, error: epErr } = await supabase
     .from("episodes")
-    .select("id, season, voted_out_player_id, immunity_winning_tribe_id, medevac_player_id")
+    .select("id, season, voted_out_player_id, medevac_player_id")
     .eq("id", episodeId)
     .single();
 
@@ -41,7 +41,6 @@ export async function processEpisode(
     id: string;
     season: number;
     voted_out_player_id: string | null;
-    immunity_winning_tribe_id: string | null;
     medevac_player_id: string | null;
   };
   if (episode.season !== SEASON) {
@@ -152,13 +151,19 @@ export async function processEpisode(
     }
   }
 
-  // Tribe immunity: +1 for each user who picked the winning tribe this episode
-  if (episode.immunity_winning_tribe_id) {
+  // Tribe immunity: +1 for each user who picked any winning tribe this episode (from episode_immunity_tribes)
+  const { data: winningTribeRows } = await supabase
+    .from("episode_immunity_tribes")
+    .select("tribe_id")
+    .eq("episode_id", episodeId);
+  const winningTribeIds = (winningTribeRows ?? []).map((r: { tribe_id: string }) => r.tribe_id);
+
+  if (winningTribeIds.length > 0) {
     const { data: tribeCorrectPicks } = await supabase
       .from("tribe_immunity_picks")
       .select("user_id")
       .eq("episode_id", episodeId)
-      .eq("tribe_id", episode.immunity_winning_tribe_id);
+      .in("tribe_id", winningTribeIds);
 
     const winnerUserIds = (tribeCorrectPicks ?? []).map((r: { user_id: string }) => r.user_id);
     for (const uid of winnerUserIds) {

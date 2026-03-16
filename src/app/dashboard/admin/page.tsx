@@ -92,6 +92,15 @@ export default async function AdminPage({
             .order("episode_number", { ascending: true })
         : episodesResWithMedevac;
 
+    const immunityRes = await supabase.from("episode_immunity_tribes").select("episode_id, tribe_id");
+    const immunityByEpisode = new Map<string, Set<string>>();
+    if (!immunityRes.error) {
+      (immunityRes.data ?? []).forEach((r: { episode_id: string; tribe_id: string }) => {
+        if (!immunityByEpisode.has(r.episode_id)) immunityByEpisode.set(r.episode_id, new Set());
+        immunityByEpisode.get(r.episode_id)!.add(r.tribe_id);
+      });
+    }
+
     const [profilesRes, pointsRes] = await Promise.all([
       supabase.from("profiles").select("id, email, display_name, deactivated_at"),
       supabase
@@ -157,8 +166,7 @@ export default async function AdminPage({
           Episodes
         </h2>
         <p className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
-          Set who was voted out, (optional) medevac/injury, and which tribe won immunity, then run &quot;Process episode&quot; to apply
-          scoring. Adjust lock time to unlock or lock picks for that episode.
+          Set who was voted out, (optional) medevac/injury, and which tribes won immunity (check all that had immunity; +1 per correct pick). Then run &quot;Process episode&quot; to apply scoring.
         </p>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -222,20 +230,19 @@ export default async function AdminPage({
                           ))}
                         </select>
                       )}
-                      <select
-                        name="immunityWinningTribeId"
-                        className="survivor-auth__input"
-                        style={{ width: "auto", marginLeft: "0.25rem" }}
-                        defaultValue={ep.immunity_winning_tribe_id ?? ""}
-                        title="Tribe immunity"
-                      >
-                        <option value="">Immunity: —</option>
+                      <span style={{ marginLeft: "0.5rem", display: "inline-flex", alignItems: "center", gap: "0.5rem" }} title="Tribes that won immunity (check all)">
                         {(Object.keys(TRIBES) as TribeId[]).map((id) => (
-                          <option key={id} value={id}>
-                            {TRIBES[id].name}
-                          </option>
+                          <label key={id} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", cursor: "pointer" }}>
+                            <input
+                              type="checkbox"
+                              name="immunityTribeId"
+                              value={id}
+                              defaultChecked={immunityByEpisode.get(ep.id)?.has(id)}
+                            />
+                            <span style={{ color: TRIBES[id].color, fontWeight: 600 }}>{TRIBES[id].name}</span>
+                          </label>
                         ))}
-                      </select>
+                      </span>
                       <button type="submit" className="survivor-btn survivor-btn--secondary" style={{ marginLeft: "0.5rem" }}>
                         Save results
                       </button>

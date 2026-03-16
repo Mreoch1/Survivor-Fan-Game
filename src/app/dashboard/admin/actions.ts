@@ -46,19 +46,28 @@ export async function updateEpisodeLockForm(formData: FormData): Promise<void> {
 export async function updateEpisodeResult(episodeId: string, formData: FormData): Promise<void> {
   try {
     const votedOutPlayerId = (formData.get("votedOutPlayerId") as string) || null;
-    const immunityWinningTribeId = (formData.get("immunityWinningTribeId") as string) || null;
     const medevacPlayerId = (formData.get("medevacPlayerId") as string) || null;
+    const immunityTribeIds = (formData.getAll("immunityTribeId") as string[]).filter(Boolean);
     const supabase = await requireAdmin();
-    const { error } = await supabase
+
+    const { error: epError } = await supabase
       .from("episodes")
       .update({
         voted_out_player_id: votedOutPlayerId,
-        immunity_winning_tribe_id: immunityWinningTribeId,
         medevac_player_id: medevacPlayerId,
         updated_at: new Date().toISOString(),
       })
       .eq("id", episodeId);
-    if (error) return adminRedirect(error.message);
+    if (epError) return adminRedirect(epError.message);
+
+    await supabase.from("episode_immunity_tribes").delete().eq("episode_id", episodeId);
+    if (immunityTribeIds.length > 0) {
+      const { error: immError } = await supabase.from("episode_immunity_tribes").insert(
+        immunityTribeIds.map((tribe_id) => ({ episode_id: episodeId, tribe_id }))
+      );
+      if (immError) return adminRedirect(immError.message);
+    }
+
     revalidatePath("/dashboard/admin");
     redirect("/dashboard/admin");
   } catch (e) {

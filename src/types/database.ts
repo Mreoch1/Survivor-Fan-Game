@@ -209,6 +209,19 @@ export interface Database {
           tribe_id?: string;
         };
       };
+      episode_immunity_tribes: {
+        Row: {
+          episode_id: string;
+          tribe_id: string;
+        };
+        Insert: {
+          episode_id: string;
+          tribe_id: string;
+        };
+        Update: {
+          tribe_id?: string;
+        };
+      };
     };
   };
 }

@@ -51,7 +51,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 ## Data
 
 - **Season 50 cast:** 24 players, 3 tribes. Post-swap (Episode 3): Cila (yellow #eab308), Kalo (blue #2563eb), Vatu (red #dc2626). Stored in app as static data. Player cards show initials when `imageUrl` is null; set `imageUrl` in `src/data/players.ts` for self-hosted or licensed photos.
-- **Episodes:** Episode number, lock time, **voted_out_player_id** (who was eliminated; required for survival scoring), **immunity_winning_tribe_id** (tribe that won immunity this episode; optional, used for tribe immunity scoring). Planned: immunity_winning_player_id (post-merge) for individual immunity.
+- **Episodes:** Episode number, lock time, **voted_out_player_id** (who was eliminated), **medevac_player_id** (optional). **episode_immunity_tribes** (episode_id, tribe_id): one row per tribe that won immunity; users who picked any of those tribes get +1. Planned: immunity_winning_player_id (post-merge) for individual immunity.
 - **User picks:** winner_picks, vote_out_picks (per episode), **tribe_immunity_picks** (user_id, episode_id, tribe_id; one per user per episode), tribe_picks (season-long tribe choice), profiles.
 - **user_season_points:** Points per user per season with breakdown: `survival_points`, `tribe_immunity_points`, `individual_immunity_points`, `vote_out_points`; `points` = sum of all four. Also `weeks_survived`, `eliminations_hit`, `last_week_delta`. **episode_points_processed:** Tracks which episodes have had points applied (idempotent).
 
@@ -76,6 +76,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-03-09: Episode 2 Season 50 results: migration 015 sets voted_out_player_id = Savannah Louie (Cila went to Tribal; unanimous blindside). Immunity: Kalo and Vatu both had immunity; schema supports only one tribe per episode, so immunity_winning_tribe_id left null for episode 2 (no tribe immunity points). Run Process episode in Admin to apply scoring.
 - 2026-03-09: Episode 3 Season 50: migration 016 inserts episode 3 "Did You Vote for a Swap?" with vote_out_lock_at = 2026-03-11 20:00:00-05 (Wed 8 PM ET). My picks page now shows tribe immunity and vote-out for episode 3.
 - 2026-03-12: Episode 3 Season 50 results: migration 017 sets voted_out_player_id = Q Burdette (Vatu Tribal). Immunity: Vatu lost; Cila and Kalo had immunity so immunity_winning_tribe_id null. Run Process episode in Admin. Migration 018 adds episode 4 (Mar 18 2026) for next picks.
+- 2026-03-12: Multiple immunity-winning tribes: migration 019 adds episode_immunity_tribes (episode_id, tribe_id). Process-episode awards +1 to any user whose tribe pick is in that set. Admin uses checkboxes (Cila, Kalo, Vatu) per episode. Migration 020 backfills tribe immunity points for ep2 (Kalo, Vatu) and ep3 (Cila, Kalo).
 - 2026-03-09: Tribe swap (Episode 3): Updated players.ts with post-swap tribes from Survivor Fandom wiki. New Cila (yellow): Charlie, Cirie, Dee, Jonathan, Kamilla, Rick, Rizo. New Kalo (blue): Aubry, Chrissy, Coach, Colby, Genevieve, Joe, Tiffany. New Vatu (red): Angelina, Christian, Emily, Mike, Ozzy, Q, Stephenie. Eliminated (Jenna, Kyle, Savannah) remain in original tribes for cast display.
 
 ## Theme music
@@ -96,7 +97,6 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 ## TODOs / unresolved
 
 - [ ] Add episode lock times (e.g. Wednesday 7pm ET before air) per episode in DB.
-- [ ] Optional: support multiple immunity-winning tribes per episode (e.g. Episode 2 had Kalo and Vatu; currently only one tribe_id stored, so tribe immunity was skipped for that episode).
 - [ ] Individual immunity (post-merge): add episode field (e.g. immunity_winning_player_id), user pick per episode, and scoring in process-episode. Implement when the show switches to individual phase.
 - [ ] Optional: email sending via Resend/Supabase Edge for invite emails (or copy-link for now).
 - Themed auth emails: copy HTML from `docs/email-templates/` into Supabase Dashboard → Authentication → Email Templates (Confirm signup, Reset password, Invite, Magic link). See `docs/email-templates/README.md`.
