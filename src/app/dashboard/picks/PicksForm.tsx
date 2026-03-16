@@ -43,8 +43,22 @@ export function PicksForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSaving(true);
     setMessage(null);
+
+    if (currentEpisode && !isLocked) {
+      const missing: string[] = [];
+      if (!tribeImmunityId) missing.push("tribe immunity");
+      if (!voteOutId) missing.push("vote-out");
+      if (missing.length > 0) {
+        setMessage({
+          type: "error",
+          text: `Complete your picks: ${missing.join(" and ")} before saving.`,
+        });
+        return;
+      }
+    }
+
+    setSaving(true);
     try {
       const res = await fetch("/api/picks", {
         method: "POST",
@@ -116,9 +130,22 @@ export function PicksForm({
                 Locks: {lockTime.toLocaleString()}
               </span>
             )}
-            <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+            <div className="picks-form__tribe-options" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
               {(Object.keys(tribes) as TribeId[]).map((id) => (
-                <label key={id} style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer" }}>
+                <label
+                  key={id}
+                  className="picks-form__tribe-option"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    cursor: isLocked ? "default" : "pointer",
+                    padding: "0.75rem 1rem",
+                    borderRadius: "0.5rem",
+                    border: `2px solid ${tribeImmunityId === id ? tribes[id].color : "var(--survivor-border)"}`,
+                    background: tribeImmunityId === id ? "var(--survivor-bg-card)" : "transparent",
+                  }}
+                >
                   <input
                     type="radio"
                     name="tribeImmunity"
@@ -126,8 +153,9 @@ export function PicksForm({
                     checked={tribeImmunityId === id}
                     onChange={() => setTribeImmunityId(id)}
                     disabled={isLocked}
+                    className="picks-form__tribe-radio"
                   />
-                  <span style={{ color: tribes[id].color, fontWeight: 600 }}>{tribes[id].name}</span>
+                  <span style={{ color: tribes[id].color, fontWeight: 700, fontSize: "1.125rem" }}>{tribes[id].name}</span>
                 </label>
               ))}
             </div>
