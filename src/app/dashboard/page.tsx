@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { PLAYERS } from "@/data/players";
+import { PLAYERS, TRIBES } from "@/data/players";
+import type { TribeId } from "@/data/players";
 import { SetDisplayName } from "./SetDisplayName";
 
 export default async function DashboardPage() {
@@ -31,9 +32,13 @@ export default async function DashboardPage() {
 
   const { data: episodes } = await supabase
     .from("episodes")
-    .select("episode_number, voted_out_player_id")
+    .select("id, episode_number, voted_out_player_id, medevac_player_id")
     .eq("season", 50)
     .order("episode_number", { ascending: true });
+
+  const currentEpisode = (episodes ?? []).find(
+    (e) => !e.voted_out_player_id && !e.medevac_player_id
+  );
 
   const episodeResults = (episodes ?? []).map((ep) => ({
     episodeNumber: ep.episode_number,
@@ -52,6 +57,32 @@ export default async function DashboardPage() {
     : winnerPick
       ? "OUT"
       : null;
+
+  let userTribeImmunityPick: TribeId | null = null;
+  let userVoteOutPickPlayerId: string | null = null;
+  if (currentEpisode && user?.id) {
+    const [{ data: voteOutPick }, { data: tribeImmunityPick }] = await Promise.all([
+      supabase
+        .from("vote_out_picks")
+        .select("player_id")
+        .eq("user_id", user?.id)
+        .eq("episode_id", currentEpisode.id)
+        .maybeSingle(),
+      supabase
+        .from("tribe_immunity_picks")
+        .select("tribe_id")
+        .eq("user_id", user?.id)
+        .eq("episode_id", currentEpisode.id)
+        .maybeSingle(),
+    ]);
+
+    userVoteOutPickPlayerId = voteOutPick?.player_id ?? null;
+    userTribeImmunityPick = (tribeImmunityPick?.tribe_id as TribeId) ?? null;
+  }
+
+  const userVoteOutPlayer = userVoteOutPickPlayerId
+    ? PLAYERS.find((p) => p.id === userVoteOutPickPlayerId) ?? null
+    : null;
 
   return (
     <div className="survivor-dashboard">
@@ -86,6 +117,38 @@ export default async function DashboardPage() {
                 {winnerPick
                   ? "Your pick was voted out. Pick again →"
                   : "No pick selected"}
+              </Link>
+            )}
+          </li>
+          <li className="survivor-dashboard__list-item">
+            <strong>
+              Tribe immunity pick:
+              {currentEpisode ? ` (Episode ${currentEpisode.episode_number})` : ""}
+            </strong>{" "}
+            {userTribeImmunityPick ? (
+              <span
+                className={`survivor-dashboard__tribe-name--${userTribeImmunityPick}`}
+              >
+                {TRIBES[userTribeImmunityPick].name}
+              </span>
+            ) : (
+              <Link href="/dashboard/picks" className="survivor-auth__link">
+                Not picked yet
+              </Link>
+            )}
+          </li>
+          <li className="survivor-dashboard__list-item">
+            <strong>
+              Vote-out pick:
+              {currentEpisode ? ` (Episode ${currentEpisode.episode_number})` : ""}
+            </strong>{" "}
+            {userVoteOutPlayer ? (
+              <Link href="/dashboard/picks" className="survivor-auth__link">
+                {userVoteOutPlayer.name}
+              </Link>
+            ) : (
+              <Link href="/dashboard/picks" className="survivor-auth__link">
+                Not picked yet
               </Link>
             )}
           </li>
