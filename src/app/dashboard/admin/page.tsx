@@ -15,6 +15,8 @@ import {
 import { ProcessEpisodeButton } from "./ProcessEpisodeButton";
 
 const SEASON = 50;
+const ADMIN_TABS = ["episodes", "users", "picks"] as const;
+type AdminTab = (typeof ADMIN_TABS)[number];
 
 /** Format for datetime-local input (YYYY-MM-DDTHH:mm). Handles ISO or Postgres timestamp strings. */
 function toDatetimeLocal(value: unknown): string {
@@ -58,10 +60,11 @@ function AdminLoadError({ message }: { message: string }) {
 export default async function AdminPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; tab?: string; episode?: string }>;
 }) {
   try {
-    const { error: errorParam } = await searchParams;
+    const { error: errorParam, tab: requestedTab, episode: requestedEpisode } = await searchParams;
+    const activeTab: AdminTab = ADMIN_TABS.includes(requestedTab as AdminTab) ? (requestedTab as AdminTab) : "episodes";
 
     if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
       return <AdminLoadError message="Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY in environment." />;
@@ -101,18 +104,28 @@ export default async function AdminPage({
       });
     }
 
-    const [profilesRes, pointsRes] = await Promise.all([
+    const [profilesRes, pointsRes, winnerPicksRes, voteOutPicksRes, tribePicksRes] = await Promise.all([
       supabase.from("profiles").select("id, email, display_name, deactivated_at"),
       supabase
         .from("user_season_points")
         .select("user_id, points, survival_points, tribe_immunity_points, individual_immunity_points, vote_out_points")
         .eq("season", SEASON),
+      supabase.from("winner_picks").select("user_id, player_id").eq("season", SEASON),
+      supabase
+        .from("vote_out_picks")
+        .select("user_id, episode_id, player_id, episodes(episode_number)"),
+      supabase
+        .from("tribe_immunity_picks")
+        .select("user_id, episode_id, tribe_id, episodes(episode_number)"),
     ]);
 
     const err =
       episodesRes.error?.message ? `Episodes: ${episodesRes.error.message}` :
       profilesRes.error?.message ? `Profiles: ${profilesRes.error.message}` :
       pointsRes.error?.message ? `Points: ${pointsRes.error.message}` :
+      winnerPicksRes.error?.message ? `Winner picks: ${winnerPicksRes.error.message}` :
+      voteOutPicksRes.error?.message ? `Vote-out picks: ${voteOutPicksRes.error.message}` :
+      tribePicksRes.error?.message ? `Tribe picks: ${tribePicksRes.error.message}` :
       null;
     if (err) {
       return <AdminLoadError message={err} />;
@@ -131,6 +144,55 @@ export default async function AdminPage({
     const pointsRows = pointsRes.data ?? [];
     const pointsByUser = new Map(pointsRows.map((r) => [r.user_id, r]));
     const hasMedevacColumn = episodes.length > 0 && "medevac_player_id" in episodes[0];
+    const playerNameById = new Map(PLAYERS.map((p) => [p.id, p.name]));
+    const winnerPicksByUser = new Map((winnerPicksRes.data ?? []).map((row) => [row.user_id, row.player_id]));
+    const voteOutPickRows = (voteOutPicksRes.data ?? []) as {
+      user_id: string;
+      episode_id: string;
+      player_id: string;
+      episodes: { episode_number: number } | { episode_number: number }[] | null;
+    }[];
+    const tribePickRows = (tribePicksRes.data ?? []) as {
+      user_id: string;
+      episode_id: string;
+      tribe_id: TribeId;
+      episodes: { episode_number: number } | { episode_number: number }[] | null;
+    }[];
+    const episodeById = new Map(episodes.map((ep) => [ep.id, ep]));
+    const episodeNumberById = new Map(episodes.map((ep) => [ep.id, ep.episode_number]));
+    const pickEpisodeId =
+      requestedEpisode && episodeById.has(requestedEpisode)
+        ? requestedEpisode
+        : episodes.find((ep) => !ep.voted_out_player_id)?.id ?? episodes.at(-1)?.id ?? null;
+    const pickEpisode = pickEpisodeId ? episodeById.get(pickEpisodeId) ?? null : null;
+    const voteOutPickByUserForEpisode = new Map<string, string>();
+    voteOutPickRows.forEach((row) => {
+      if (row.episode_id === pickEpisodeId && !voteOutPickByUserForEpisode.has(row.user_id)) {
+        voteOutPickByUserForEpisode.set(row.user_id, row.player_id);
+      }
+    });
+    const tribePickByUserForEpisode = new Map<string, TribeId>();
+    tribePickRows.forEach((row) => {
+      if (row.episode_id === pickEpisodeId && !tribePickByUserForEpisode.has(row.user_id)) {
+        tribePickByUserForEpisode.set(row.user_id, row.tribe_id);
+      }
+    });
+    const latestVoteOutEpisodeByUser = new Map<string, number>();
+    voteOutPickRows.forEach((row) => {
+      const relation = row.episodes;
+      const epNum = Array.isArray(relation) ? relation[0]?.episode_number : relation?.episode_number;
+      const resolvedEpNum = epNum ?? (episodeNumberById.get(row.episode_id) ?? 0);
+      const current = latestVoteOutEpisodeByUser.get(row.user_id) ?? 0;
+      latestVoteOutEpisodeByUser.set(row.user_id, Math.max(current, resolvedEpNum));
+    });
+    const latestTribePickEpisodeByUser = new Map<string, number>();
+    tribePickRows.forEach((row) => {
+      const relation = row.episodes;
+      const epNum = Array.isArray(relation) ? relation[0]?.episode_number : relation?.episode_number;
+      const resolvedEpNum = epNum ?? (episodeNumberById.get(row.episode_id) ?? 0);
+      const current = latestTribePickEpisodeByUser.get(row.user_id) ?? 0;
+      latestTribePickEpisodeByUser.set(row.user_id, Math.max(current, resolvedEpNum));
+    });
 
     return (
 
@@ -160,7 +222,34 @@ export default async function AdminPage({
       <p className="survivor-dashboard__welcome-subtext" style={{ marginBottom: "1.5rem" }}>
         Manage episodes (lock/unlock, set results, run scoring), users (names, scores, remove from group).
       </p>
+      <nav aria-label="Admin sections" style={{ display: "flex", gap: "0.5rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+        <Link
+          href="/dashboard/admin?tab=episodes"
+          className="survivor-btn survivor-btn--secondary"
+          aria-current={activeTab === "episodes" ? "page" : undefined}
+          style={activeTab === "episodes" ? { borderColor: "var(--survivor-accent)", color: "var(--survivor-accent)" } : undefined}
+        >
+          Episodes
+        </Link>
+        <Link
+          href="/dashboard/admin?tab=users"
+          className="survivor-btn survivor-btn--secondary"
+          aria-current={activeTab === "users" ? "page" : undefined}
+          style={activeTab === "users" ? { borderColor: "var(--survivor-accent)", color: "var(--survivor-accent)" } : undefined}
+        >
+          Users
+        </Link>
+        <Link
+          href="/dashboard/admin?tab=picks"
+          className="survivor-btn survivor-btn--secondary"
+          aria-current={activeTab === "picks" ? "page" : undefined}
+          style={activeTab === "picks" ? { borderColor: "var(--survivor-accent)", color: "var(--survivor-accent)" } : undefined}
+        >
+          Picks
+        </Link>
+      </nav>
 
+      {activeTab === "episodes" && (
       <section className="survivor-card" aria-labelledby="admin-episodes">
         <h2 id="admin-episodes" className="survivor-card__title">
           Episodes
@@ -190,6 +279,8 @@ export default async function AdminPage({
                         name="voteOutLockAt"
                         defaultValue={toDatetimeLocal(ep.vote_out_lock_at)}
                         className="survivor-auth__input"
+                        aria-label={`Episode ${ep.episode_number} lock time`}
+                        title={`Episode ${ep.episode_number} lock time`}
                         style={{ width: "auto", minWidth: "12rem" }}
                       />
                       <button type="submit" className="survivor-btn survivor-btn--secondary" style={{ marginLeft: "0.5rem" }}>
@@ -260,7 +351,9 @@ export default async function AdminPage({
           <p className="survivor-dashboard__card-body">No episodes. Add one in Supabase.</p>
         )}
       </section>
+      )}
 
+      {activeTab === "users" && (
       <section className="survivor-card" aria-labelledby="admin-users">
         <h2 id="admin-users" className="survivor-card__title">
           Users
@@ -321,10 +414,10 @@ export default async function AdminPage({
                     <td style={{ padding: "0.5rem" }}>
                       <form action={updateUserScoresForm} className="survivor-admin-inline" style={{ flexWrap: "wrap" }}>
                         <input type="hidden" name="userId" value={pro.id} />
-                        <input type="number" name="survival_points" defaultValue={pts?.survival_points ?? 0} min={0} className="survivor-auth__input" style={{ width: "3rem" }} />
-                        <input type="number" name="tribe_immunity_points" defaultValue={pts?.tribe_immunity_points ?? 0} min={0} className="survivor-auth__input" style={{ width: "3rem" }} />
-                        <input type="number" name="vote_out_points" defaultValue={pts?.vote_out_points ?? 0} min={0} className="survivor-auth__input" style={{ width: "3rem" }} />
-                        <input type="number" name="individual_immunity_points" defaultValue={pts?.individual_immunity_points ?? 0} min={0} className="survivor-auth__input" style={{ width: "3rem" }} />
+                        <input type="number" name="survival_points" defaultValue={pts?.survival_points ?? 0} min={0} aria-label={`Survival points for ${pro.display_name ?? pro.email ?? pro.id}`} title="Survival points" className="survivor-auth__input" style={{ width: "3rem" }} />
+                        <input type="number" name="tribe_immunity_points" defaultValue={pts?.tribe_immunity_points ?? 0} min={0} aria-label={`Tribe immunity points for ${pro.display_name ?? pro.email ?? pro.id}`} title="Tribe immunity points" className="survivor-auth__input" style={{ width: "3rem" }} />
+                        <input type="number" name="vote_out_points" defaultValue={pts?.vote_out_points ?? 0} min={0} aria-label={`Vote-out points for ${pro.display_name ?? pro.email ?? pro.id}`} title="Vote-out points" className="survivor-auth__input" style={{ width: "3rem" }} />
+                        <input type="number" name="individual_immunity_points" defaultValue={pts?.individual_immunity_points ?? 0} min={0} aria-label={`Individual immunity points for ${pro.display_name ?? pro.email ?? pro.id}`} title="Individual immunity points" className="survivor-auth__input" style={{ width: "3rem" }} />
                         <button type="submit" className="survivor-btn survivor-btn--secondary" style={{ marginLeft: "0.5rem" }}>
                           Save scores
                         </button>
@@ -352,6 +445,106 @@ export default async function AdminPage({
           </table>
         </div>
       </section>
+      )}
+
+      {activeTab === "picks" && (
+      <section className="survivor-card" aria-labelledby="admin-picks">
+        <h2 id="admin-picks" className="survivor-card__title">
+          Everyone&apos;s picks
+        </h2>
+        <p className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
+          Review winner picks and episode picks for appeal checks. Select an episode to inspect submitted vote-out and tribe immunity picks.
+        </p>
+        <form action="/dashboard/admin" method="get" className="survivor-admin-inline" style={{ marginBottom: "1rem" }}>
+          <input type="hidden" name="tab" value="picks" />
+          <label htmlFor="pick-episode" className="survivor-auth__label" style={{ marginBottom: 0 }}>
+            Episode
+          </label>
+          <select
+            id="pick-episode"
+            name="episode"
+            defaultValue={pickEpisodeId ?? ""}
+            className="survivor-auth__input"
+            style={{ width: "auto", minWidth: "10rem" }}
+          >
+            {episodes.map((ep) => (
+              <option key={ep.id} value={ep.id}>
+                Episode {ep.episode_number}
+              </option>
+            ))}
+          </select>
+          <button type="submit" className="survivor-btn survivor-btn--secondary">
+            View picks
+          </button>
+        </form>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>User</th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>Winner pick</th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>
+                  Vote-out pick{pickEpisode ? ` (Ep ${pickEpisode.episode_number})` : ""}
+                </th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>
+                  Tribe immunity{pickEpisode ? ` (Ep ${pickEpisode.episode_number})` : ""}
+                </th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>Latest pick activity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {profiles.map((pro) => {
+                const winnerPickId = winnerPicksByUser.get(pro.id);
+                const voteOutPickId = voteOutPickByUserForEpisode.get(pro.id);
+                const tribePickId = tribePickByUserForEpisode.get(pro.id);
+                const latestVoteEp = latestVoteOutEpisodeByUser.get(pro.id);
+                const latestTribeEp = latestTribePickEpisodeByUser.get(pro.id);
+                return (
+                  <tr
+                    key={pro.id}
+                    style={{
+                      borderBottom: "1px solid var(--survivor-border)",
+                      opacity: pro.deactivated_at ? 0.7 : 1,
+                    }}
+                  >
+                    <td style={{ padding: "0.5rem" }}>
+                      <strong>{pro.display_name || "No display name"}</strong>
+                      <span className="survivor-dashboard__card-body" style={{ display: "block", fontSize: "0.8125rem" }}>
+                        {pro.email ?? pro.id}
+                      </span>
+                      {pro.deactivated_at && (
+                        <span style={{ color: "var(--survivor-danger)", fontSize: "0.8125rem" }}>Removed from group</span>
+                      )}
+                    </td>
+                    <td style={{ padding: "0.5rem" }}>
+                      {winnerPickId ? playerNameById.get(winnerPickId) ?? "Unknown player" : "No pick"}
+                    </td>
+                    <td style={{ padding: "0.5rem" }}>
+                      {voteOutPickId ? playerNameById.get(voteOutPickId) ?? "Unknown player" : "No pick"}
+                    </td>
+                    <td style={{ padding: "0.5rem" }}>
+                      {tribePickId ? (
+                        <span style={{ color: TRIBES[tribePickId].color, fontWeight: 600 }}>{TRIBES[tribePickId].name}</span>
+                      ) : (
+                        "No pick"
+                      )}
+                    </td>
+                    <td style={{ padding: "0.5rem" }}>
+                      <span className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
+                        Latest vote-out pick: {latestVoteEp ? `Ep ${latestVoteEp}` : "None"}
+                      </span>
+                      <span className="survivor-dashboard__card-body survivor-dashboard__card-body--sm" style={{ display: "block" }}>
+                        Latest tribe pick: {latestTribeEp ? `Ep ${latestTribeEp}` : "None"}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      )}
 
       <p className="survivor-dashboard__welcome-subtext">
         <Link href="/dashboard" className="survivor-auth__link">

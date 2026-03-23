@@ -1,6 +1,6 @@
 # Survivor Fan Game – Single Source of Truth
 
-**Last updated:** 2026-03-19
+**Last updated:** 2026-03-23
 
 ## Project overview
 
@@ -41,6 +41,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - **Where:** Dashboard → Admin (link only visible to admins). Requires migration 008 (is_admin, deactivated_at, RLS).
 - **Episodes:** Unlock/lock picks (set vote_out_lock_at), set voted_out_player_id and `episode_immunity_tribes` (tribes that won immunity that episode), run Process episode to apply scoring.
 - **Users:** Edit display names, adjust score breakdown (survival, tribe imm., vote-out, ind. imm.), remove from group (sets deactivated_at; user is hidden from leaderboard) or restore.
+- **Picks:** Dedicated admin picks tab with an episode selector to audit everyone’s winner pick, vote-out pick, and tribe immunity pick for appeals/questions.
 - **Cast:** Eliminated players (voted_out_player_id set on an episode) show a red X overlay and "Eliminated — Episode N" on cast cards and player detail.
 
 ## Auth
@@ -79,6 +80,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-03-12: Multiple immunity-winning tribes: migration 019 adds episode_immunity_tribes (episode_id, tribe_id). Process-episode awards +1 to any user whose tribe pick is in that set. Admin uses checkboxes (Cila, Kalo, Vatu) per episode. Migration 020 backfills tribe immunity points for ep2 (Kalo, Vatu) and ep3 (Cila, Kalo).
 - 2026-03-19: Episode 4 Season 50 results: migration 021 sets voted_out_player_id = Mike White (Vatu Tribal) and inserts episode_immunity_tribes for Cila and Kalo.
 - 2026-03-19: Episode 5 Season 50: migration 022 inserts Episode 5 vote_out_lock_at so “My picks” can advance to the next week.
+- 2026-03-23: Admin page now has tabbed sections (Episodes, Users, Picks). New Picks tab shows all users and their winner pick plus per-episode vote-out and tribe immunity picks, with episode filter for adjudicating appeals/questions.
 - 2026-03-09: Tribe swap (Episode 3): Updated players.ts with post-swap tribes from Survivor Fandom wiki. New Cila (yellow): Charlie, Cirie, Dee, Jonathan, Kamilla, Rick, Rizo. New Kalo (blue): Aubry, Chrissy, Coach, Colby, Genevieve, Joe, Tiffany. New Vatu (red): Angelina, Christian, Emily, Mike, Ozzy, Q, Stephenie. Eliminated (Jenna, Kyle, Savannah) remain in original tribes for cast display.
 
 ## Theme music
