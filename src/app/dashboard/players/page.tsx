@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PLAYERS, TRIBES, getPlayersByTribe, CASTAWAYS_PAGE_URL } from "@/data/players";
 import type { TribeId } from "@/data/players";
@@ -49,7 +48,8 @@ export default async function PlayersPage() {
       ].map(({ id, label, players, color }) => (
         <section key={id} className="survivor-card" style={{ marginBottom: "1.5rem" }}>
           <h2 className="survivor-card__title" style={{ borderLeft: `4px solid ${color}`, paddingLeft: "0.75rem" }}>
-            Tribe: {label}
+            <span style={{ color: "var(--survivor-text-muted)" }}>Tribe:</span>{" "}
+            <span style={{ color, fontWeight: 700 }}>{label}</span>
           </h2>
           <div
             style={{
