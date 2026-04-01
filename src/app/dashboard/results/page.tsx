@@ -9,15 +9,15 @@ export default async function ResultsPage() {
 
   const { data: episodes } = await supabase
     .from("episodes")
-    .select("episode_number, voted_out_player_id")
+    .select("episode_number, voted_out_player_id, second_voted_out_player_id")
     .eq("season", SEASON)
     .order("episode_number", { ascending: true });
 
   const results = (episodes ?? []).map((ep) => ({
     episodeNumber: ep.episode_number,
-    bootName: ep.voted_out_player_id
-      ? PLAYERS.find((p) => p.id === ep.voted_out_player_id)?.name ?? "Unknown"
-      : null,
+    bootNames: [ep.voted_out_player_id, ep.second_voted_out_player_id]
+      .filter(Boolean)
+      .map((id) => PLAYERS.find((p) => p.id === id)?.name ?? "Unknown"),
   }));
 
   return (
@@ -36,7 +36,7 @@ export default async function ResultsPage() {
               No episode results yet. Results are posted after each episode (e.g. Friday 9:00 AM ET).
             </li>
           ) : (
-            results.map(({ episodeNumber, bootName }) => (
+            results.map(({ episodeNumber, bootNames }) => (
               <li
                 key={episodeNumber}
                 style={{
@@ -50,8 +50,8 @@ export default async function ResultsPage() {
                 }}
               >
                 <strong>Episode {episodeNumber}</strong>
-                <span style={{ color: bootName ? "var(--survivor-text)" : "var(--survivor-text-muted)" }}>
-                  Boot = {bootName ?? "—"}
+                <span style={{ color: bootNames.length > 0 ? "var(--survivor-text)" : "var(--survivor-text-muted)" }}>
+                  Boot{bootNames.length > 1 ? "s" : ""} = {bootNames.length > 0 ? bootNames.join(", ") : "—"}
                 </span>
               </li>
             ))

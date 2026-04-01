@@ -69,6 +69,7 @@ export interface Database {
           episode_number: number;
           vote_out_lock_at: string;
           voted_out_player_id: string | null;
+          second_voted_out_player_id: string | null;
           immunity_winning_tribe_id: string | null;
           medevac_player_id: string | null;
           created_at: string;
@@ -80,6 +81,7 @@ export interface Database {
           episode_number: number;
           vote_out_lock_at: string;
           voted_out_player_id?: string | null;
+          second_voted_out_player_id?: string | null;
           immunity_winning_tribe_id?: string | null;
           medevac_player_id?: string | null;
           created_at?: string;
@@ -87,6 +89,7 @@ export interface Database {
         };
         Update: {
           voted_out_player_id?: string | null;
+          second_voted_out_player_id?: string | null;
           immunity_winning_tribe_id?: string | null;
           medevac_player_id?: string | null;
           updated_at?: string;

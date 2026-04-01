@@ -46,6 +46,7 @@ export async function updateEpisodeLockForm(formData: FormData): Promise<void> {
 export async function updateEpisodeResult(episodeId: string, formData: FormData): Promise<void> {
   try {
     const votedOutPlayerId = (formData.get("votedOutPlayerId") as string) || null;
+    const secondVotedOutPlayerId = (formData.get("secondVotedOutPlayerId") as string) || null;
     const medevacPlayerId = (formData.get("medevacPlayerId") as string) || null;
     const immunityTribeIds = (formData.getAll("immunityTribeId") as string[]).filter(Boolean);
     const supabase = await requireAdmin();
@@ -54,6 +55,7 @@ export async function updateEpisodeResult(episodeId: string, formData: FormData)
       .from("episodes")
       .update({
         voted_out_player_id: votedOutPlayerId,
+        second_voted_out_player_id: secondVotedOutPlayerId,
         medevac_player_id: medevacPlayerId,
         updated_at: new Date().toISOString(),
       })

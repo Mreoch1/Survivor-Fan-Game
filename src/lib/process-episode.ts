@@ -29,7 +29,7 @@ export async function processEpisode(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data: episodeData, error: epErr } = await supabase
     .from("episodes")
-    .select("id, season, voted_out_player_id, medevac_player_id")
+    .select("id, season, voted_out_player_id, second_voted_out_player_id, medevac_player_id")
     .eq("id", episodeId)
     .single();
 
@@ -41,6 +41,7 @@ export async function processEpisode(
     id: string;
     season: number;
     voted_out_player_id: string | null;
+    second_voted_out_player_id: string | null;
     medevac_player_id: string | null;
   };
   if (episode.season !== SEASON) {
@@ -51,7 +52,11 @@ export async function processEpisode(
   }
 
   const votedOutId = episode.voted_out_player_id;
-  const eliminatedPlayerIds = [votedOutId, episode.medevac_player_id].filter(Boolean) as string[];
+  const eliminatedPlayerIds = [
+    votedOutId,
+    episode.second_voted_out_player_id,
+    episode.medevac_player_id,
+  ].filter(Boolean) as string[];
 
   const { data: already } = await supabase
     .from("episode_points_processed")
@@ -205,7 +210,10 @@ export async function processEpisode(
     .from("vote_out_picks")
     .select("user_id")
     .eq("episode_id", episodeId)
-    .eq("player_id", votedOutId);
+    .in(
+      "player_id",
+      [votedOutId, episode.second_voted_out_player_id].filter(Boolean) as string[]
+    );
 
   const voteOutWinnerIds = (voteOutCorrectPicks ?? []).map((r: { user_id: string }) => r.user_id);
   for (const uid of voteOutWinnerIds) {

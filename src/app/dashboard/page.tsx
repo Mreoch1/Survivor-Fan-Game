@@ -32,19 +32,19 @@ export default async function DashboardPage() {
 
   const { data: episodes } = await supabase
     .from("episodes")
-    .select("id, episode_number, voted_out_player_id, medevac_player_id")
+    .select("id, episode_number, voted_out_player_id, second_voted_out_player_id, medevac_player_id")
     .eq("season", 50)
     .order("episode_number", { ascending: true });
 
   const currentEpisode = (episodes ?? []).find(
-    (e) => !e.voted_out_player_id && !e.medevac_player_id
+    (e) => !e.voted_out_player_id && !e.second_voted_out_player_id && !e.medevac_player_id
   );
 
   const episodeResults = (episodes ?? []).map((ep) => ({
     episodeNumber: ep.episode_number,
-    bootName: ep.voted_out_player_id
-      ? PLAYERS.find((p) => p.id === ep.voted_out_player_id)?.name ?? "Unknown"
-      : null,
+    bootNames: [ep.voted_out_player_id, ep.second_voted_out_player_id]
+      .filter(Boolean)
+      .map((id) => PLAYERS.find((p) => p.id === id)?.name ?? "Unknown"),
   }));
 
   const winnerPlayer = winnerPick?.player_id
@@ -227,12 +227,12 @@ export default async function DashboardPage() {
         ) : (
           <>
             <ul className="survivor-dashboard__list">
-              {episodeResults.map(({ episodeNumber, bootName }) => (
+              {episodeResults.map(({ episodeNumber, bootNames }) => (
                 <li
                   key={episodeNumber}
                   className="survivor-dashboard__episode-row"
                 >
-                  <strong>Episode {episodeNumber}:</strong> Boot = {bootName ?? "—"}
+                  <strong>Episode {episodeNumber}:</strong> Boot{bootNames.length > 1 ? "s" : ""} = {bootNames.length > 0 ? bootNames.join(", ") : "—"}
                 </li>
               ))}
             </ul>

@@ -18,7 +18,7 @@ export default async function PlayerDetailPage({
     .from("episodes")
     .select("episode_number")
     .eq("season", 50)
-    .or(`voted_out_player_id.eq.${id},medevac_player_id.eq.${id}`)
+    .or(`voted_out_player_id.eq.${id},second_voted_out_player_id.eq.${id},medevac_player_id.eq.${id}`)
     .order("episode_number", { ascending: true })
     .limit(1);
   const eliminatedEpisode = episodes?.[0]?.episode_number ?? null;
