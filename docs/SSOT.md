@@ -1,6 +1,6 @@
 # Survivor Fan Game – Single Source of Truth
 
-**Last updated:** 2026-03-23
+**Last updated:** 2026-04-02
 
 ## Project overview
 
@@ -82,6 +82,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-03-19: Episode 5 Season 50: migration 022 inserts Episode 5 vote_out_lock_at so “My picks” can advance to the next week.
 - 2026-04-01: Episode 5 Season 50 results (migration 024): set `voted_out_player_id = angelina-keeley` and immunity winner `kalo` (`episode_immunity_tribes`) so Episode 5 is process-ready.
 - 2026-04-01: Episode 6 Season 50: migration 023 inserts Episode 6 vote_out_lock_at = 2026-04-01 20:00:00-05 (Wed 8 PM ET) so “My picks” advances to the latest episode.
+- 2026-04-02: Migration 028 sets Episode 6 `vote_out_lock_at` to 2026-04-08 20:00:00-05 (Wed 8 PM ET) so picks stay unlocked after the original Apr 1 lock passed.
 - 2026-04-01: Double-elimination support (migrations 025/026): added `episodes.second_voted_out_player_id`, updated Episode 5 second boot to `charlie-davis`, and cleared Episode 5 from `episode_points_processed` so scoring can be re-run with both eliminations counted.
 - 2026-04-01: Migration 027 re-opens Episode 5 for processing again after deploying updated double-elimination app logic, ensuring Charlie is counted when Episode 5 is reprocessed.
 - 2026-03-23: Admin page now has tabbed sections (Episodes, Users, Picks). New Picks tab shows all users and their winner pick plus per-episode vote-out and tribe immunity picks, with episode filter for adjudicating appeals/questions.
