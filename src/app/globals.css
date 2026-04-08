@@ -513,6 +513,128 @@ body {
   gap: 0.5rem;
 }
 
+/* Admin Episodes: wide table, horizontal scroll, readable vote-out selects */
+.survivor-admin-episodes {
+  overflow: visible;
+}
+
+.survivor-admin-episodes__scroll-hint {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--survivor-text-muted);
+  background: color-mix(in srgb, var(--survivor-border) 35%, transparent);
+  border-radius: 0.5rem;
+  border: 1px solid var(--survivor-border);
+}
+
+.survivor-admin-episodes__scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: visible;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 0.5rem;
+  padding: 0.25rem 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--survivor-border);
+  background: color-mix(in srgb, var(--survivor-bg) 40%, var(--survivor-bg-card));
+  outline-offset: 2px;
+}
+
+.survivor-admin-episodes__scroll:focus-visible {
+  outline: 2px solid var(--survivor-accent);
+}
+
+.survivor-admin-episodes__table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.survivor-admin-episodes__th {
+  text-align: left;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--survivor-text-muted);
+  border-bottom: 1px solid var(--survivor-border);
+  white-space: nowrap;
+}
+
+.survivor-admin-episodes__td {
+  padding: 0.5rem 0.65rem;
+  vertical-align: top;
+  border-bottom: 1px solid var(--survivor-border);
+}
+
+.survivor-admin-episodes__td--boot {
+  min-width: 15rem;
+}
+
+.survivor-admin-episodes__th--ep,
+.survivor-admin-episodes__td--ep {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--survivor-bg-card);
+  box-shadow: 6px 0 12px -8px rgba(0, 0, 0, 0.65);
+  width: 2.75rem;
+  min-width: 2.75rem;
+  text-align: center;
+}
+
+.survivor-admin-episodes__thead .survivor-admin-episodes__th--ep {
+  z-index: 3;
+}
+
+.survivor-admin-episodes__td--lock {
+  min-width: 14rem;
+  white-space: nowrap;
+}
+
+.survivor-admin-episodes__td--tribe {
+  min-width: 7rem;
+}
+
+.survivor-admin-episodes__td--action {
+  white-space: nowrap;
+}
+
+.survivor-admin-episodes__select {
+  display: block;
+  width: 100%;
+  min-width: 12.5rem;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+.survivor-admin-episodes__lock-form {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.5rem;
+  min-width: 13rem;
+}
+
+.survivor-admin-episodes__lock-form .survivor-auth__input {
+  width: 100%;
+  min-width: 0;
+  max-width: 16rem;
+}
+
+.survivor-admin-episodes__tribe-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: flex-start;
+}
+
 .survivor-dashboard__tribe-name--cila {
   color: var(--survivor-tribe-cila);
 }

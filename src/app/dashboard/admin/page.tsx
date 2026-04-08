@@ -257,12 +257,16 @@ export default async function AdminPage({
       </nav>
 
       {activeTab === "episodes" && (
-      <section className="survivor-card" aria-labelledby="admin-episodes">
+      <section className="survivor-card survivor-admin-episodes" aria-labelledby="admin-episodes">
         <h2 id="admin-episodes" className="survivor-card__title">
           Episodes
         </h2>
         <p className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
-          Set up to three vote-outs (double or triple elimination weeks), optional medevac, and tribe immunity (check all winning tribes; +1 per correct pick). One Save results per row submits every vote-out field. Then run Process episode. Scroll horizontally if the table is wider than your screen.
+          Set up to three vote-outs (double or triple elimination weeks), optional medevac, and tribe immunity (check all winning tribes; +1 per correct pick). One Save results per row submits every vote-out field. Then run Process episode.
+        </p>
+        <p className="survivor-admin-episodes__scroll-hint" role="note">
+          <span aria-hidden>↔</span>
+          <span>This table is wide: scroll sideways inside the bordered area below to see Vote-out 2, Vote-out 3, Medevac, tribe checkboxes, Save, and Process.</span>
         </p>
         {(!hasSecondBootColumn || !hasThirdBootColumn) && (
           <p
@@ -281,29 +285,47 @@ export default async function AdminPage({
             <code style={{ fontSize: "0.875em" }}>npm run db:push</code> (apply migrations through 030+) so double and triple boots work, then refresh this page.
           </p>
         )}
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", minWidth: "56rem", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Ep</th>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Lock at</th>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Vote-out 1</th>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Vote-out 2</th>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Vote-out 3</th>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Medevac</th>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Tribe immunity</th>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Save</th>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Process</th>
+        <div className="survivor-admin-episodes__scroll" tabIndex={0}>
+          <table className="survivor-admin-episodes__table">
+            <thead className="survivor-admin-episodes__thead">
+              <tr>
+                <th className="survivor-admin-episodes__th survivor-admin-episodes__th--ep" scope="col">
+                  Ep
+                </th>
+                <th className="survivor-admin-episodes__th" scope="col">
+                  Lock at
+                </th>
+                <th className="survivor-admin-episodes__th" scope="col">
+                  Vote-out 1
+                </th>
+                <th className="survivor-admin-episodes__th" scope="col">
+                  Vote-out 2
+                </th>
+                <th className="survivor-admin-episodes__th" scope="col">
+                  Vote-out 3
+                </th>
+                <th className="survivor-admin-episodes__th" scope="col">
+                  Medevac
+                </th>
+                <th className="survivor-admin-episodes__th" scope="col">
+                  Tribe immunity
+                </th>
+                <th className="survivor-admin-episodes__th" scope="col">
+                  Save
+                </th>
+                <th className="survivor-admin-episodes__th" scope="col">
+                  Process
+                </th>
               </tr>
             </thead>
             <tbody>
               {episodes.map((ep) => {
                 const resultFormId = `admin-episode-result-${ep.id}`;
                 return (
-                <tr key={ep.id} style={{ borderBottom: "1px solid var(--survivor-border)" }}>
-                  <td style={{ padding: "0.5rem" }}>{ep.episode_number}</td>
-                  <td style={{ padding: "0.5rem" }}>
-                    <form action={updateEpisodeLockForm} className="survivor-admin-inline">
+                <tr key={ep.id}>
+                  <td className="survivor-admin-episodes__td survivor-admin-episodes__td--ep">{ep.episode_number}</td>
+                  <td className="survivor-admin-episodes__td survivor-admin-episodes__td--lock">
+                    <form action={updateEpisodeLockForm} className="survivor-admin-episodes__lock-form">
                       <input type="hidden" name="episodeId" value={ep.id} />
                       <input
                         type="datetime-local"
@@ -312,14 +334,13 @@ export default async function AdminPage({
                         className="survivor-auth__input"
                         aria-label={`Episode ${ep.episode_number} lock time`}
                         title={`Episode ${ep.episode_number} lock time`}
-                        style={{ width: "auto", minWidth: "12rem" }}
                       />
-                      <button type="submit" className="survivor-btn survivor-btn--secondary" style={{ marginLeft: "0.5rem" }}>
+                      <button type="submit" className="survivor-btn survivor-btn--secondary">
                         Set lock
                       </button>
                     </form>
                   </td>
-                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
+                  <td className="survivor-admin-episodes__td survivor-admin-episodes__td--boot">
                     <form id={resultFormId} action={updateEpisodeResultForm}>
                       <input type="hidden" name="episodeId" value={ep.id} />
                     </form>
@@ -330,10 +351,13 @@ export default async function AdminPage({
                       id={`v1-${ep.id}`}
                       form={resultFormId}
                       name="votedOutPlayerId"
-                      className="survivor-auth__input"
-                      style={{ width: "100%", minWidth: "9rem", maxWidth: "12rem" }}
+                      className="survivor-auth__input survivor-admin-episodes__select"
                       defaultValue={ep.voted_out_player_id ?? ""}
-                      title="Vote-out 1 (required to process)"
+                      title={
+                        ep.voted_out_player_id
+                          ? `${playerNameById.get(ep.voted_out_player_id) ?? ep.voted_out_player_id} (vote-out 1)`
+                          : "Vote-out 1 (required to process)"
+                      }
                       aria-label={`Episode ${ep.episode_number} vote-out 1`}
                     >
                       <option value="">—</option>
@@ -344,7 +368,7 @@ export default async function AdminPage({
                       ))}
                     </select>
                   </td>
-                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
+                  <td className="survivor-admin-episodes__td survivor-admin-episodes__td--boot">
                     {hasSecondBootColumn ? (
                       <>
                         <label htmlFor={`v2-${ep.id}`} className="survivor-auth__label" style={{ display: "block", fontSize: "0.75rem", marginBottom: "0.25rem", color: "var(--survivor-text-muted)" }}>
@@ -354,10 +378,13 @@ export default async function AdminPage({
                           id={`v2-${ep.id}`}
                           form={resultFormId}
                           name="secondVotedOutPlayerId"
-                          className="survivor-auth__input"
-                          style={{ width: "100%", minWidth: "9rem", maxWidth: "12rem" }}
+                          className="survivor-auth__input survivor-admin-episodes__select"
                           defaultValue={ep.second_voted_out_player_id ?? ""}
-                          title="Vote-out 2 (double elimination)"
+                          title={
+                            ep.second_voted_out_player_id
+                              ? `${playerNameById.get(ep.second_voted_out_player_id) ?? ep.second_voted_out_player_id} (vote-out 2)`
+                              : "Vote-out 2 (double elimination)"
+                          }
                           aria-label={`Episode ${ep.episode_number} vote-out 2`}
                         >
                           <option value="">—</option>
@@ -372,7 +399,7 @@ export default async function AdminPage({
                       <span style={{ color: "var(--survivor-text-muted)", fontSize: "0.8125rem" }} title="Run DB migrations for second boot column">—</span>
                     )}
                   </td>
-                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
+                  <td className="survivor-admin-episodes__td survivor-admin-episodes__td--boot">
                     {hasThirdBootColumn ? (
                       <>
                         <label htmlFor={`v3-${ep.id}`} className="survivor-auth__label" style={{ display: "block", fontSize: "0.75rem", marginBottom: "0.25rem", color: "var(--survivor-text-muted)" }}>
@@ -382,10 +409,13 @@ export default async function AdminPage({
                           id={`v3-${ep.id}`}
                           form={resultFormId}
                           name="thirdVotedOutPlayerId"
-                          className="survivor-auth__input"
-                          style={{ width: "100%", minWidth: "9rem", maxWidth: "12rem" }}
+                          className="survivor-auth__input survivor-admin-episodes__select"
                           defaultValue={ep.third_voted_out_player_id ?? ""}
-                          title="Vote-out 3 (triple elimination)"
+                          title={
+                            ep.third_voted_out_player_id
+                              ? `${playerNameById.get(ep.third_voted_out_player_id) ?? ep.third_voted_out_player_id} (vote-out 3)`
+                              : "Vote-out 3 (triple elimination)"
+                          }
                           aria-label={`Episode ${ep.episode_number} vote-out 3`}
                         >
                           <option value="">—</option>
@@ -400,7 +430,7 @@ export default async function AdminPage({
                       <span style={{ color: "var(--survivor-text-muted)", fontSize: "0.8125rem" }} title="Run DB migrations for third boot column">—</span>
                     )}
                   </td>
-                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
+                  <td className="survivor-admin-episodes__td survivor-admin-episodes__td--boot">
                     {hasMedevacColumn ? (
                       <>
                         <label htmlFor={`med-${ep.id}`} className="survivor-auth__label" style={{ display: "block", fontSize: "0.75rem", marginBottom: "0.25rem", color: "var(--survivor-text-muted)" }}>
@@ -410,10 +440,13 @@ export default async function AdminPage({
                           id={`med-${ep.id}`}
                           form={resultFormId}
                           name="medevacPlayerId"
-                          className="survivor-auth__input"
-                          style={{ width: "100%", minWidth: "9rem", maxWidth: "12rem" }}
+                          className="survivor-auth__input survivor-admin-episodes__select"
                           defaultValue={ep.medevac_player_id ?? ""}
-                          title="Medevac / injury"
+                          title={
+                            ep.medevac_player_id
+                              ? `${playerNameById.get(ep.medevac_player_id) ?? ep.medevac_player_id} (medevac)`
+                              : "Medevac / injury"
+                          }
                           aria-label={`Episode ${ep.episode_number} medevac`}
                         >
                           <option value="">—</option>
@@ -428,8 +461,8 @@ export default async function AdminPage({
                       <span style={{ color: "var(--survivor-text-muted)", fontSize: "0.8125rem" }}>—</span>
                     )}
                   </td>
-                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
-                    <span style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }} title="Tribes that won immunity (check all)">
+                  <td className="survivor-admin-episodes__td survivor-admin-episodes__td--tribe">
+                    <span className="survivor-admin-episodes__tribe-stack" title="Tribes that won immunity (check all)">
                       {(Object.keys(TRIBES) as TribeId[]).map((id) => (
                         <label key={id} style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", cursor: "pointer" }}>
                           <input
@@ -445,12 +478,12 @@ export default async function AdminPage({
                       ))}
                     </span>
                   </td>
-                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
+                  <td className="survivor-admin-episodes__td survivor-admin-episodes__td--action">
                     <button type="submit" form={resultFormId} className="survivor-btn survivor-btn--secondary">
                       Save results
                     </button>
                   </td>
-                  <td style={{ padding: "0.5rem" }}>
+                  <td className="survivor-admin-episodes__td survivor-admin-episodes__td--action">
                     <ProcessEpisodeButton episodeId={ep.id} />
                   </td>
                 </tr>
