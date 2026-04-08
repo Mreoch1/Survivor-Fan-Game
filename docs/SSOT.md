@@ -83,7 +83,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-04-01: Episode 5 Season 50 results (migration 024): set `voted_out_player_id = angelina-keeley` and immunity winner `kalo` (`episode_immunity_tribes`) so Episode 5 is process-ready.
 - 2026-04-01: Episode 6 Season 50: migration 023 inserts Episode 6 vote_out_lock_at = 2026-04-01 20:00:00-05 (Wed 8 PM ET) so “My picks” advances to the latest episode.
 - 2026-04-02: Migration 028 sets Episode 6 `vote_out_lock_at` to 2026-04-08 20:00:00-05 (Wed 8 PM ET) so picks stay unlocked after the original Apr 1 lock passed.
-- 2026-04-02: Episode 7 Season 50: migration 029 inserts Episode 7 with `vote_out_lock_at` = 2026-04-15 20:00:00-05 (Wed 8 PM ET) so “My picks” advances after Episode 6 results are in.
+- 2026-04-02: Episode 7 Season 50: migration 029 inserts Episode 7 (lock Wed 8 PM ET). **Correction:** lock is **2026-04-08 20:00:00-05** (not Apr 15); migration 032 updates existing DBs; 029 text/insert amended for fresh installs.
 - 2026-04-07: Triple-elimination support (migration 030): `episodes.third_voted_out_player_id`. Episode 6 results (migration 031): Kamilla Karthigesu, Genevieve Mushaluk, Colby Donaldson; clears `episode_immunity_tribes` for that week (merge / individual immunity). Clears `episode_points_processed` for Episode 6 so Admin can run Process episode once.
 - 2026-04-07: Admin Episodes table: dedicated columns for Vote-out 1, 2, and 3 (plus Medevac, tribe immunity, Save, Process) with HTML `form` association so one Save submits all vote-out fields.
 - 2026-04-07: Admin Episodes: banner when DB lacks second/third boot columns; table `minWidth` and copy to scroll horizontally; detect columns via `episodes.some` for robustness.
