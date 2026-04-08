@@ -32,17 +32,15 @@ export default async function DashboardPage() {
 
   const { data: episodes } = await supabase
     .from("episodes")
-    .select("id, episode_number, voted_out_player_id, second_voted_out_player_id, medevac_player_id")
+    .select("id, episode_number, voted_out_player_id, second_voted_out_player_id, third_voted_out_player_id, medevac_player_id")
     .eq("season", 50)
     .order("episode_number", { ascending: true });
 
-  const currentEpisode = (episodes ?? []).find(
-    (e) => !e.voted_out_player_id && !e.second_voted_out_player_id && !e.medevac_player_id
-  );
+  const currentEpisode = (episodes ?? []).find((e) => !e.voted_out_player_id);
 
   const episodeResults = (episodes ?? []).map((ep) => ({
     episodeNumber: ep.episode_number,
-    bootNames: [ep.voted_out_player_id, ep.second_voted_out_player_id]
+    bootNames: [ep.voted_out_player_id, ep.second_voted_out_player_id, ep.third_voted_out_player_id]
       .filter(Boolean)
       .map((id) => PLAYERS.find((p) => p.id === id)?.name ?? "Unknown"),
   }));

@@ -20,13 +20,14 @@ export default async function PicksPage() {
 
   const { data: allEpisodes } = await supabase
     .from("episodes")
-    .select("episode_number, voted_out_player_id, second_voted_out_player_id, medevac_player_id")
+    .select("episode_number, voted_out_player_id, second_voted_out_player_id, third_voted_out_player_id, medevac_player_id")
     .eq("season", 50)
     .order("episode_number", { ascending: true });
   const eliminatedPlayerIds = new Set<string>();
-  (allEpisodes ?? []).forEach((e: { voted_out_player_id?: string | null; second_voted_out_player_id?: string | null; medevac_player_id?: string | null }) => {
+  (allEpisodes ?? []).forEach((e: { voted_out_player_id?: string | null; second_voted_out_player_id?: string | null; third_voted_out_player_id?: string | null; medevac_player_id?: string | null }) => {
     if (e.voted_out_player_id) eliminatedPlayerIds.add(e.voted_out_player_id);
     if (e.second_voted_out_player_id) eliminatedPlayerIds.add(e.second_voted_out_player_id);
+    if (e.third_voted_out_player_id) eliminatedPlayerIds.add(e.third_voted_out_player_id);
     if (e.medevac_player_id) eliminatedPlayerIds.add(e.medevac_player_id);
   });
 
@@ -40,13 +41,11 @@ export default async function PicksPage() {
 
   const { data: episodes } = await supabase
     .from("episodes")
-    .select("id, episode_number, vote_out_lock_at, voted_out_player_id, second_voted_out_player_id, medevac_player_id")
+    .select("id, episode_number, vote_out_lock_at, voted_out_player_id, second_voted_out_player_id, third_voted_out_player_id, medevac_player_id")
     .eq("season", 50)
     .order("episode_number", { ascending: true });
 
-  const currentEpisode = episodes?.find(
-    (e) => !e.voted_out_player_id && !e.second_voted_out_player_id && !e.medevac_player_id
-  );
+  const currentEpisode = episodes?.find((e) => !e.voted_out_player_id);
   let userVoteOutPick: string | null = null;
   let userTribeImmunityPick: TribeId | null = null;
   if (currentEpisode) {

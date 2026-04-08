@@ -47,6 +47,7 @@ export async function updateEpisodeResult(episodeId: string, formData: FormData)
   try {
     const votedOutPlayerId = (formData.get("votedOutPlayerId") as string) || null;
     const secondVotedOutPlayerId = (formData.get("secondVotedOutPlayerId") as string) || null;
+    const thirdVotedOutPlayerId = (formData.get("thirdVotedOutPlayerId") as string) || null;
     const medevacPlayerId = (formData.get("medevacPlayerId") as string) || null;
     const immunityTribeIds = (formData.getAll("immunityTribeId") as string[]).filter(Boolean);
     const supabase = await requireAdmin();
@@ -56,6 +57,7 @@ export async function updateEpisodeResult(episodeId: string, formData: FormData)
       .update({
         voted_out_player_id: votedOutPlayerId,
         second_voted_out_player_id: secondVotedOutPlayerId,
+        third_voted_out_player_id: thirdVotedOutPlayerId,
         medevac_player_id: medevacPlayerId,
         updated_at: new Date().toISOString(),
       })

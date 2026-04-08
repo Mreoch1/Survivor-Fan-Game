@@ -1,6 +1,6 @@
 # Survivor Fan Game – Single Source of Truth
 
-**Last updated:** 2026-04-02
+**Last updated:** 2026-04-07
 
 ## Project overview
 
@@ -39,7 +39,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 
 - **Who:** Any user with `profiles.is_admin = true` (set in Supabase or via SQL). Typically the group creator / first user.
 - **Where:** Dashboard → Admin (link only visible to admins). Requires migration 008 (is_admin, deactivated_at, RLS).
-- **Episodes:** Unlock/lock picks (set vote_out_lock_at), set voted_out_player_id and `episode_immunity_tribes` (tribes that won immunity that episode), run Process episode to apply scoring.
+- **Episodes:** Unlock/lock picks (set vote_out_lock_at), set voted_out_player_id (and second/third boot if needed) and `episode_immunity_tribes` (tribes that won immunity that episode), run Process episode to apply scoring.
 - **Users:** Edit display names, adjust score breakdown (survival, tribe imm., vote-out, ind. imm.), remove from group (sets deactivated_at; user is hidden from leaderboard) or restore.
 - **Picks:** Dedicated admin picks tab with an episode selector to audit everyone’s winner pick, vote-out pick, and tribe immunity pick for appeals/questions.
 - **Cast:** Eliminated players (voted_out_player_id set on an episode) show a red X overlay and "Eliminated — Episode N" on cast cards and player detail.
@@ -52,7 +52,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 ## Data
 
 - **Season 50 cast:** 24 players, 3 tribes. Post-swap (Episode 3): Cila (yellow #eab308), Kalo (blue #2563eb), Vatu (red #dc2626). Stored in app as static data. Player cards show initials when `imageUrl` is null; set `imageUrl` in `src/data/players.ts` for self-hosted or licensed photos.
-- **Episodes:** Episode number, lock time, **voted_out_player_id** (who was eliminated), **medevac_player_id** (optional). **episode_immunity_tribes** (episode_id, tribe_id): one row per tribe that won immunity; users who picked any of those tribes get +1. Planned: immunity_winning_player_id (post-merge) for individual immunity.
+- **Episodes:** Episode number, lock time, **voted_out_player_id**, optional **second_voted_out_player_id** and **third_voted_out_player_id** for double/triple boots, **medevac_player_id** (optional). **episode_immunity_tribes** (episode_id, tribe_id): one row per tribe that won immunity; users who picked any of those tribes get +1. Planned: immunity_winning_player_id (post-merge) for individual immunity.
 - **User picks:** winner_picks, vote_out_picks (per episode), **tribe_immunity_picks** (user_id, episode_id, tribe_id; one per user per episode), tribe_picks (season-long tribe choice), profiles.
 - **user_season_points:** Points per user per season with breakdown: `survival_points`, `tribe_immunity_points`, `individual_immunity_points`, `vote_out_points`; `points` = sum of all four. Also `weeks_survived`, `eliminations_hit`, `last_week_delta`. **episode_points_processed:** Tracks which episodes have had points applied (idempotent).
 
@@ -84,6 +84,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-04-01: Episode 6 Season 50: migration 023 inserts Episode 6 vote_out_lock_at = 2026-04-01 20:00:00-05 (Wed 8 PM ET) so “My picks” advances to the latest episode.
 - 2026-04-02: Migration 028 sets Episode 6 `vote_out_lock_at` to 2026-04-08 20:00:00-05 (Wed 8 PM ET) so picks stay unlocked after the original Apr 1 lock passed.
 - 2026-04-02: Episode 7 Season 50: migration 029 inserts Episode 7 with `vote_out_lock_at` = 2026-04-15 20:00:00-05 (Wed 8 PM ET) so “My picks” advances after Episode 6 results are in.
+- 2026-04-07: Triple-elimination support (migration 030): `episodes.third_voted_out_player_id`. Episode 6 results (migration 031): Kamilla Karthigesu, Genevieve Mushaluk, Colby Donaldson; clears `episode_immunity_tribes` for that week (merge / individual immunity). Clears `episode_points_processed` for Episode 6 so Admin can run Process episode once.
 - 2026-04-01: Double-elimination support (migrations 025/026): added `episodes.second_voted_out_player_id`, updated Episode 5 second boot to `charlie-davis`, and cleared Episode 5 from `episode_points_processed` so scoring can be re-run with both eliminations counted.
 - 2026-04-01: Migration 027 re-opens Episode 5 for processing again after deploying updated double-elimination app logic, ensuring Charlie is counted when Episode 5 is reprocessed.
 - 2026-03-23: Admin page now has tabbed sections (Episodes, Users, Picks). New Picks tab shows all users and their winner pick plus per-episode vote-out and tribe immunity picks, with episode filter for adjudicating appeals/questions.

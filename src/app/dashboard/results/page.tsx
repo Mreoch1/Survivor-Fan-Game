@@ -9,13 +9,13 @@ export default async function ResultsPage() {
 
   const { data: episodes } = await supabase
     .from("episodes")
-    .select("episode_number, voted_out_player_id, second_voted_out_player_id")
+    .select("episode_number, voted_out_player_id, second_voted_out_player_id, third_voted_out_player_id")
     .eq("season", SEASON)
     .order("episode_number", { ascending: true });
 
   const results = (episodes ?? []).map((ep) => ({
     episodeNumber: ep.episode_number,
-    bootNames: [ep.voted_out_player_id, ep.second_voted_out_player_id]
+    bootNames: [ep.voted_out_player_id, ep.second_voted_out_player_id, ep.third_voted_out_player_id]
       .filter(Boolean)
       .map((id) => PLAYERS.find((p) => p.id === id)?.name ?? "Unknown"),
   }));

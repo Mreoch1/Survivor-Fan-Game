@@ -83,13 +83,14 @@ export default async function AdminPage({
 
     const episodesResWithMedevac = await supabase
       .from("episodes")
-      .select("id, episode_number, vote_out_lock_at, voted_out_player_id, second_voted_out_player_id, immunity_winning_tribe_id, medevac_player_id")
+      .select("id, episode_number, vote_out_lock_at, voted_out_player_id, second_voted_out_player_id, third_voted_out_player_id, immunity_winning_tribe_id, medevac_player_id")
       .eq("season", SEASON)
       .order("episode_number", { ascending: true });
     const episodesRes =
       episodesResWithMedevac.error &&
       (episodesResWithMedevac.error.message?.includes("medevac_player_id") ||
-        episodesResWithMedevac.error.message?.includes("second_voted_out_player_id"))
+        episodesResWithMedevac.error.message?.includes("second_voted_out_player_id") ||
+        episodesResWithMedevac.error.message?.includes("third_voted_out_player_id"))
         ? await supabase
             .from("episodes")
             .select("id, episode_number, vote_out_lock_at, voted_out_player_id, immunity_winning_tribe_id")
@@ -139,6 +140,7 @@ export default async function AdminPage({
       vote_out_lock_at: string | null;
       voted_out_player_id: string | null;
       second_voted_out_player_id?: string | null;
+      third_voted_out_player_id?: string | null;
       immunity_winning_tribe_id: string | null;
       medevac_player_id?: string | null;
     };
@@ -148,6 +150,7 @@ export default async function AdminPage({
     const pointsByUser = new Map(pointsRows.map((r) => [r.user_id, r]));
     const hasMedevacColumn = episodes.length > 0 && "medevac_player_id" in episodes[0];
     const hasSecondBootColumn = episodes.length > 0 && "second_voted_out_player_id" in episodes[0];
+    const hasThirdBootColumn = episodes.length > 0 && "third_voted_out_player_id" in episodes[0];
     const playerNameById = new Map(PLAYERS.map((p) => [p.id, p.name]));
     const winnerPicksByUser = new Map((winnerPicksRes.data ?? []).map((row) => [row.user_id, row.player_id]));
     const voteOutPickRows = (voteOutPicksRes.data ?? []) as {
@@ -167,7 +170,7 @@ export default async function AdminPage({
     const pickEpisodeId =
       requestedEpisode && episodeById.has(requestedEpisode)
         ? requestedEpisode
-        : episodes.find((ep) => !ep.voted_out_player_id && !ep.second_voted_out_player_id && !ep.medevac_player_id)?.id ?? episodes.at(-1)?.id ?? null;
+        : episodes.find((ep) => !ep.voted_out_player_id)?.id ?? episodes.at(-1)?.id ?? null;
     const pickEpisode = pickEpisodeId ? episodeById.get(pickEpisodeId) ?? null : null;
     const voteOutPickByUserForEpisode = new Map<string, string>();
     voteOutPickRows.forEach((row) => {
@@ -267,7 +270,7 @@ export default async function AdminPage({
               <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>Ep</th>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>Lock at</th>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Voted out / Second boot / Medevac / Immunity</th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>Boots / Medevac / Immunity</th>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>Process</th>
               </tr>
             </thead>
@@ -318,6 +321,22 @@ export default async function AdminPage({
                           title="Second voted out (double elimination)"
                         >
                           <option value="">Second boot: —</option>
+                          {PLAYERS.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      {hasThirdBootColumn && (
+                        <select
+                          name="thirdVotedOutPlayerId"
+                          className="survivor-auth__input"
+                          style={{ width: "auto", minWidth: "10rem", marginLeft: "0.25rem" }}
+                          defaultValue={ep.third_voted_out_player_id ?? ""}
+                          title="Third voted out (triple elimination)"
+                        >
+                          <option value="">Third boot: —</option>
                           {PLAYERS.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.name}
