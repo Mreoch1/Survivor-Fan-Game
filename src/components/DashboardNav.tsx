@@ -37,7 +37,7 @@ export function DashboardNav({ userEmail, isAdmin }: DashboardNavProps) {
       {userEmail && (
         <span className="survivor-header__user-email">{userEmail}</span>
       )}
-      <form action={signOut}>
+      <form action={signOut} className="survivor-header__signout-form">
         <button
           type="submit"
           className="survivor-btn survivor-btn--secondary survivor-header__signout"

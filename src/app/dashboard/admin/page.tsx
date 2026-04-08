@@ -489,7 +489,7 @@ export default async function AdminPage({
           Edit display names and score breakdown. Remove from group hides the user from the leaderboard; restore to
           bring them back.
         </p>
-        <div style={{ overflowX: "auto" }}>
+        <div className="survivor-table-scroll">
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>
@@ -604,7 +604,7 @@ export default async function AdminPage({
             View picks
           </button>
         </form>
-        <div style={{ overflowX: "auto" }}>
+        <div className="survivor-table-scroll">
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>

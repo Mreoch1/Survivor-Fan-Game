@@ -44,15 +44,14 @@ export function InviteForm() {
         <label className="survivor-auth__label" htmlFor="invite-email">
           Email (we&apos;ll generate a link to send them)
         </label>
-        <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+        <div className="survivor-flex-field-row survivor-flex-field-row--stack-sm">
           <input
             id="invite-email"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="survivor-auth__input"
+            className="survivor-auth__input survivor-flex-field-row__grow"
             placeholder="friend@example.com"
-            style={{ flex: "1", minWidth: "200px" }}
           />
           <button type="submit" className="survivor-btn survivor-btn--primary" disabled={loading}>
             {loading ? "Creating…" : "Create invite link"}
@@ -74,13 +73,13 @@ export function InviteForm() {
       {inviteLink && (
         <div style={{ marginTop: "1rem" }}>
           <label className="survivor-auth__label">Invite link</label>
-          <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+          <div className="survivor-flex-field-row survivor-flex-field-row--stack-sm">
             <input
               type="text"
               readOnly
               value={inviteLink}
-              className="survivor-auth__input"
-              style={{ flex: "1", minWidth: "0", fontSize: "0.875rem" }}
+              aria-label="Invite link to copy"
+              className="survivor-auth__input survivor-flex-field-row__grow survivor-invite__link-field"
             />
             <button type="button" className="survivor-btn survivor-btn--secondary" onClick={copyLink}>
               Copy link

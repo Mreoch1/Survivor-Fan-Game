@@ -53,13 +53,7 @@ export default async function PlayersPage() {
             <span style={{ color: "var(--survivor-text-muted)" }}>Tribe:</span>{" "}
             <span style={{ color, fontWeight: 700 }}>{label}</span>
           </h2>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-              gap: "1rem",
-            }}
-          >
+          <div className="survivor-cast-grid">
             {players.map((player) => (
               <FaceCard
                 key={player.id}

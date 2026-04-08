@@ -28,15 +28,17 @@ export function SetDisplayName() {
   return (
     <div className="survivor-card" style={{ marginBottom: "1rem" }}>
       <p style={{ marginBottom: "0.75rem" }}>Add a display name for the leaderboard.</p>
-      <form onSubmit={handleSubmit} style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
+      <form
+        onSubmit={handleSubmit}
+        className="survivor-flex-field-row survivor-flex-field-row--stack-sm"
+      >
         <input
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="survivor-auth__input"
+          className="survivor-auth__input survivor-flex-field-row__grow"
           placeholder="Display name"
           maxLength={100}
-          style={{ maxWidth: "200px" }}
         />
         <button type="submit" className="survivor-btn survivor-btn--primary" disabled={saving}>
           {saving ? "Saving…" : "Save"}

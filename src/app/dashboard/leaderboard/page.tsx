@@ -81,7 +81,7 @@ export default async function LeaderboardPage() {
         </ul>
       </section>
 
-      <div className="survivor-card" style={{ overflowX: "auto" }}>
+      <div className="survivor-card survivor-table-scroll">
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>

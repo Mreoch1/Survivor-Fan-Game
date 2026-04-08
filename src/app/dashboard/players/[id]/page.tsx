@@ -29,8 +29,11 @@ export default async function PlayerDetailPage({
         ← Back to cast
       </Link>
       <div className="survivor-card">
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "1.5rem", alignItems: "flex-start" }}>
-          <div style={{ width: "200px", flexShrink: 0, position: "relative", opacity: eliminatedEpisode ? 0.7 : 1 }}>
+        <div className="survivor-player-detail__layout">
+          <div
+            className="survivor-player-detail__media"
+            style={{ position: "relative", opacity: eliminatedEpisode ? 0.7 : 1 }}
+          >
             <div
               className="survivor-player-detail__photo"
               style={{
@@ -100,7 +103,7 @@ export default async function PlayerDetailPage({
               {tribe.name}
             </p>
           </div>
-          <div style={{ flex: "1", minWidth: "200px" }}>
+          <div className="survivor-player-detail__body">
             <h1 className="survivor-card__title" style={{ marginBottom: "0.5rem" }}>
               {player.name}
             </h1>
