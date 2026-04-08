@@ -106,6 +106,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 
 ## Troubleshooting
 
+- **`npm run db:push` → `env: node: No such file or directory`:** The shell does not have Node on `PATH` (common in Cursor’s terminal if nvm/Homebrew only load in an interactive login shell). Fix: open **Terminal.app**, `cd` to the repo, run `npm run db:push`, or run **`./scripts/db-push.sh`** (uses Homebrew/nvm paths and calls `supabase` directly; still requires `SUPABASE_DB_PASSWORD` in the environment).
 - **Email confirmation "Cannot connect to the server":** Supabase **Authentication → URL Configuration** must have **Site URL** set to the production app URL and **Redirect URLs** including `https://<your-app>/auth/callback` and `https://<your-app>/**`. See `docs/troubleshooting.md`.
 
 ## TODOs / unresolved
