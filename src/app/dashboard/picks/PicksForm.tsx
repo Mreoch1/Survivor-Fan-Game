@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { formatInstantInEastern } from "@/lib/eastern-time";
 import type { Player } from "@/data/players";
 import type { TribeId } from "@/data/players";
 import type { TRIBES } from "@/data/players";
@@ -86,6 +87,9 @@ export function PicksForm({
     ? new Date(currentEpisode.vote_out_lock_at)
     : null;
   const isLocked = lockTime ? new Date() >= lockTime : false;
+  const lockLabelEastern = currentEpisode
+    ? formatInstantInEastern(currentEpisode.vote_out_lock_at)
+    : "";
 
   const needsRepick = !initialWinnerId && eliminatedIds.size > 0;
 
@@ -125,9 +129,9 @@ export function PicksForm({
         <>
           <div style={{ marginBottom: "1.5rem" }}>
             <label className="survivor-auth__label">Which tribe wins immunity? (Episode {currentEpisode.episode_number})</label>
-            {lockTime && (
+            {lockLabelEastern && (
               <span style={{ fontSize: "0.8125rem", color: "var(--survivor-text-muted)", marginLeft: "0.5rem" }}>
-                Locks: {lockTime.toLocaleString()}
+                Locks (ET): {lockLabelEastern}
               </span>
             )}
             <div className="picks-form__tribe-options" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
@@ -168,9 +172,9 @@ export function PicksForm({
           <div style={{ marginBottom: "1.5rem" }}>
             <label className="survivor-auth__label" htmlFor="voteOut">
               Who gets voted out this week? (Episode {currentEpisode.episode_number})
-            {lockTime && (
+            {lockLabelEastern && (
               <span style={{ fontSize: "0.8125rem", color: "var(--survivor-text-muted)", marginLeft: "0.5rem" }}>
-                Locks: {lockTime.toLocaleString()}
+                Locks (ET): {lockLabelEastern}
               </span>
             )}
           </label>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PLAYERS } from "@/data/players";
 import { TRIBES } from "@/data/players";
 import type { TribeId } from "@/data/players";
+import { formatInstantAsEasternDatetimeValue } from "@/lib/eastern-time";
 import {
   updateEpisodeLockForm,
   updateEpisodeResultForm,
@@ -17,14 +18,6 @@ import { ProcessEpisodeButton } from "./ProcessEpisodeButton";
 const SEASON = 50;
 const ADMIN_TABS = ["episodes", "users", "picks"] as const;
 type AdminTab = (typeof ADMIN_TABS)[number];
-
-/** Format for datetime-local input (YYYY-MM-DDTHH:mm). Handles ISO or Postgres timestamp strings. */
-function toDatetimeLocal(value: unknown): string {
-  if (value == null) return "";
-  const s = typeof value === "string" ? value : String(value);
-  const normalized = s.replace(" ", "T").slice(0, 16);
-  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(normalized) ? normalized : "";
-}
 
 function AdminLoadError({ message }: { message: string }) {
   return (
@@ -295,14 +288,20 @@ export default async function AdminPage({
                     </span>
                     <form action={updateEpisodeLockForm} className="survivor-admin-episodes__lock-form survivor-admin-episodes__lock-form--row">
                       <input type="hidden" name="episodeId" value={ep.id} />
-                      <input
-                        type="datetime-local"
-                        name="voteOutLockAt"
-                        defaultValue={toDatetimeLocal(ep.vote_out_lock_at)}
-                        className="survivor-auth__input survivor-admin-episodes__lock-input"
-                        aria-label={`Episode ${ep.episode_number} lock time`}
-                        title={`Episode ${ep.episode_number} lock time`}
-                      />
+                      <div className="survivor-admin-episodes__lock-field">
+                        <input
+                          type="text"
+                          name="voteOutLockAt"
+                          defaultValue={formatInstantAsEasternDatetimeValue(ep.vote_out_lock_at ?? "")}
+                          className="survivor-auth__input survivor-admin-episodes__lock-input"
+                          placeholder="2026-04-08T20:00"
+                          pattern="\d{4}-\d{2}-\d{2}T\d{1,2}:\d{2}"
+                          required
+                          aria-label={`Episode ${ep.episode_number} lock time (US Eastern)`}
+                          title="US Eastern Time: YYYY-MM-DDTHH:mm (24h)"
+                        />
+                        <span className="survivor-admin-episodes__lock-tz">US Eastern (ET)</span>
+                      </div>
                       <button type="submit" className="survivor-btn survivor-btn--secondary survivor-admin-episodes__lock-btn">
                         Set lock
                       </button>

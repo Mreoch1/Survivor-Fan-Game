@@ -1,6 +1,6 @@
 # Survivor Fan Game – Single Source of Truth
 
-**Last updated:** 2026-04-08
+**Last updated:** 2026-04-09
 
 ## Project overview
 
@@ -33,7 +33,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 
 - After the merge, you pick which castaway wins individual immunity each week. Correct pick = points (e.g. +1 per episode). Requires episode-level "immunity winner" player and user picks per episode; scoring in process-episode.
 
-**Lock rules:** All picks lock at episode start. Set a consistent "results publish time" (e.g. Friday 9:00 AM ET) so scoring updates are predictable.
+**Lock rules:** All picks lock at episode start. **`vote_out_lock_at`** is stored as **timestamptz** (absolute instant). Everywhere in the app, lock times are shown and edited as **US Eastern (`America/New_York`, EST/EDT)** so the group has one clock, not each user’s browser timezone. Admin uses a text field `YYYY-MM-DDTHH:mm` interpreted as Eastern; see `src/lib/eastern-time.ts`.
 
 ## Admin
 
@@ -89,6 +89,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-04-07: Admin Episodes: banner when DB lacks second/third boot columns; table `minWidth` and copy to scroll horizontally; detect columns via `episodes.some` for robustness.
 - 2026-04-08: Admin Episodes layout: wired `survivor-admin-episodes` BEM classes on the page, scroll hint, `tabIndex` on scroll area for keyboard focus, removed boot column `max-width` so long names are not clipped; focus-visible ring on scroll container.
 - 2026-04-08: Admin Episodes UI replaced wide scrollable table with a full-width card list per episode so controls fit without a horizontal scrollbar (responsive grid for vote-outs and medevac).
+- 2026-04-08: Lock times are standardized on **US Eastern** for display (My Picks) and admin editing; `src/lib/eastern-time.ts` formats and parses `YYYY-MM-DDTHH:mm` as `America/New_York`. DB still uses timestamptz.
 - 2026-04-08: `npm run db:push` script uses `supabase db push --yes` (linked project). `scripts/db-push.sh` calls the same without requiring Node; optional `SUPABASE_DB_PASSWORD` if needed.
 - 2026-04-01: Double-elimination support (migrations 025/026): added `episodes.second_voted_out_player_id`, updated Episode 5 second boot to `charlie-davis`, and cleared Episode 5 from `episode_points_processed` so scoring can be re-run with both eliminations counted.
 - 2026-04-01: Migration 027 re-opens Episode 5 for processing again after deploying updated double-elimination app logic, ensuring Charlie is counted when Episode 5 is reprocessed.

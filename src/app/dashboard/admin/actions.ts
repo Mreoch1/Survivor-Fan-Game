@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { parseEasternDatetimeValueToIso } from "@/lib/eastern-time";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -21,12 +22,18 @@ function adminRedirect(errorMessage: string) {
 
 export async function updateEpisodeLock(episodeId: string, formData: FormData): Promise<void> {
   try {
-    const voteOutLockAt = formData.get("voteOutLockAt") as string | null;
-    if (!voteOutLockAt) return adminRedirect("Lock time required");
+    const voteOutLockAtRaw = formData.get("voteOutLockAt") as string | null;
+    if (!voteOutLockAtRaw?.trim()) return adminRedirect("Lock time required");
+    const voteOutLockAtIso = parseEasternDatetimeValueToIso(voteOutLockAtRaw);
+    if (!voteOutLockAtIso) {
+      return adminRedirect(
+        "Lock time must be Eastern Time as YYYY-MM-DDTHH:mm (e.g. 2026-04-08T20:00). Use a valid clock time in US Eastern."
+      );
+    }
     const supabase = await requireAdmin();
     const { error } = await supabase
       .from("episodes")
-      .update({ vote_out_lock_at: voteOutLockAt, updated_at: new Date().toISOString() })
+      .update({ vote_out_lock_at: voteOutLockAtIso, updated_at: new Date().toISOString() })
       .eq("id", episodeId);
     if (error) return adminRedirect(error.message);
     revalidatePath("/dashboard/admin");
