@@ -81,75 +81,141 @@ export default async function LeaderboardPage() {
         </ul>
       </section>
 
-      <div className="survivor-card survivor-table-scroll">
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>
-              <th style={{ textAlign: "left", padding: "0.75rem" }}>Rank</th>
-              <th style={{ textAlign: "left", padding: "0.75rem" }}>Player</th>
-              <th style={{ textAlign: "left", padding: "0.75rem" }}>Current pick</th>
-              <th style={{ textAlign: "left", padding: "0.75rem" }}>Status</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }}>Last week</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }}>Repicks</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }} title="Winner pick">Survival</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }} title="Tribe immunity (pre-merge)">Tribe imm.</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }} title="Correct vote-out pick = +2">Vote-out</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }} title="Individual immunity (post-merge)">Ind. imm.</th>
-              <th style={{ textAlign: "right", padding: "0.75rem" }}>Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, i) => (
-              <tr key={row.userId} style={{ borderBottom: "1px solid var(--survivor-border)" }}>
-                <td style={{ padding: "0.75rem" }}>{i + 1}</td>
-                <td style={{ padding: "0.75rem", fontWeight: 600 }}>{row.name}</td>
-                <td style={{ padding: "0.75rem", color: "var(--survivor-text-muted)" }}>{row.currentPick}</td>
-                <td style={{ padding: "0.75rem" }}>
-                  <span
-                    style={{
-                      display: "inline-block",
-                      padding: "0.25rem 0.5rem",
-                      borderRadius: "0.25rem",
-                      fontSize: "0.75rem",
-                      fontWeight: 600,
-                      background: row.status === "SAFE" ? "var(--survivor-success)" : "var(--survivor-danger)",
-                      color: "var(--survivor-bg)",
-                    }}
-                  >
-                    {row.status === "SAFE" ? "SAFE" : "OUT, REPICK REQUIRED"}
-                  </span>
-                </td>
-                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
-                  {row.lastWeekDelta != null
-                    ? row.lastWeekDelta >= 0
-                      ? `+${row.lastWeekDelta}`
-                      : row.lastWeekDelta
-                    : "—"}
-                </td>
-                <td style={{ padding: "0.75rem", textAlign: "right" }}>{row.eliminationsHit}</td>
-                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
-                  {row.survivalPoints}
-                </td>
-                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
-                  {row.tribeImmunityPoints}
-                </td>
-                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
-                  {row.voteOutPoints}
-                </td>
-                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
-                  {row.individualImmunityPoints}
-                </td>
-                <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-accent)", fontWeight: 700 }}>
-                  {row.points}
-                </td>
+      <div className="survivor-card survivor-leaderboard">
+        <div className="survivor-leaderboard--desktop survivor-table-scroll">
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>
+                <th style={{ textAlign: "left", padding: "0.75rem" }}>Rank</th>
+                <th style={{ textAlign: "left", padding: "0.75rem" }}>Player</th>
+                <th style={{ textAlign: "left", padding: "0.75rem" }}>Current pick</th>
+                <th style={{ textAlign: "left", padding: "0.75rem" }}>Status</th>
+                <th style={{ textAlign: "right", padding: "0.75rem" }}>Last week</th>
+                <th style={{ textAlign: "right", padding: "0.75rem" }}>Repicks</th>
+                <th style={{ textAlign: "right", padding: "0.75rem" }} title="Winner pick">
+                  Survival
+                </th>
+                <th style={{ textAlign: "right", padding: "0.75rem" }} title="Tribe immunity (pre-merge)">
+                  Tribe imm.
+                </th>
+                <th style={{ textAlign: "right", padding: "0.75rem" }} title="Correct vote-out pick = +2">
+                  Vote-out
+                </th>
+                <th style={{ textAlign: "right", padding: "0.75rem" }} title="Individual immunity (post-merge)">
+                  Ind. imm.
+                </th>
+                <th style={{ textAlign: "right", padding: "0.75rem" }}>Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row, i) => (
+                <tr key={row.userId} style={{ borderBottom: "1px solid var(--survivor-border)" }}>
+                  <td style={{ padding: "0.75rem" }}>{i + 1}</td>
+                  <td style={{ padding: "0.75rem", fontWeight: 600 }}>{row.name}</td>
+                  <td style={{ padding: "0.75rem", color: "var(--survivor-text-muted)" }}>{row.currentPick}</td>
+                  <td style={{ padding: "0.75rem" }}>
+                    <span
+                      className={
+                        row.status === "SAFE"
+                          ? "survivor-leaderboard__status survivor-leaderboard__status--safe"
+                          : "survivor-leaderboard__status survivor-leaderboard__status--out"
+                      }
+                    >
+                      {row.status === "SAFE" ? "SAFE" : "OUT, REPICK REQUIRED"}
+                    </span>
+                  </td>
+                  <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+                    {row.lastWeekDelta != null
+                      ? row.lastWeekDelta >= 0
+                        ? `+${row.lastWeekDelta}`
+                        : row.lastWeekDelta
+                      : "—"}
+                  </td>
+                  <td style={{ padding: "0.75rem", textAlign: "right" }}>{row.eliminationsHit}</td>
+                  <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+                    {row.survivalPoints}
+                  </td>
+                  <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+                    {row.tribeImmunityPoints}
+                  </td>
+                  <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+                    {row.voteOutPoints}
+                  </td>
+                  <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-text-muted)", fontSize: "0.875rem" }}>
+                    {row.individualImmunityPoints}
+                  </td>
+                  <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-accent)", fontWeight: 700 }}>
+                    {row.points}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <ul className="survivor-leaderboard--mobile survivor-leaderboard__card-list" aria-label="Leaderboard by player">
+          {rows.map((row, i) => (
+            <li key={row.userId} className="survivor-leaderboard__card">
+              <div className="survivor-leaderboard__card-head">
+                <div>
+                  <span className="survivor-leaderboard__card-rank">#{i + 1}</span>
+                  <p className="survivor-leaderboard__card-name">{row.name}</p>
+                </div>
+                <div className="survivor-leaderboard__card-total-block">
+                  <span className="survivor-leaderboard__card-total-label">Total</span>
+                  <span className="survivor-leaderboard__card-total">{row.points}</span>
+                </div>
+              </div>
+              <span
+                className={
+                  row.status === "SAFE"
+                    ? "survivor-leaderboard__status survivor-leaderboard__status--safe"
+                    : "survivor-leaderboard__status survivor-leaderboard__status--out"
+                }
+              >
+                {row.status === "SAFE" ? "SAFE" : "OUT, REPICK REQUIRED"}
+              </span>
+              <p className="survivor-leaderboard__card-pick">
+                <span className="survivor-leaderboard__card-dt">Current pick</span> {row.currentPick}
+              </p>
+              <dl className="survivor-leaderboard__metrics">
+                <div className="survivor-leaderboard__metric">
+                  <dt>Last week</dt>
+                  <dd>
+                    {row.lastWeekDelta != null
+                      ? row.lastWeekDelta >= 0
+                        ? `+${row.lastWeekDelta}`
+                        : row.lastWeekDelta
+                      : "—"}
+                  </dd>
+                </div>
+                <div className="survivor-leaderboard__metric">
+                  <dt>Repicks</dt>
+                  <dd>{row.eliminationsHit}</dd>
+                </div>
+                <div className="survivor-leaderboard__metric">
+                  <dt>Survival</dt>
+                  <dd>{row.survivalPoints}</dd>
+                </div>
+                <div className="survivor-leaderboard__metric">
+                  <dt>Tribe imm.</dt>
+                  <dd>{row.tribeImmunityPoints}</dd>
+                </div>
+                <div className="survivor-leaderboard__metric">
+                  <dt>Vote-out</dt>
+                  <dd>{row.voteOutPoints}</dd>
+                </div>
+                <div className="survivor-leaderboard__metric">
+                  <dt>Ind. imm.</dt>
+                  <dd>{row.individualImmunityPoints}</dd>
+                </div>
+              </dl>
+            </li>
+          ))}
+        </ul>
+
         {rows.length === 0 && (
-          <p style={{ color: "var(--survivor-text-muted)", padding: "1rem" }}>
-            No points yet. Make your winner pick to start earning.
-          </p>
+          <p className="survivor-leaderboard__empty">No points yet. Make your winner pick to start earning.</p>
         )}
       </div>
 

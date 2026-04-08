@@ -1223,3 +1223,163 @@ body {
     text-align: left;
   }
 }
+
+/* Leaderboard: stacked cards below 1024px so nothing requires horizontal scroll */
+.survivor-leaderboard {
+  overflow-x: visible;
+}
+
+.survivor-leaderboard--mobile {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.survivor-leaderboard__status {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--survivor-bg);
+}
+
+.survivor-leaderboard__status--safe {
+  background: var(--survivor-success);
+}
+
+.survivor-leaderboard__status--out {
+  background: var(--survivor-danger);
+}
+
+.survivor-leaderboard__card {
+  border: 1px solid var(--survivor-border);
+  border-radius: 0.5rem;
+  padding: 0.85rem 1rem;
+  margin-bottom: 0.65rem;
+  background: color-mix(in srgb, var(--survivor-bg) 30%, var(--survivor-bg-card));
+}
+
+.survivor-leaderboard__card:last-child {
+  margin-bottom: 0;
+}
+
+.survivor-leaderboard__card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.survivor-leaderboard__card-rank {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--survivor-accent);
+  letter-spacing: 0.02em;
+}
+
+.survivor-leaderboard__card-name {
+  margin: 0.15rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--survivor-text);
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.survivor-leaderboard__card-total-block {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.survivor-leaderboard__card-total-label {
+  display: block;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--survivor-text-muted);
+}
+
+.survivor-leaderboard__card-total {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--survivor-accent);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+
+.survivor-leaderboard__card-pick {
+  margin: 0.5rem 0 0.65rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--survivor-text);
+}
+
+.survivor-leaderboard__card-dt {
+  color: var(--survivor-text-muted);
+  font-weight: 600;
+  margin-right: 0.25rem;
+}
+
+.survivor-leaderboard__metrics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem 0.75rem;
+  margin: 0;
+  padding: 0.65rem 0 0;
+  border-top: 1px solid var(--survivor-border);
+}
+
+.survivor-leaderboard__metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.survivor-leaderboard__metric dt {
+  margin: 0;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--survivor-text-muted);
+}
+
+.survivor-leaderboard__metric dd {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: var(--survivor-text);
+}
+
+.survivor-leaderboard__empty {
+  color: var(--survivor-text-muted);
+  padding: 1rem;
+  margin: 0;
+}
+
+@media (max-width: 63.99rem) {
+  .survivor-leaderboard--desktop {
+    display: none !important;
+  }
+
+  .survivor-leaderboard--mobile {
+    display: block;
+  }
+}
+
+@media (min-width: 64rem) {
+  .survivor-leaderboard--mobile {
+    display: none !important;
+  }
+
+  .survivor-leaderboard--desktop {
+    display: block;
+  }
+}
