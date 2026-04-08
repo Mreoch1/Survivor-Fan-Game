@@ -262,7 +262,7 @@ export default async function AdminPage({
           Episodes
         </h2>
         <p className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
-          Set who was voted out, (optional) medevac/injury, and which tribes won immunity (check all that had immunity; +1 per correct pick). Then run &quot;Process episode&quot; to apply scoring.
+          Set up to three vote-outs (double or triple elimination weeks), optional medevac, and tribe immunity (check all winning tribes; +1 per correct pick). One Save results per row submits every vote-out field. Then run Process episode.
         </p>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -270,12 +270,19 @@ export default async function AdminPage({
               <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>Ep</th>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>Lock at</th>
-                <th style={{ textAlign: "left", padding: "0.5rem" }}>Boots / Medevac / Immunity</th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>Vote-out 1</th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>Vote-out 2</th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>Vote-out 3</th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>Medevac</th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>Tribe immunity</th>
+                <th style={{ textAlign: "left", padding: "0.5rem" }}>Save</th>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>Process</th>
               </tr>
             </thead>
             <tbody>
-              {episodes.map((ep) => (
+              {episodes.map((ep) => {
+                const resultFormId = `admin-episode-result-${ep.id}`;
+                return (
                 <tr key={ep.id} style={{ borderBottom: "1px solid var(--survivor-border)" }}>
                   <td style={{ padding: "0.5rem" }}>{ep.episode_number}</td>
                   <td style={{ padding: "0.5rem" }}>
@@ -295,94 +302,143 @@ export default async function AdminPage({
                       </button>
                     </form>
                   </td>
-                  <td style={{ padding: "0.5rem" }}>
-                    <form action={updateEpisodeResultForm} className="survivor-admin-inline" style={{ flexWrap: "wrap" }}>
+                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
+                    <form id={resultFormId} action={updateEpisodeResultForm}>
                       <input type="hidden" name="episodeId" value={ep.id} />
-                      <select
-                        name="votedOutPlayerId"
-                        className="survivor-auth__input"
-                        style={{ width: "auto", minWidth: "10rem" }}
-                        defaultValue={ep.voted_out_player_id ?? ""}
-                        title="Voted out"
-                      >
-                        <option value="">Voted out: —</option>
-                        {PLAYERS.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                          </option>
-                        ))}
-                      </select>
-                      {hasSecondBootColumn && (
+                    </form>
+                    <label htmlFor={`v1-${ep.id}`} className="survivor-auth__label" style={{ display: "block", fontSize: "0.75rem", marginBottom: "0.25rem", color: "var(--survivor-text-muted)" }}>
+                      Primary boot
+                    </label>
+                    <select
+                      id={`v1-${ep.id}`}
+                      form={resultFormId}
+                      name="votedOutPlayerId"
+                      className="survivor-auth__input"
+                      style={{ width: "100%", minWidth: "9rem", maxWidth: "12rem" }}
+                      defaultValue={ep.voted_out_player_id ?? ""}
+                      title="Vote-out 1 (required to process)"
+                      aria-label={`Episode ${ep.episode_number} vote-out 1`}
+                    >
+                      <option value="">—</option>
+                      {PLAYERS.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
+                    {hasSecondBootColumn ? (
+                      <>
+                        <label htmlFor={`v2-${ep.id}`} className="survivor-auth__label" style={{ display: "block", fontSize: "0.75rem", marginBottom: "0.25rem", color: "var(--survivor-text-muted)" }}>
+                          Second boot
+                        </label>
                         <select
+                          id={`v2-${ep.id}`}
+                          form={resultFormId}
                           name="secondVotedOutPlayerId"
                           className="survivor-auth__input"
-                          style={{ width: "auto", minWidth: "10rem", marginLeft: "0.25rem" }}
+                          style={{ width: "100%", minWidth: "9rem", maxWidth: "12rem" }}
                           defaultValue={ep.second_voted_out_player_id ?? ""}
-                          title="Second voted out (double elimination)"
+                          title="Vote-out 2 (double elimination)"
+                          aria-label={`Episode ${ep.episode_number} vote-out 2`}
                         >
-                          <option value="">Second boot: —</option>
+                          <option value="">—</option>
                           {PLAYERS.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.name}
                             </option>
                           ))}
                         </select>
-                      )}
-                      {hasThirdBootColumn && (
+                      </>
+                    ) : (
+                      <span style={{ color: "var(--survivor-text-muted)", fontSize: "0.8125rem" }} title="Run DB migrations for second boot column">—</span>
+                    )}
+                  </td>
+                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
+                    {hasThirdBootColumn ? (
+                      <>
+                        <label htmlFor={`v3-${ep.id}`} className="survivor-auth__label" style={{ display: "block", fontSize: "0.75rem", marginBottom: "0.25rem", color: "var(--survivor-text-muted)" }}>
+                          Third boot
+                        </label>
                         <select
+                          id={`v3-${ep.id}`}
+                          form={resultFormId}
                           name="thirdVotedOutPlayerId"
                           className="survivor-auth__input"
-                          style={{ width: "auto", minWidth: "10rem", marginLeft: "0.25rem" }}
+                          style={{ width: "100%", minWidth: "9rem", maxWidth: "12rem" }}
                           defaultValue={ep.third_voted_out_player_id ?? ""}
-                          title="Third voted out (triple elimination)"
+                          title="Vote-out 3 (triple elimination)"
+                          aria-label={`Episode ${ep.episode_number} vote-out 3`}
                         >
-                          <option value="">Third boot: —</option>
+                          <option value="">—</option>
                           {PLAYERS.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.name}
                             </option>
                           ))}
                         </select>
-                      )}
-                      {hasMedevacColumn && (
+                      </>
+                    ) : (
+                      <span style={{ color: "var(--survivor-text-muted)", fontSize: "0.8125rem" }} title="Run DB migrations for third boot column">—</span>
+                    )}
+                  </td>
+                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
+                    {hasMedevacColumn ? (
+                      <>
+                        <label htmlFor={`med-${ep.id}`} className="survivor-auth__label" style={{ display: "block", fontSize: "0.75rem", marginBottom: "0.25rem", color: "var(--survivor-text-muted)" }}>
+                          Medevac / injury
+                        </label>
                         <select
+                          id={`med-${ep.id}`}
+                          form={resultFormId}
                           name="medevacPlayerId"
                           className="survivor-auth__input"
-                          style={{ width: "auto", minWidth: "10rem", marginLeft: "0.25rem" }}
+                          style={{ width: "100%", minWidth: "9rem", maxWidth: "12rem" }}
                           defaultValue={ep.medevac_player_id ?? ""}
                           title="Medevac / injury"
+                          aria-label={`Episode ${ep.episode_number} medevac`}
                         >
-                          <option value="">Medevac: —</option>
+                          <option value="">—</option>
                           {PLAYERS.map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.name}
                             </option>
                           ))}
                         </select>
-                      )}
-                      <span style={{ marginLeft: "0.5rem", display: "inline-flex", alignItems: "center", gap: "0.5rem" }} title="Tribes that won immunity (check all)">
-                        {(Object.keys(TRIBES) as TribeId[]).map((id) => (
-                          <label key={id} style={{ display: "inline-flex", alignItems: "center", gap: "0.25rem", cursor: "pointer" }}>
-                            <input
-                              type="checkbox"
-                              name="immunityTribeId"
-                              value={id}
-                              defaultChecked={immunityByEpisode.get(ep.id)?.has(id)}
-                            />
-                            <span style={{ color: TRIBES[id].color, fontWeight: 600 }}>{TRIBES[id].name}</span>
-                          </label>
-                        ))}
-                      </span>
-                      <button type="submit" className="survivor-btn survivor-btn--secondary" style={{ marginLeft: "0.5rem" }}>
-                        Save results
-                      </button>
-                    </form>
+                      </>
+                    ) : (
+                      <span style={{ color: "var(--survivor-text-muted)", fontSize: "0.8125rem" }}>—</span>
+                    )}
+                  </td>
+                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
+                    <span style={{ display: "flex", flexDirection: "column", gap: "0.35rem" }} title="Tribes that won immunity (check all)">
+                      {(Object.keys(TRIBES) as TribeId[]).map((id) => (
+                        <label key={id} style={{ display: "inline-flex", alignItems: "center", gap: "0.35rem", cursor: "pointer" }}>
+                          <input
+                            type="checkbox"
+                            form={resultFormId}
+                            name="immunityTribeId"
+                            value={id}
+                            defaultChecked={immunityByEpisode.get(ep.id)?.has(id)}
+                            aria-label={`Episode ${ep.episode_number} immunity ${TRIBES[id].name}`}
+                          />
+                          <span style={{ color: TRIBES[id].color, fontWeight: 600 }}>{TRIBES[id].name}</span>
+                        </label>
+                      ))}
+                    </span>
+                  </td>
+                  <td style={{ padding: "0.5rem", verticalAlign: "top" }}>
+                    <button type="submit" form={resultFormId} className="survivor-btn survivor-btn--secondary">
+                      Save results
+                    </button>
                   </td>
                   <td style={{ padding: "0.5rem" }}>
                     <ProcessEpisodeButton episodeId={ep.id} />
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
