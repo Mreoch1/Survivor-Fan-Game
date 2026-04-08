@@ -4,7 +4,7 @@ import Link from "next/link";
 import { PLAYERS } from "@/data/players";
 import { TRIBES } from "@/data/players";
 import type { TribeId } from "@/data/players";
-import { formatInstantAsEasternDatetimeValue } from "@/lib/eastern-time";
+import { formatInstantAsEasternDateAndTime } from "@/lib/eastern-time";
 import {
   updateEpisodeLockForm,
   updateEpisodeResultForm,
@@ -280,6 +280,7 @@ export default async function AdminPage({
         <ul className="survivor-admin-episodes__list">
               {episodes.map((ep) => {
                 const resultFormId = `admin-episode-result-${ep.id}`;
+                const lockParts = formatInstantAsEasternDateAndTime(ep.vote_out_lock_at ?? "");
                 return (
                 <li key={ep.id} className="survivor-admin-episodes__episode">
                   <div className="survivor-admin-episodes__episode-head">
@@ -289,18 +290,27 @@ export default async function AdminPage({
                     <form action={updateEpisodeLockForm} className="survivor-admin-episodes__lock-form survivor-admin-episodes__lock-form--row">
                       <input type="hidden" name="episodeId" value={ep.id} />
                       <div className="survivor-admin-episodes__lock-field">
-                        <input
-                          type="text"
-                          name="voteOutLockAt"
-                          defaultValue={formatInstantAsEasternDatetimeValue(ep.vote_out_lock_at ?? "")}
-                          className="survivor-auth__input survivor-admin-episodes__lock-input"
-                          placeholder="2026-04-08T20:00"
-                          pattern="\\d{4}-\\d{2}-\\d{2}T\\d{1,2}:\\d{2}"
-                          inputMode="numeric"
-                          required
-                          aria-label={`Episode ${ep.episode_number} lock time (US Eastern)`}
-                          title="US Eastern Time: YYYY-MM-DDTHH:mm (24h)"
-                        />
+                        <div className="survivor-admin-episodes__lock-inputs">
+                          <input
+                            type="date"
+                            name="voteOutLockDate"
+                            defaultValue={lockParts.date}
+                            className="survivor-auth__input survivor-admin-episodes__lock-input survivor-admin-episodes__lock-input--date"
+                            required
+                            aria-label={`Episode ${ep.episode_number} lock date (US Eastern)`}
+                            title="US Eastern date"
+                          />
+                          <input
+                            type="time"
+                            name="voteOutLockTime"
+                            defaultValue={lockParts.time}
+                            step={60}
+                            className="survivor-auth__input survivor-admin-episodes__lock-input survivor-admin-episodes__lock-input--time"
+                            required
+                            aria-label={`Episode ${ep.episode_number} lock time (US Eastern)`}
+                            title="US Eastern time (24h)"
+                          />
+                        </div>
                         <span className="survivor-admin-episodes__lock-tz">US Eastern (ET)</span>
                       </div>
                       <button type="submit" className="survivor-btn survivor-btn--secondary survivor-admin-episodes__lock-btn">

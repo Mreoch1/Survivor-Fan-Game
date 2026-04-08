@@ -22,7 +22,10 @@ function adminRedirect(errorMessage: string) {
 
 export async function updateEpisodeLock(episodeId: string, formData: FormData): Promise<void> {
   try {
-    const voteOutLockAtRaw = formData.get("voteOutLockAt") as string | null;
+    const lockDate = (formData.get("voteOutLockDate") as string | null)?.trim() ?? "";
+    const lockTime = (formData.get("voteOutLockTime") as string | null)?.trim() ?? "";
+    const combinedFromSplit = lockDate && lockTime ? `${lockDate}T${lockTime}` : "";
+    const voteOutLockAtRaw = combinedFromSplit || ((formData.get("voteOutLockAt") as string | null)?.trim() ?? "");
     if (!voteOutLockAtRaw?.trim()) return adminRedirect("Lock time required");
     const voteOutLockAtIso = parseEasternDatetimeValueToIso(voteOutLockAtRaw);
     if (!voteOutLockAtIso) {

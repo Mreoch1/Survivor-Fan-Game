@@ -69,6 +69,16 @@ export function formatInstantAsEasternDatetimeValue(isoOrDate: string | Date): s
   return `${y}-${m}-${day}T${h}:${min}`;
 }
 
+/** Split Eastern wall-clock string into date + time controls. */
+export function formatInstantAsEasternDateAndTime(
+  isoOrDate: string | Date
+): { date: string; time: string } {
+  const dt = formatInstantAsEasternDatetimeValue(isoOrDate);
+  if (!dt.includes("T")) return { date: "", time: "" };
+  const [date, time] = dt.split("T");
+  return { date, time };
+}
+
 /**
  * Parse admin input (YYYY-MM-DDTHH:mm or space) as Eastern wall time → UTC ISO string for DB.
  * Returns null if invalid or non-existent local time (spring-forward gap).
