@@ -11,7 +11,7 @@
     "email-templates": "node scripts/setup-email-templates.mjs",
     "supabase:link": "supabase link",
     "db:link": "supabase link --project-ref ${SUPABASE_PROJECT_REF}",
-    "db:push": "supabase db push --password \"${SUPABASE_DB_PASSWORD}\"",
+    "db:push": "supabase db push --yes",
     "db:diff": "supabase db diff",
     "db:reset": "supabase db reset",
     "vercel:link": "vercel link",

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Run DB migrations without npm (fixes "env: node: No such file or directory" when
-# Cursor/SSH terminals do not load nvm/Homebrew into PATH).
+# Push migrations via Supabase CLI (linked project). Does not require Node/npm.
+# Requires: brew install supabase/tap/supabase, `supabase login`, and `supabase link` in this repo.
+# Optional: SUPABASE_DB_PASSWORD if your CLI session needs explicit DB password.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -15,9 +16,7 @@ if ! command -v supabase >/dev/null 2>&1; then
   exit 1
 fi
 
-if [[ -z "${SUPABASE_DB_PASSWORD:-}" ]]; then
-  echo "Set SUPABASE_DB_PASSWORD (database password from Supabase Dashboard → Settings → Database)." >&2
-  exit 1
+if [[ -n "${SUPABASE_DB_PASSWORD:-}" ]]; then
+  exec supabase db push --yes --password "${SUPABASE_DB_PASSWORD}"
 fi
-
-exec supabase db push --password "${SUPABASE_DB_PASSWORD}"
+exec supabase db push --yes

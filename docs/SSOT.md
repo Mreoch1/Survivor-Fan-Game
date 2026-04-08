@@ -87,6 +87,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-04-07: Triple-elimination support (migration 030): `episodes.third_voted_out_player_id`. Episode 6 results (migration 031): Kamilla Karthigesu, Genevieve Mushaluk, Colby Donaldson; clears `episode_immunity_tribes` for that week (merge / individual immunity). Clears `episode_points_processed` for Episode 6 so Admin can run Process episode once.
 - 2026-04-07: Admin Episodes table: dedicated columns for Vote-out 1, 2, and 3 (plus Medevac, tribe immunity, Save, Process) with HTML `form` association so one Save submits all vote-out fields.
 - 2026-04-07: Admin Episodes: banner when DB lacks second/third boot columns; table `minWidth` and copy to scroll horizontally; detect columns via `episodes.some` for robustness.
+- 2026-04-08: `npm run db:push` script uses `supabase db push --yes` (linked project). `scripts/db-push.sh` calls the same without requiring Node; optional `SUPABASE_DB_PASSWORD` if needed.
 - 2026-04-01: Double-elimination support (migrations 025/026): added `episodes.second_voted_out_player_id`, updated Episode 5 second boot to `charlie-davis`, and cleared Episode 5 from `episode_points_processed` so scoring can be re-run with both eliminations counted.
 - 2026-04-01: Migration 027 re-opens Episode 5 for processing again after deploying updated double-elimination app logic, ensuring Charlie is counted when Episode 5 is reprocessed.
 - 2026-03-23: Admin page now has tabbed sections (Episodes, Users, Picks). New Picks tab shows all users and their winner pick plus per-episode vote-out and tribe immunity picks, with episode filter for adjudicating appeals/questions.
@@ -106,7 +107,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 
 ## Troubleshooting
 
-- **`npm run db:push` → `env: node: No such file or directory`:** The shell does not have Node on `PATH` (common in Cursor’s terminal if nvm/Homebrew only load in an interactive login shell). Fix: open **Terminal.app**, `cd` to the repo, run `npm run db:push`, or run **`./scripts/db-push.sh`** (uses Homebrew/nvm paths and calls `supabase` directly; still requires `SUPABASE_DB_PASSWORD` in the environment).
+- **`npm run db:push` → `env: node: No such file or directory`:** Use the Supabase CLI only: **`./scripts/db-push.sh`** (or ensure `/opt/homebrew/bin` is on `PATH` and run **`supabase db push --yes`** from the repo). With a **linked** project and `supabase login`, no database password is required. `package.json` `db:push` is now `supabase db push --yes` (still needs Node if you invoke it via `npm run`).
 - **Email confirmation "Cannot connect to the server":** Supabase **Authentication → URL Configuration** must have **Site URL** set to the production app URL and **Redirect URLs** including `https://<your-app>/auth/callback` and `https://<your-app>/**`. See `docs/troubleshooting.md`.
 
 ## TODOs / unresolved
