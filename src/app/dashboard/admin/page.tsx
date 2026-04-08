@@ -295,7 +295,8 @@ export default async function AdminPage({
                           defaultValue={formatInstantAsEasternDatetimeValue(ep.vote_out_lock_at ?? "")}
                           className="survivor-auth__input survivor-admin-episodes__lock-input"
                           placeholder="2026-04-08T20:00"
-                          pattern="\d{4}-\d{2}-\d{2}T\d{1,2}:\d{2}"
+                          pattern="\\d{4}-\\d{2}-\\d{2}T\\d{1,2}:\\d{2}"
+                          inputMode="numeric"
                           required
                           aria-label={`Episode ${ep.episode_number} lock time (US Eastern)`}
                           title="US Eastern Time: YYYY-MM-DDTHH:mm (24h)"
