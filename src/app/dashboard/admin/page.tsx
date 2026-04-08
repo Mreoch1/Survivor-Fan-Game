@@ -148,9 +148,9 @@ export default async function AdminPage({
     const profiles = profilesRes.data ?? [];
     const pointsRows = pointsRes.data ?? [];
     const pointsByUser = new Map(pointsRows.map((r) => [r.user_id, r]));
-    const hasMedevacColumn = episodes.length > 0 && "medevac_player_id" in episodes[0];
-    const hasSecondBootColumn = episodes.length > 0 && "second_voted_out_player_id" in episodes[0];
-    const hasThirdBootColumn = episodes.length > 0 && "third_voted_out_player_id" in episodes[0];
+    const hasMedevacColumn = episodes.some((ep) => "medevac_player_id" in ep);
+    const hasSecondBootColumn = episodes.some((ep) => "second_voted_out_player_id" in ep);
+    const hasThirdBootColumn = episodes.some((ep) => "third_voted_out_player_id" in ep);
     const playerNameById = new Map(PLAYERS.map((p) => [p.id, p.name]));
     const winnerPicksByUser = new Map((winnerPicksRes.data ?? []).map((row) => [row.user_id, row.player_id]));
     const voteOutPickRows = (voteOutPicksRes.data ?? []) as {
@@ -262,10 +262,27 @@ export default async function AdminPage({
           Episodes
         </h2>
         <p className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
-          Set up to three vote-outs (double or triple elimination weeks), optional medevac, and tribe immunity (check all winning tribes; +1 per correct pick). One Save results per row submits every vote-out field. Then run Process episode.
+          Set up to three vote-outs (double or triple elimination weeks), optional medevac, and tribe immunity (check all winning tribes; +1 per correct pick). One Save results per row submits every vote-out field. Then run Process episode. Scroll horizontally if the table is wider than your screen.
         </p>
+        {(!hasSecondBootColumn || !hasThirdBootColumn) && (
+          <p
+            className="survivor-dashboard__card-body survivor-dashboard__card-body--sm"
+            role="status"
+            style={{
+              marginBottom: "1rem",
+              padding: "0.75rem 1rem",
+              borderRadius: "0.5rem",
+              border: "1px solid var(--survivor-accent)",
+              color: "var(--survivor-text)",
+              background: "color-mix(in srgb, var(--survivor-accent) 12%, transparent)",
+            }}
+          >
+            <strong>Vote-out 2 and/or 3 are hidden</strong> because the database response does not include those columns yet. Run{" "}
+            <code style={{ fontSize: "0.875em" }}>npm run db:push</code> (apply migrations through 030+) so double and triple boots work, then refresh this page.
+          </p>
+        )}
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+          <table style={{ width: "100%", minWidth: "56rem", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid var(--survivor-border)" }}>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>Ep</th>
