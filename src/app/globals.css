@@ -231,6 +231,9 @@ body {
   background: var(--survivor-bg-card);
   border-bottom: 1px solid var(--survivor-border);
   padding: 0.75rem 1.5rem;
+  padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+  padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -377,10 +380,22 @@ body {
   z-index: 1;
   flex: 1;
   padding: 1.5rem;
+  padding-left: max(1.5rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1.5rem, env(safe-area-inset-right, 0px));
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom, 0px));
   max-width: 72rem;
   margin: 0 auto;
   width: 100%;
+  min-width: 0;
   min-height: calc(100vh - 4rem);
+}
+
+@media (max-width: 36rem) {
+  .survivor-main {
+    padding-top: max(1rem, env(safe-area-inset-top, 0px));
+    padding-left: max(1rem, env(safe-area-inset-left, 0px));
+    padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  }
 }
 
 /* Cast page: no extra bg; uses app full-screen layer */
@@ -515,7 +530,9 @@ body {
 
 /* Admin Episodes: card list, full width, no horizontal scroll */
 .survivor-admin-episodes {
-  overflow: visible;
+  overflow-x: clip;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .survivor-admin-episodes__list {
@@ -532,6 +549,8 @@ body {
   border-radius: 0.5rem;
   padding: 0.75rem 1rem;
   background: color-mix(in srgb, var(--survivor-bg) 35%, var(--survivor-bg-card));
+  max-width: 100%;
+  min-width: 0;
 }
 
 .survivor-admin-episodes__episode-head {
@@ -717,6 +736,121 @@ body {
   align-items: center;
   gap: 0.5rem;
   flex-shrink: 0;
+}
+
+/* Admin Episodes: phones and small tablets (layout, tap targets, iOS input zoom) */
+@media (max-width: 48rem) {
+  .survivor-admin-episodes .survivor-auth__input {
+    font-size: 1rem;
+  }
+
+  .survivor-admin-episodes .survivor-btn {
+    min-height: 2.75rem;
+  }
+}
+
+@media (max-width: 36rem) {
+  .survivor-card.survivor-admin-episodes {
+    padding: 1rem;
+  }
+
+  .survivor-admin-episodes__episode {
+    padding: 0.65rem 0.75rem;
+  }
+
+  .survivor-admin-episodes__episode-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+  }
+
+  .survivor-admin-episodes__ep-badge {
+    align-self: flex-start;
+  }
+
+  .survivor-admin-episodes__lock-form--row {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .survivor-admin-episodes__lock-field {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .survivor-admin-episodes__lock-inputs {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .survivor-admin-episodes__lock-input--date,
+  .survivor-admin-episodes__lock-input--time {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .survivor-admin-episodes__lock-btn {
+    width: 100%;
+    align-self: stretch;
+  }
+
+  .survivor-admin-episodes__boots {
+    grid-template-columns: 1fr;
+  }
+
+  .survivor-admin-episodes__tail {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .survivor-admin-episodes__tribes-row {
+    flex: 1 1 auto;
+  }
+
+  .survivor-admin-episodes__tribe-label {
+    min-height: 2.75rem;
+    padding: 0.25rem 0;
+    box-sizing: border-box;
+  }
+
+  .survivor-admin-episodes__tribe-label input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    flex-shrink: 0;
+  }
+
+  .survivor-admin-episodes__actions {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .survivor-admin-episodes__actions > .survivor-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .survivor-admin-episodes__actions > span {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    width: 100%;
+  }
+
+  .survivor-admin-episodes__actions > span .survivor-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 22.5rem) {
+  .survivor-admin-episodes__lock-inputs {
+    grid-template-columns: 1fr;
+  }
 }
 
 .survivor-dashboard__tribe-name--cila {
