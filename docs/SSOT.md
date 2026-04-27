@@ -1,6 +1,6 @@
 # Survivor Fan Game – Single Source of Truth
 
-**Last updated:** 2026-04-09
+**Last updated:** 2026-04-27
 
 ## Project overview
 
@@ -98,6 +98,18 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-04-08: `npm run db:push` script uses `supabase db push --yes` (linked project). `scripts/db-push.sh` calls the same without requiring Node; optional `SUPABASE_DB_PASSWORD` if needed.
 - 2026-04-01: Double-elimination support (migrations 025/026): added `episodes.second_voted_out_player_id`, updated Episode 5 second boot to `charlie-davis`, and cleared Episode 5 from `episode_points_processed` so scoring can be re-run with both eliminations counted.
 - 2026-04-01: Migration 027 re-opens Episode 5 for processing again after deploying updated double-elimination app logic, ensuring Charlie is counted when Episode 5 is reprocessed.
+- 2026-04-14: Episode 7 Season 50 results + Episode 8 unlock (migration 033): set Episode 7 `voted_out_player_id = dee-valladares`, clear any Episode 7 `episode_immunity_tribes` rows (post-merge individual immunity phase), clear Episode 7 from `episode_points_processed` for reprocessing, and insert Episode 8 lock at 2026-04-15 20:00 ET.
+- 2026-04-14: Picks/admin post-merge behavior: from Episode 7 onward, tribe immunity picks are no longer required in My Picks, tribe-immunity save calls are ignored/cleared server-side, and admin Episode cards/picks view show tribe immunity as pre-merge only.
+- 2026-04-14: Manual Episode 7 adjudication (migration 034): awarded +1 `tribe_immunity_points` to users who picked Ozzy's tribe (`vatu`) for Episode 7, and recomputed `points` totals for those users.
+- 2026-04-14: Individual immunity is now implemented (migration 035 + app wiring): added `episodes.immunity_winning_player_id`, created `individual_immunity_picks` with RLS, switched My Picks post-merge UI from tribe immunity to immunity winner pick, added API save/delete logic for individual picks, added admin result field for individual immunity winner, and process-episode now awards +1 `individual_immunity_points` for correct picks.
+- 2026-04-21: Episode 8 Season 50 results + Episode 9 unlock (migration 036): set Episode 8 `voted_out_player_id = benjamin-coach-wade`, `second_voted_out_player_id = chrissy-hofbeck`, cleared Episode 8 `episode_immunity_tribes` rows, cleared Episode 8 from `episode_points_processed`, and inserted Episode 9 lock at 2026-04-22 20:00 ET. Episode 8 immunity used a duo-winner twist, so `immunity_winning_player_id` remains null for this week.
+- 2026-04-21: Leaderboard score reconciliation (migration 037): recomputed Season 50 `vote_out_points`, `tribe_immunity_points`, and `individual_immunity_points` from picks/results source tables, preserved `survival_points`, and recomputed `points` totals. Includes the Episode 7 manual tribe bonus rule (+1 for `vatu` picks).
+- 2026-04-21: Winner pick auditability (migration 038 + API): added `winner_pick_history` table (user_id, season, episode_id, previous_player_id, player_id, source, created_at) with RLS (own read/insert + admin read). `/api/picks` now writes a history row whenever a user's winner pick actually changes.
+- 2026-04-21: Leaderboard clarity pass: updated copy and labels so point totals are easier to parse. Added explicit formula text (`Total = Survival + Tribe + Vote-out + Individual`) and per-player formula display on desktop/mobile cards, plus clearer component column labels with point weights.
+- 2026-04-27: Episode 9 Season 50 results + Episode 10 unlock (migration 039): set Episode 9 `voted_out_player_id = christian-hubicki`, `immunity_winning_player_id = joe-hunter`, cleared any Episode 9 `episode_immunity_tribes` rows, cleared Episode 9 from `episode_points_processed` for idempotent replay, and inserted Episode 10 lock at 2026-04-29 20:00 ET.
+- 2026-04-27: Automation schedule changed: Vercel cron for `GET /api/cron/process-pending-episodes` now runs every Sunday 9:00 PM EST (`0 2 * * 1` UTC schedule).
+- 2026-04-27: Theme color options removed: deleted `ThemePicker` UI and related `data-theme` overrides. App now always uses the default Survivor palette.
+- 2026-04-14: Admin Picks tab and copy aligned to post-merge behavior: episode picks table now shows individual immunity picks for Episode 7+ (instead of N/A), latest activity tracks latest individual pick in post-merge weeks, and leaderboard point-system copy removed "coming soon" for individual immunity.
 - 2026-03-23: Admin page now has tabbed sections (Episodes, Users, Picks). New Picks tab shows all users and their winner pick plus per-episode vote-out and tribe immunity picks, with episode filter for adjudicating appeals/questions.
 - 2026-03-23: Cast page tribe section headers now color the tribe name text itself (not just the border) so labels like Vatu clearly match their team color.
 - 2026-03-09: Tribe swap (Episode 3): Updated players.ts with post-swap tribes from Survivor Fandom wiki. New Cila (yellow): Charlie, Cirie, Dee, Jonathan, Kamilla, Rick, Rizo. New Kalo (blue): Aubry, Chrissy, Coach, Colby, Genevieve, Joe, Tiffany. New Vatu (red): Angelina, Christian, Emily, Mike, Ozzy, Q, Stephenie. Eliminated (Jenna, Kyle, Savannah) remain in original tribes for cast display.
@@ -109,7 +121,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 ## Episode results and automation
 
 - **What we need per week:** Who was eliminated (set `voted_out_player_id` on the episode). Optionally, which tribe(s) won immunity (set `episode_immunity_tribes` rows for the winning tribe_id(s)). Injury/removal is treated the same as voted out for survival scoring. Scoring runs automatically or via manual API.
-- **Results publish time:** Friday 9:00 AM ET (14:00 UTC). Vercel Cron runs `GET /api/cron/process-pending-episodes` every Friday; it processes every Season 50 episode that has `voted_out_player_id` set and is not yet in `episode_points_processed`. Idempotent.
+- **Results publish time:** Sunday 9:00 PM EST (Monday 02:00 UTC). Vercel Cron runs `GET /api/cron/process-pending-episodes` weekly at that time; it processes every Season 50 episode that has `voted_out_player_id` set and is not yet in `episode_points_processed`. Idempotent.
 - **Env for automation:** `SUPABASE_SERVICE_ROLE_KEY` (required for process-episode and cron). `CRON_SECRET` in Vercel (Vercel sends it when invoking the cron; route rejects requests without it).
 - **Manual trigger:** `POST /api/process-episode` with body `{ "episodeId": "uuid" }` (logged-in user; uses service role under the hood).
 
@@ -121,7 +133,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 ## TODOs / unresolved
 
 - [ ] Add episode lock times (e.g. Wednesday 7pm ET before air) per episode in DB.
-- [ ] Individual immunity (post-merge): add episode field (e.g. immunity_winning_player_id), user pick per episode, and scoring in process-episode. Implement when the show switches to individual phase.
+- [ ] Backfill/confirm Episode 7+ `immunity_winning_player_id` values in Admin so process-episode can award individual immunity points correctly each week (leave null for special multi-winner twist weeks like Episode 8, unless scoring rules change).
 - [ ] Optional: email sending via Resend/Supabase Edge for invite emails (or copy-link for now).
 - Themed auth emails: copy HTML from `docs/email-templates/` into Supabase Dashboard → Authentication → Email Templates (Confirm signup, Reset password, Invite, Magic link). See `docs/email-templates/README.md`.
 - [ ] Optional: set `imageUrl` in `src/data/players.ts` for real cast photos (licensed/self-hosted); cards use DiceBear Initials (CC0) until then.

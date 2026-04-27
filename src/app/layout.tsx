@@ -65,13 +65,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){var t=localStorage.getItem("survivor-theme");if(t==="cila"||t==="kalo"||t==="vatu")document.documentElement.setAttribute("data-theme",t);})();`,
-          }}
-        />
-      </head>
+      <head />
       <body className={`${survivorSans.variable} ${geistMono.variable} antialiased`}>
         {children}
         <ThemeMusic />

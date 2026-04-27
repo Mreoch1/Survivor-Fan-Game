@@ -29,7 +29,7 @@ export async function processEpisode(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data: episodeData, error: epErr } = await supabase
     .from("episodes")
-    .select("id, season, voted_out_player_id, second_voted_out_player_id, third_voted_out_player_id, medevac_player_id")
+    .select("id, season, voted_out_player_id, second_voted_out_player_id, third_voted_out_player_id, medevac_player_id, immunity_winning_player_id")
     .eq("id", episodeId)
     .single();
 
@@ -44,6 +44,7 @@ export async function processEpisode(
     second_voted_out_player_id: string | null;
     third_voted_out_player_id: string | null;
     medevac_player_id: string | null;
+    immunity_winning_player_id: string | null;
   };
   if (episode.season !== SEASON) {
     return { ok: false, error: "Wrong season" };
@@ -196,6 +197,49 @@ export async function processEpisode(
           survival_points: s,
           tribe_immunity_points: newTribe,
           individual_immunity_points: i,
+          vote_out_points: v,
+          points: total,
+          weeks_survived: r?.weeks_survived ?? 0,
+          eliminations_hit: r?.eliminations_hit ?? 0,
+          last_week_delta: r?.last_week_delta ?? null,
+        },
+        { onConflict: "user_id,season" }
+      );
+    }
+  }
+
+  // Individual immunity: +1 for each user who correctly picked the episode winner (post-merge)
+  if (episode.immunity_winning_player_id) {
+    const { data: immunityCorrectPicks } = await supabase
+      .from("individual_immunity_picks")
+      .select("user_id")
+      .eq("episode_id", episodeId)
+      .eq("player_id", episode.immunity_winning_player_id);
+
+    const immunityWinnerUserIds = (immunityCorrectPicks ?? []).map((r: { user_id: string }) => r.user_id);
+    for (const uid of immunityWinnerUserIds) {
+      const { data: row } = await supabase
+        .from("user_season_points")
+        .select("survival_points, tribe_immunity_points, individual_immunity_points, vote_out_points, weeks_survived, eliminations_hit, last_week_delta")
+        .eq("user_id", uid)
+        .eq("season", SEASON)
+        .maybeSingle();
+
+      const r = row as SeasonPointsRow | null;
+      const s = r?.survival_points ?? 0;
+      const t = r?.tribe_immunity_points ?? 0;
+      const i = r?.individual_immunity_points ?? 0;
+      const v = r?.vote_out_points ?? 0;
+      const newIndividual = i + 1;
+      const total = s + t + newIndividual + v;
+
+      await (supabase.from("user_season_points") as any).upsert(
+        {
+          user_id: uid,
+          season: SEASON,
+          survival_points: s,
+          tribe_immunity_points: t,
+          individual_immunity_points: newIndividual,
           vote_out_points: v,
           points: total,
           weeks_survived: r?.weeks_survived ?? 0,

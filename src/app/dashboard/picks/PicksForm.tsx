@@ -14,8 +14,6 @@ interface Episode {
 }
 
 interface PicksFormProps {
-  userId: string;
-  players: Player[];
   inGamePlayers: Player[];
   eliminatedIds: Set<string>;
   tribes: typeof TRIBES;
@@ -23,11 +21,11 @@ interface PicksFormProps {
   currentEpisode: Episode | null;
   initialVoteOutId: string | null;
   initialTribeImmunityId: TribeId | null;
+  initialIndividualImmunityId: string | null;
+  isIndividualImmunityPhase: boolean;
 }
 
 export function PicksForm({
-  userId,
-  players,
   inGamePlayers,
   eliminatedIds,
   tribes,
@@ -35,10 +33,13 @@ export function PicksForm({
   currentEpisode,
   initialVoteOutId,
   initialTribeImmunityId,
+  initialIndividualImmunityId,
+  isIndividualImmunityPhase,
 }: PicksFormProps) {
   const [winnerId, setWinnerId] = useState<string>(initialWinnerId ?? "");
   const [voteOutId, setVoteOutId] = useState<string>(initialVoteOutId ?? "");
   const [tribeImmunityId, setTribeImmunityId] = useState<TribeId | "">(initialTribeImmunityId ?? "");
+  const [individualImmunityId, setIndividualImmunityId] = useState<string>(initialIndividualImmunityId ?? "");
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
@@ -48,7 +49,8 @@ export function PicksForm({
 
     if (currentEpisode && !isLocked) {
       const missing: string[] = [];
-      if (!tribeImmunityId) missing.push("tribe immunity");
+      if (!isIndividualImmunityPhase && !tribeImmunityId) missing.push("tribe immunity");
+      if (isIndividualImmunityPhase && !individualImmunityId) missing.push("immunity winner");
       if (!voteOutId) missing.push("vote-out");
       if (missing.length > 0) {
         setMessage({
@@ -68,8 +70,10 @@ export function PicksForm({
           winnerId: winnerId || null,
           voteOutId: currentEpisode && voteOutId ? voteOutId : null,
           episodeId: currentEpisode?.id ?? null,
-          tribeImmunityEpisodeId: currentEpisode?.id ?? null,
-          tribeImmunityTribeId: tribeImmunityId || null,
+          tribeImmunityEpisodeId: !isIndividualImmunityPhase ? (currentEpisode?.id ?? null) : null,
+          tribeImmunityTribeId: !isIndividualImmunityPhase ? (tribeImmunityId || null) : null,
+          individualImmunityEpisodeId: isIndividualImmunityPhase ? (currentEpisode?.id ?? null) : null,
+          individualImmunityPlayerId: isIndividualImmunityPhase ? (individualImmunityId || null) : null,
         }),
       });
       const data = await res.json();
@@ -127,48 +131,80 @@ export function PicksForm({
 
       {currentEpisode && (
         <>
-          <div style={{ marginBottom: "1.5rem" }}>
-            <label className="survivor-auth__label">Which tribe wins immunity? (Episode {currentEpisode.episode_number})</label>
-            {lockLabelEastern && (
-              <span style={{ fontSize: "0.8125rem", color: "var(--survivor-text-muted)", marginLeft: "0.5rem" }}>
-                Locks (ET): {lockLabelEastern}
-              </span>
-            )}
-            <div className="picks-form__tribe-options" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
-              {(Object.keys(tribes) as TribeId[]).map((id) => (
-                <label
-                  key={id}
-                  className="picks-form__tribe-option"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.75rem",
-                    cursor: isLocked ? "default" : "pointer",
-                    padding: "0.75rem 1rem",
-                    borderRadius: "0.5rem",
-                    border: `2px solid ${tribeImmunityId === id ? tribes[id].color : "var(--survivor-border)"}`,
-                    background: tribeImmunityId === id ? "var(--survivor-bg-card)" : "transparent",
-                  }}
-                >
-                  <input
-                    type="radio"
-                    name="tribeImmunity"
-                    value={id}
-                    checked={tribeImmunityId === id}
-                    onChange={() => setTribeImmunityId(id)}
-                    disabled={isLocked}
-                    className="picks-form__tribe-radio"
-                  />
-                  <span style={{ color: tribes[id].color, fontWeight: 700, fontSize: "1.125rem" }}>{tribes[id].name}</span>
-                </label>
-              ))}
+          {!isIndividualImmunityPhase ? (
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label className="survivor-auth__label">Which tribe wins immunity? (Episode {currentEpisode.episode_number})</label>
+              {lockLabelEastern && (
+                <span style={{ fontSize: "0.8125rem", color: "var(--survivor-text-muted)", marginLeft: "0.5rem" }}>
+                  Locks (ET): {lockLabelEastern}
+                </span>
+              )}
+              <div className="picks-form__tribe-options" style={{ display: "flex", gap: "1rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                {(Object.keys(tribes) as TribeId[]).map((id) => (
+                  <label
+                    key={id}
+                    className="picks-form__tribe-option"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.75rem",
+                      cursor: isLocked ? "default" : "pointer",
+                      padding: "0.75rem 1rem",
+                      borderRadius: "0.5rem",
+                      border: `2px solid ${tribeImmunityId === id ? tribes[id].color : "var(--survivor-border)"}`,
+                      background: tribeImmunityId === id ? "var(--survivor-bg-card)" : "transparent",
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="tribeImmunity"
+                      value={id}
+                      checked={tribeImmunityId === id}
+                      onChange={() => setTribeImmunityId(id)}
+                      disabled={isLocked}
+                      className="picks-form__tribe-radio"
+                    />
+                    <span style={{ color: tribes[id].color, fontWeight: 700, fontSize: "1.125rem" }}>{tribes[id].name}</span>
+                  </label>
+                ))}
+              </div>
+              {isLocked && (
+                <p style={{ fontSize: "0.875rem", color: "var(--survivor-text-muted)", marginTop: "0.25rem" }}>
+                  Tribe immunity pick is locked for this episode.
+                </p>
+              )}
             </div>
-            {isLocked && (
-              <p style={{ fontSize: "0.875rem", color: "var(--survivor-text-muted)", marginTop: "0.25rem" }}>
-                Tribe immunity pick is locked for this episode.
-              </p>
-            )}
-          </div>
+          ) : (
+            <div style={{ marginBottom: "1.5rem" }}>
+              <label className="survivor-auth__label" htmlFor="individualImmunity">
+                Who wins individual immunity? (Episode {currentEpisode.episode_number})
+                {lockLabelEastern && (
+                  <span style={{ fontSize: "0.8125rem", color: "var(--survivor-text-muted)", marginLeft: "0.5rem" }}>
+                    Locks (ET): {lockLabelEastern}
+                  </span>
+                )}
+              </label>
+              <select
+                id="individualImmunity"
+                value={individualImmunityId}
+                onChange={(e) => setIndividualImmunityId(e.target.value)}
+                className="survivor-auth__input"
+                disabled={isLocked}
+              >
+                <option value="">Select a player</option>
+                {inGamePlayers.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+              {isLocked && (
+                <p style={{ fontSize: "0.875rem", color: "var(--survivor-text-muted)", marginTop: "0.25rem" }}>
+                  Individual immunity pick is locked for this episode.
+                </p>
+              )}
+            </div>
+          )}
           <div style={{ marginBottom: "1.5rem" }}>
             <label className="survivor-auth__label" htmlFor="voteOut">
               Who gets voted out this week? (Episode {currentEpisode.episode_number})

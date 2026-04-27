@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { signOut } from "./actions";
-import { ThemePicker } from "./ThemePicker";
 
 interface DashboardNavProps {
   userEmail?: string | null;
@@ -10,7 +9,6 @@ interface DashboardNavProps {
 export function DashboardNav({ userEmail, isAdmin }: DashboardNavProps) {
   return (
     <nav className="survivor-header__nav">
-      <ThemePicker />
       <Link href="/dashboard" className="survivor-header__link">
         Home
       </Link>

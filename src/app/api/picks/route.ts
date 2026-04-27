@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 
+const INDIVIDUAL_IMMUNITY_START_EPISODE = 7;
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const {
@@ -11,15 +13,44 @@ export async function POST(request: Request) {
   }
 
   const body = await request.json();
-  const { winnerId, episodeId, voteOutId, tribeImmunityEpisodeId, tribeImmunityTribeId } = body;
+  const {
+    winnerId,
+    episodeId,
+    voteOutId,
+    tribeImmunityEpisodeId,
+    tribeImmunityTribeId,
+    individualImmunityEpisodeId,
+    individualImmunityPlayerId,
+  } = body;
 
-  if (winnerId) {
-    const { error: upsertPickErr } = await supabase.from("winner_picks").upsert(
-      { user_id: user.id, player_id: winnerId, season: 50 },
-      { onConflict: "user_id,season" }
-    );
+  if (typeof winnerId === "string" && winnerId.length > 0) {
+    const { data: existingWinnerPick } = await supabase
+      .from("winner_picks")
+      .select("player_id")
+      .eq("user_id", user.id)
+      .eq("season", 50)
+      .maybeSingle();
+    const previousPlayerId = existingWinnerPick?.player_id ?? null;
+    const isWinnerPickChanged = previousPlayerId !== winnerId;
+
+    const { error: upsertPickErr } = await supabase
+      .from("winner_picks")
+      .upsert({ user_id: user.id, player_id: winnerId, season: 50 }, { onConflict: "user_id,season" });
     if (upsertPickErr) {
       return NextResponse.json({ error: upsertPickErr.message }, { status: 500 });
+    }
+    if (isWinnerPickChanged) {
+      const { error: historyErr } = await supabase.from("winner_pick_history").insert({
+        user_id: user.id,
+        season: 50,
+        episode_id: typeof episodeId === "string" && episodeId.length > 0 ? episodeId : null,
+        previous_player_id: previousPlayerId,
+        player_id: winnerId,
+        source: "user",
+      });
+      if (historyErr) {
+        return NextResponse.json({ error: historyErr.message }, { status: 500 });
+      }
     }
     await supabase.from("user_season_points").upsert(
       { user_id: user.id, season: 50, points: 0 },
@@ -57,9 +88,18 @@ export async function POST(request: Request) {
   if (tribeImmunityEpisodeId) {
     const { data: episode } = await supabase
       .from("episodes")
-      .select("vote_out_lock_at")
+      .select("vote_out_lock_at, episode_number")
       .eq("id", tribeImmunityEpisodeId)
       .single();
+    const isIndividualImmunityPhase = (episode?.episode_number ?? 0) >= INDIVIDUAL_IMMUNITY_START_EPISODE;
+    if (isIndividualImmunityPhase) {
+      await supabase
+        .from("tribe_immunity_picks")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("episode_id", tribeImmunityEpisodeId);
+      return NextResponse.json({ ok: true });
+    }
     if (episode && new Date() >= new Date(episode.vote_out_lock_at)) {
       return NextResponse.json({ error: "Tribe immunity pick is locked for this episode" }, { status: 400 });
     }
@@ -81,6 +121,40 @@ export async function POST(request: Request) {
         .delete()
         .eq("user_id", user.id)
         .eq("episode_id", tribeImmunityEpisodeId);
+    }
+  }
+
+  if (individualImmunityEpisodeId) {
+    const { data: episode } = await supabase
+      .from("episodes")
+      .select("vote_out_lock_at, episode_number")
+      .eq("id", individualImmunityEpisodeId)
+      .single();
+    const isIndividualImmunityPhase = (episode?.episode_number ?? 0) >= INDIVIDUAL_IMMUNITY_START_EPISODE;
+    if (!isIndividualImmunityPhase) {
+      return NextResponse.json({ error: "Individual immunity picks are only available post-merge" }, { status: 400 });
+    }
+    if (episode && new Date() >= new Date(episode.vote_out_lock_at)) {
+      return NextResponse.json({ error: "Individual immunity pick is locked for this episode" }, { status: 400 });
+    }
+    if (individualImmunityPlayerId) {
+      const { error: upsertErr } = await supabase.from("individual_immunity_picks").upsert(
+        {
+          user_id: user.id,
+          episode_id: individualImmunityEpisodeId,
+          player_id: individualImmunityPlayerId,
+        },
+        { onConflict: "user_id,episode_id" }
+      );
+      if (upsertErr) {
+        return NextResponse.json({ error: upsertErr.message }, { status: 500 });
+      }
+    } else {
+      await supabase
+        .from("individual_immunity_picks")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("episode_id", individualImmunityEpisodeId);
     }
   }
 

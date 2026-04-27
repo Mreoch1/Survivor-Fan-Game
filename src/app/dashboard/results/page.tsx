@@ -33,7 +33,7 @@ export default async function ResultsPage() {
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
           {results.length === 0 ? (
             <li style={{ padding: "1rem", color: "var(--survivor-text-muted)" }}>
-              No episode results yet. Results are posted after each episode (e.g. Friday 9:00 AM ET).
+              No episode results yet. Results are posted after each episode (e.g. Sunday 9:00 PM EST).
             </li>
           ) : (
             results.map(({ episodeNumber, bootNames }) => (

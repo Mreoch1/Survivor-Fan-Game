@@ -6,7 +6,7 @@ const SEASON = 50;
 
 /**
  * Cron: process all Season 50 episodes that have voted_out_player_id set
- * and are not yet in episode_points_processed. Run weekly (e.g. Friday 9 AM ET).
+ * and are not yet in episode_points_processed. Run weekly (Sunday 9 PM EST).
  * Secured by CRON_SECRET (Vercel sends it in Authorization when invoking the cron).
  */
 export async function GET(request: Request) {

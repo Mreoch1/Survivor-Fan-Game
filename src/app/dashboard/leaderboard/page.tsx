@@ -51,6 +51,7 @@ export default async function LeaderboardPage() {
       individualImmunityPoints: pts?.individual_immunity_points ?? 0,
       voteOutPoints: pts?.vote_out_points ?? 0,
       points: pts?.points ?? 0,
+      pointsFormula: `${pts?.survival_points ?? 0} + ${pts?.tribe_immunity_points ?? 0} + ${pts?.vote_out_points ?? 0} + ${pts?.individual_immunity_points ?? 0}`,
       lastWeekDelta: pts?.last_week_delta ?? null,
       status,
     };
@@ -70,14 +71,17 @@ export default async function LeaderboardPage() {
 
       <section className="survivor-card" style={{ marginBottom: "1.5rem" }}>
         <h2 className="survivor-card__title" style={{ fontSize: "1.125rem", marginBottom: "0.75rem" }}>
-          Point system
+          How totals are calculated
         </h2>
-        <ul style={{ color: "var(--survivor-text-muted)", lineHeight: 1.7, margin: 0, paddingLeft: "1.25rem" }}>
-          <li><strong>Winner pick:</strong> +1 each week your current pick survives; -1 when eliminated (voted out, injured, or removed); repick before next episode.</li>
-          <li><strong>Tribe immunity (pre-merge):</strong> Pick which tribe wins immunity; correct pick = +1 point.</li>
-          <li><strong>Vote-out:</strong> Pick who gets voted out each week; correct pick = +2 points.</li>
-          <li><strong>Individual immunity (post-merge):</strong> Pick which castaway wins immunity; correct pick = points. (Coming soon.)</li>
-          <li>All picks lock at episode start</li>
+        <p className="survivor-leaderboard__explain-line">
+          <strong>Total points = Survival + Tribe immunity + Vote-out + Individual immunity</strong>
+        </p>
+        <ul style={{ color: "var(--survivor-text-muted)", lineHeight: 1.7, margin: "0.5rem 0 0", paddingLeft: "1.25rem" }}>
+          <li><strong>Survival:</strong> +1 each week your winner pick survives, -1 if that pick is eliminated.</li>
+          <li><strong>Tribe immunity:</strong> +1 for each correct tribe immunity pick (pre-merge weeks).</li>
+          <li><strong>Vote-out:</strong> +2 for each correct vote-out pick.</li>
+          <li><strong>Individual immunity:</strong> +1 for each correct individual immunity pick (post-merge weeks).</li>
+          <li><strong>Repicks</strong> shows how many times your winner pick was eliminated.</li>
         </ul>
       </section>
 
@@ -93,16 +97,16 @@ export default async function LeaderboardPage() {
                 <th style={{ textAlign: "right", padding: "0.75rem" }}>Last week</th>
                 <th style={{ textAlign: "right", padding: "0.75rem" }}>Repicks</th>
                 <th style={{ textAlign: "right", padding: "0.75rem" }} title="Winner pick">
-                  Survival
+                  Survival (+/-1)
                 </th>
                 <th style={{ textAlign: "right", padding: "0.75rem" }} title="Tribe immunity (pre-merge)">
-                  Tribe imm.
+                  Tribe (+1)
                 </th>
                 <th style={{ textAlign: "right", padding: "0.75rem" }} title="Correct vote-out pick = +2">
-                  Vote-out
+                  Vote-out (+2)
                 </th>
                 <th style={{ textAlign: "right", padding: "0.75rem" }} title="Individual immunity (post-merge)">
-                  Ind. imm.
+                  Individual (+1)
                 </th>
                 <th style={{ textAlign: "right", padding: "0.75rem" }}>Total</th>
               </tr>
@@ -146,6 +150,9 @@ export default async function LeaderboardPage() {
                   </td>
                   <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-accent)", fontWeight: 700 }}>
                     {row.points}
+                    <div className="survivor-leaderboard__formula" aria-label="Points formula">
+                      {row.pointsFormula}
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -194,22 +201,25 @@ export default async function LeaderboardPage() {
                   <dd>{row.eliminationsHit}</dd>
                 </div>
                 <div className="survivor-leaderboard__metric">
-                  <dt>Survival</dt>
+                  <dt>Survival (+/-1)</dt>
                   <dd>{row.survivalPoints}</dd>
                 </div>
                 <div className="survivor-leaderboard__metric">
-                  <dt>Tribe imm.</dt>
+                  <dt>Tribe (+1)</dt>
                   <dd>{row.tribeImmunityPoints}</dd>
                 </div>
                 <div className="survivor-leaderboard__metric">
-                  <dt>Vote-out</dt>
+                  <dt>Vote-out (+2)</dt>
                   <dd>{row.voteOutPoints}</dd>
                 </div>
                 <div className="survivor-leaderboard__metric">
-                  <dt>Ind. imm.</dt>
+                  <dt>Individual (+1)</dt>
                   <dd>{row.individualImmunityPoints}</dd>
                 </div>
               </dl>
+              <p className="survivor-leaderboard__mobile-formula">
+                Total formula: {row.survivalPoints} + {row.tribeImmunityPoints} + {row.voteOutPoints} + {row.individualImmunityPoints}
+              </p>
             </li>
           ))}
         </ul>
@@ -225,14 +235,6 @@ export default async function LeaderboardPage() {
         </p>
       )}
 
-      <section className="survivor-card" style={{ marginTop: "1.5rem" }}>
-        <h2 className="survivor-card__title" style={{ fontSize: "1rem", marginBottom: "0.5rem" }}>
-          How scoring works
-        </h2>
-        <p style={{ color: "var(--survivor-text-muted)", lineHeight: 1.6, margin: 0 }}>
-          Winner pick: +1 per week your pick survives, -1 when eliminated (then repick). Tribe immunity: +1 for correct tribe (pre-merge). Vote-out: +2 for correct boot pick. Individual immunity (post-merge) coming when the show switches. All picks lock when the episode starts.
-        </p>
-      </section>
     </>
   );
 }

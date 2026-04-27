@@ -16,6 +16,7 @@ import {
 import { ProcessEpisodeButton } from "./ProcessEpisodeButton";
 
 const SEASON = 50;
+const INDIVIDUAL_IMMUNITY_START_EPISODE = 7;
 const ADMIN_TABS = ["episodes", "users", "picks"] as const;
 type AdminTab = (typeof ADMIN_TABS)[number];
 
@@ -76,7 +77,7 @@ export default async function AdminPage({
 
     const episodesResWithMedevac = await supabase
       .from("episodes")
-      .select("id, episode_number, vote_out_lock_at, voted_out_player_id, second_voted_out_player_id, third_voted_out_player_id, immunity_winning_tribe_id, medevac_player_id")
+      .select("id, episode_number, vote_out_lock_at, voted_out_player_id, second_voted_out_player_id, third_voted_out_player_id, immunity_winning_tribe_id, immunity_winning_player_id, medevac_player_id")
       .eq("season", SEASON)
       .order("episode_number", { ascending: true });
     const episodesRes =
@@ -100,7 +101,7 @@ export default async function AdminPage({
       });
     }
 
-    const [profilesRes, pointsRes, winnerPicksRes, voteOutPicksRes, tribePicksRes] = await Promise.all([
+    const [profilesRes, pointsRes, winnerPicksRes, voteOutPicksRes, tribePicksRes, individualPicksRes] = await Promise.all([
       supabase.from("profiles").select("id, email, display_name, deactivated_at"),
       supabase
         .from("user_season_points")
@@ -113,6 +114,9 @@ export default async function AdminPage({
       supabase
         .from("tribe_immunity_picks")
         .select("user_id, episode_id, tribe_id, episodes(episode_number)"),
+      supabase
+        .from("individual_immunity_picks")
+        .select("user_id, episode_id, player_id, episodes(episode_number)"),
     ]);
 
     const err =
@@ -122,6 +126,7 @@ export default async function AdminPage({
       winnerPicksRes.error?.message ? `Winner picks: ${winnerPicksRes.error.message}` :
       voteOutPicksRes.error?.message ? `Vote-out picks: ${voteOutPicksRes.error.message}` :
       tribePicksRes.error?.message ? `Tribe picks: ${tribePicksRes.error.message}` :
+      individualPicksRes.error?.message ? `Individual immunity picks: ${individualPicksRes.error.message}` :
       null;
     if (err) {
       return <AdminLoadError message={err} />;
@@ -135,6 +140,7 @@ export default async function AdminPage({
       second_voted_out_player_id?: string | null;
       third_voted_out_player_id?: string | null;
       immunity_winning_tribe_id: string | null;
+      immunity_winning_player_id?: string | null;
       medevac_player_id?: string | null;
     };
     const episodes = (episodesRes.data ?? []) as EpisodeRow[];
@@ -158,6 +164,12 @@ export default async function AdminPage({
       tribe_id: TribeId;
       episodes: { episode_number: number } | { episode_number: number }[] | null;
     }[];
+    const individualPickRows = (individualPicksRes.data ?? []) as {
+      user_id: string;
+      episode_id: string;
+      player_id: string;
+      episodes: { episode_number: number } | { episode_number: number }[] | null;
+    }[];
     const episodeById = new Map(episodes.map((ep) => [ep.id, ep]));
     const episodeNumberById = new Map(episodes.map((ep) => [ep.id, ep.episode_number]));
     const pickEpisodeId =
@@ -177,6 +189,12 @@ export default async function AdminPage({
         tribePickByUserForEpisode.set(row.user_id, row.tribe_id);
       }
     });
+    const individualPickByUserForEpisode = new Map<string, string>();
+    individualPickRows.forEach((row) => {
+      if (row.episode_id === pickEpisodeId && !individualPickByUserForEpisode.has(row.user_id)) {
+        individualPickByUserForEpisode.set(row.user_id, row.player_id);
+      }
+    });
     const latestVoteOutEpisodeByUser = new Map<string, number>();
     voteOutPickRows.forEach((row) => {
       const relation = row.episodes;
@@ -192,6 +210,14 @@ export default async function AdminPage({
       const resolvedEpNum = epNum ?? (episodeNumberById.get(row.episode_id) ?? 0);
       const current = latestTribePickEpisodeByUser.get(row.user_id) ?? 0;
       latestTribePickEpisodeByUser.set(row.user_id, Math.max(current, resolvedEpNum));
+    });
+    const latestIndividualPickEpisodeByUser = new Map<string, number>();
+    individualPickRows.forEach((row) => {
+      const relation = row.episodes;
+      const epNum = Array.isArray(relation) ? relation[0]?.episode_number : relation?.episode_number;
+      const resolvedEpNum = epNum ?? (episodeNumberById.get(row.episode_id) ?? 0);
+      const current = latestIndividualPickEpisodeByUser.get(row.user_id) ?? 0;
+      latestIndividualPickEpisodeByUser.set(row.user_id, Math.max(current, resolvedEpNum));
     });
 
     return (
@@ -255,7 +281,7 @@ export default async function AdminPage({
           Episodes
         </h2>
         <p className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
-          Set up to three vote-outs (double or triple elimination weeks), optional medevac, and tribe immunity (check all winning tribes; +1 per correct pick). One Save results per episode submits every vote-out field. Then run Process episode.
+          Set up to three vote-outs (double or triple elimination weeks), optional medevac, and tribe immunity for pre-merge weeks (check all winning tribes; +1 per correct pick). One Save results per episode submits every vote-out field. Then run Process episode.
         </p>
         {(!hasSecondBootColumn || !hasThirdBootColumn) && (
           <p
@@ -281,6 +307,7 @@ export default async function AdminPage({
               {episodes.map((ep) => {
                 const resultFormId = `admin-episode-result-${ep.id}`;
                 const lockParts = formatInstantAsEasternDateAndTime(ep.vote_out_lock_at ?? "");
+                const isIndividualImmunityPhase = ep.episode_number >= INDIVIDUAL_IMMUNITY_START_EPISODE;
                 return (
                 <li key={ep.id} className="survivor-admin-episodes__episode">
                   <div className="survivor-admin-episodes__episode-head">
@@ -416,6 +443,31 @@ export default async function AdminPage({
                       )}
                     </div>
                     <div className="survivor-admin-episodes__field">
+                      <label htmlFor={`iw-${ep.id}`} className="survivor-admin-episodes__field-label">
+                        Ind. immunity winner
+                      </label>
+                      <select
+                        id={`iw-${ep.id}`}
+                        form={resultFormId}
+                        name="immunityWinningPlayerId"
+                        className="survivor-auth__input survivor-admin-episodes__select"
+                        defaultValue={ep.immunity_winning_player_id ?? ""}
+                        title={
+                          ep.immunity_winning_player_id
+                            ? `${playerNameById.get(ep.immunity_winning_player_id) ?? ep.immunity_winning_player_id} (individual immunity winner)`
+                            : "Individual immunity winner (post-merge)"
+                        }
+                        aria-label={`Episode ${ep.episode_number} individual immunity winner`}
+                      >
+                        <option value="">—</option>
+                        {PLAYERS.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="survivor-admin-episodes__field">
                       {hasMedevacColumn ? (
                         <>
                           <label htmlFor={`med-${ep.id}`} className="survivor-admin-episodes__field-label">
@@ -449,22 +501,28 @@ export default async function AdminPage({
                   </div>
 
                   <div className="survivor-admin-episodes__tail">
-                    <div className="survivor-admin-episodes__tribes-row" role="group" aria-label={`Episode ${ep.episode_number} tribe immunity`}>
-                      <span className="survivor-admin-episodes__tribes-legend">Tribe immunity</span>
-                      {(Object.keys(TRIBES) as TribeId[]).map((id) => (
-                        <label key={id} className="survivor-admin-episodes__tribe-label">
-                          <input
-                            type="checkbox"
-                            form={resultFormId}
-                            name="immunityTribeId"
-                            value={id}
-                            defaultChecked={immunityByEpisode.get(ep.id)?.has(id)}
-                            aria-label={`${TRIBES[id].name} won immunity`}
-                          />
-                          <span style={{ color: TRIBES[id].color, fontWeight: 600 }}>{TRIBES[id].name}</span>
-                        </label>
-                      ))}
-                    </div>
+                    {!isIndividualImmunityPhase ? (
+                      <div className="survivor-admin-episodes__tribes-row" role="group" aria-label={`Episode ${ep.episode_number} tribe immunity`}>
+                        <span className="survivor-admin-episodes__tribes-legend">Tribe immunity</span>
+                        {(Object.keys(TRIBES) as TribeId[]).map((id) => (
+                          <label key={id} className="survivor-admin-episodes__tribe-label">
+                            <input
+                              type="checkbox"
+                              form={resultFormId}
+                              name="immunityTribeId"
+                              value={id}
+                              defaultChecked={immunityByEpisode.get(ep.id)?.has(id)}
+                              aria-label={`${TRIBES[id].name} won immunity`}
+                            />
+                            <span style={{ color: TRIBES[id].color, fontWeight: 600 }}>{TRIBES[id].name}</span>
+                          </label>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
+                        Individual immunity phase, leave tribe immunity empty for Episode {ep.episode_number}.
+                      </p>
+                    )}
                     <div className="survivor-admin-episodes__actions">
                       <button type="submit" form={resultFormId} className="survivor-btn survivor-btn--secondary">
                         Save results
@@ -580,7 +638,7 @@ export default async function AdminPage({
           Everyone&apos;s picks
         </h2>
         <p className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
-          Review winner picks and episode picks for appeal checks. Select an episode to inspect submitted vote-out and tribe immunity picks.
+          Review winner picks and episode picks for appeal checks. Select an episode to inspect submitted vote-out and immunity picks for that week.
         </p>
         <form action="/dashboard/admin" method="get" className="survivor-admin-inline" style={{ marginBottom: "1rem" }}>
           <input type="hidden" name="tab" value="picks" />
@@ -614,7 +672,8 @@ export default async function AdminPage({
                   Vote-out pick{pickEpisode ? ` (Ep ${pickEpisode.episode_number})` : ""}
                 </th>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>
-                  Tribe immunity{pickEpisode ? ` (Ep ${pickEpisode.episode_number})` : ""}
+                  {(pickEpisode?.episode_number ?? 0) >= INDIVIDUAL_IMMUNITY_START_EPISODE ? "Individual immunity" : "Tribe immunity"}
+                  {pickEpisode ? ` (Ep ${pickEpisode.episode_number})` : ""}
                 </th>
                 <th style={{ textAlign: "left", padding: "0.5rem" }}>Latest pick activity</th>
               </tr>
@@ -624,8 +683,11 @@ export default async function AdminPage({
                 const winnerPickId = winnerPicksByUser.get(pro.id);
                 const voteOutPickId = voteOutPickByUserForEpisode.get(pro.id);
                 const tribePickId = tribePickByUserForEpisode.get(pro.id);
+                const individualPickId = individualPickByUserForEpisode.get(pro.id);
                 const latestVoteEp = latestVoteOutEpisodeByUser.get(pro.id);
                 const latestTribeEp = latestTribePickEpisodeByUser.get(pro.id);
+                const latestIndividualEp = latestIndividualPickEpisodeByUser.get(pro.id);
+                const isIndividualPickEpisode = (pickEpisode?.episode_number ?? 0) >= INDIVIDUAL_IMMUNITY_START_EPISODE;
                 return (
                   <tr
                     key={pro.id}
@@ -650,7 +712,13 @@ export default async function AdminPage({
                       {voteOutPickId ? playerNameById.get(voteOutPickId) ?? "Unknown player" : "No pick"}
                     </td>
                     <td style={{ padding: "0.5rem" }}>
-                      {tribePickId ? (
+                      {isIndividualPickEpisode ? (
+                        individualPickId ? (
+                          playerNameById.get(individualPickId) ?? "Unknown player"
+                        ) : (
+                          "No pick"
+                        )
+                      ) : tribePickId ? (
                         <span style={{ color: TRIBES[tribePickId].color, fontWeight: 600 }}>{TRIBES[tribePickId].name}</span>
                       ) : (
                         "No pick"
@@ -661,7 +729,9 @@ export default async function AdminPage({
                         Latest vote-out pick: {latestVoteEp ? `Ep ${latestVoteEp}` : "None"}
                       </span>
                       <span className="survivor-dashboard__card-body survivor-dashboard__card-body--sm" style={{ display: "block" }}>
-                        Latest tribe pick: {latestTribeEp ? `Ep ${latestTribeEp}` : "None"}
+                        {isIndividualPickEpisode
+                          ? `Latest individual pick: ${latestIndividualEp ? `Ep ${latestIndividualEp}` : "None"}`
+                          : `Latest tribe pick: ${latestTribeEp ? `Ep ${latestTribeEp}` : "None"}`}
                       </span>
                     </td>
                   </tr>

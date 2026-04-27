@@ -72,6 +72,7 @@ export interface Database {
           second_voted_out_player_id: string | null;
           third_voted_out_player_id: string | null;
           immunity_winning_tribe_id: string | null;
+          immunity_winning_player_id: string | null;
           medevac_player_id: string | null;
           created_at: string;
           updated_at: string;
@@ -85,6 +86,7 @@ export interface Database {
           second_voted_out_player_id?: string | null;
           third_voted_out_player_id?: string | null;
           immunity_winning_tribe_id?: string | null;
+          immunity_winning_player_id?: string | null;
           medevac_player_id?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -94,6 +96,7 @@ export interface Database {
           second_voted_out_player_id?: string | null;
           third_voted_out_player_id?: string | null;
           immunity_winning_tribe_id?: string | null;
+          immunity_winning_player_id?: string | null;
           medevac_player_id?: string | null;
           updated_at?: string;
         };
@@ -115,6 +118,34 @@ export interface Database {
         };
         Update: {
           player_id?: string | null;
+        };
+      };
+      winner_pick_history: {
+        Row: {
+          id: string;
+          user_id: string;
+          season: number;
+          episode_id: string | null;
+          previous_player_id: string | null;
+          player_id: string | null;
+          source: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          season: number;
+          episode_id?: string | null;
+          previous_player_id?: string | null;
+          player_id?: string | null;
+          source?: string;
+          created_at?: string;
+        };
+        Update: {
+          episode_id?: string | null;
+          previous_player_id?: string | null;
+          player_id?: string | null;
+          source?: string;
         };
       };
       user_season_points: {
@@ -226,6 +257,25 @@ export interface Database {
         };
         Update: {
           tribe_id?: string;
+        };
+      };
+      individual_immunity_picks: {
+        Row: {
+          id: string;
+          user_id: string;
+          episode_id: string;
+          player_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          episode_id: string;
+          player_id: string;
+          created_at?: string;
+        };
+        Update: {
+          player_id?: string;
         };
       };
     };

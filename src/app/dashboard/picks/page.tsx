@@ -4,6 +4,8 @@ import { PicksForm } from "./PicksForm";
 import { PLAYERS, TRIBES } from "@/data/players";
 import type { TribeId } from "@/data/players";
 
+const INDIVIDUAL_IMMUNITY_START_EPISODE = 7;
+
 export default async function PicksPage() {
   const supabase = await createClient();
   const {
@@ -46,8 +48,10 @@ export default async function PicksPage() {
     .order("episode_number", { ascending: true });
 
   const currentEpisode = episodes?.find((e) => !e.voted_out_player_id);
+  const isIndividualImmunityPhase = (currentEpisode?.episode_number ?? 0) >= INDIVIDUAL_IMMUNITY_START_EPISODE;
   let userVoteOutPick: string | null = null;
   let userTribeImmunityPick: TribeId | null = null;
+  let userIndividualImmunityPick: string | null = null;
   if (currentEpisode) {
     const { data: votePick } = await supabase
       .from("vote_out_picks")
@@ -56,13 +60,23 @@ export default async function PicksPage() {
       .eq("episode_id", currentEpisode.id)
       .maybeSingle();
     userVoteOutPick = votePick?.player_id ?? null;
-    const { data: tribeImmPick } = await supabase
-      .from("tribe_immunity_picks")
-      .select("tribe_id")
-      .eq("user_id", user.id)
-      .eq("episode_id", currentEpisode.id)
-      .maybeSingle();
-    userTribeImmunityPick = (tribeImmPick?.tribe_id as TribeId) ?? null;
+    if (!isIndividualImmunityPhase) {
+      const { data: tribeImmPick } = await supabase
+        .from("tribe_immunity_picks")
+        .select("tribe_id")
+        .eq("user_id", user.id)
+        .eq("episode_id", currentEpisode.id)
+        .maybeSingle();
+      userTribeImmunityPick = (tribeImmPick?.tribe_id as TribeId) ?? null;
+    } else {
+      const { data: individualImmPick } = await supabase
+        .from("individual_immunity_picks")
+        .select("player_id")
+        .eq("user_id", user.id)
+        .eq("episode_id", currentEpisode.id)
+        .maybeSingle();
+      userIndividualImmunityPick = individualImmPick?.player_id ?? null;
+    }
   }
 
   const inGamePlayers = PLAYERS.filter((p) => !eliminatedPlayerIds.has(p.id));
@@ -73,14 +87,12 @@ export default async function PicksPage() {
         My picks
       </h1>
       <p style={{ color: "var(--survivor-text-muted)", marginBottom: "0.5rem" }}>
-        Pick a player to win (+1 per week they stay in, -1 when eliminated; then repick). Each week pick which tribe wins immunity (+1 if correct) and who gets voted out (+2 if correct). Picks lock when the episode starts.
+        Pick a player to win (+1 per week they stay in, -1 when eliminated, then repick). Each week pick who gets voted out (+2 if correct). Pick tribe immunity pre-merge and individual immunity post-merge (+1 if correct). Picks lock when the episode starts.
       </p>
       <p style={{ color: "var(--survivor-accent)", fontWeight: 600, marginBottom: "1.5rem" }}>
         Your points: {userPoints}
       </p>
       <PicksForm
-        userId={user.id}
-        players={PLAYERS}
         inGamePlayers={inGamePlayers}
         eliminatedIds={eliminatedPlayerIds}
         tribes={TRIBES}
@@ -88,6 +100,8 @@ export default async function PicksPage() {
         currentEpisode={currentEpisode ?? null}
         initialVoteOutId={userVoteOutPick}
         initialTribeImmunityId={userTribeImmunityPick}
+        initialIndividualImmunityId={userIndividualImmunityPick}
+        isIndividualImmunityPhase={isIndividualImmunityPhase}
       />
     </>
   );

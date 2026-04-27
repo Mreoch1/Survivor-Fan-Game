@@ -198,9 +198,9 @@ Use a future date/time (e.g. Sunday after that week’s episode). Migration `006
 
 ## After each episode
 
-**Results publish time:** Friday 9:00 AM ET. Set who was voted out in Supabase; scoring runs automatically at that time (or you can trigger it manually).
+**Results publish time:** Sunday 9:00 PM EST. Set who was voted out in Supabase; scoring runs automatically at that time (or you can trigger it manually).
 
-### 1. Set who was voted out (before Friday 9 AM)
+### 1. Set who was voted out (before Sunday 9 PM EST)
 
 In Supabase SQL Editor or Table Editor, set `voted_out_player_id` for the episode:
 
@@ -214,7 +214,7 @@ Use player IDs from `src/data/players.ts` (e.g. `jenna-lewis-dougherty`, `dee-va
 
 ### 2. Scoring (automated or manual)
 
-- **Automated:** A Vercel Cron job runs **every Friday at 14:00 UTC** (9 AM EST). It processes every Season 50 episode that has `voted_out_player_id` set and is not yet in `episode_points_processed`. No action needed once the cron and env are set (see below).
+- **Automated:** A Vercel Cron job runs **every Monday at 02:00 UTC** (Sunday 9 PM EST). It processes every Season 50 episode that has `voted_out_player_id` set and is not yet in `episode_points_processed`. No action needed once the cron and env are set (see below).
 - **Manual:** While logged in, call the API to process one episode:  
   `POST /api/process-episode` with body `{ "episodeId": "EPISODE_UUID" }`.  
   Get `EPISODE_UUID` from Supabase → episodes.

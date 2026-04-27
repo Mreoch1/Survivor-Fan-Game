@@ -4,6 +4,8 @@ import { PLAYERS, TRIBES } from "@/data/players";
 import type { TribeId } from "@/data/players";
 import { SetDisplayName } from "./SetDisplayName";
 
+const INDIVIDUAL_IMMUNITY_START_EPISODE = 7;
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
@@ -37,6 +39,7 @@ export default async function DashboardPage() {
     .order("episode_number", { ascending: true });
 
   const currentEpisode = (episodes ?? []).find((e) => !e.voted_out_player_id);
+  const isIndividualImmunityPhase = (currentEpisode?.episode_number ?? 0) >= INDIVIDUAL_IMMUNITY_START_EPISODE;
 
   const episodeResults = (episodes ?? []).map((ep) => ({
     episodeNumber: ep.episode_number,
@@ -57,29 +60,47 @@ export default async function DashboardPage() {
       : null;
 
   let userTribeImmunityPick: TribeId | null = null;
+  let userIndividualImmunityPickPlayerId: string | null = null;
   let userVoteOutPickPlayerId: string | null = null;
   if (currentEpisode && user?.id) {
-    const [{ data: voteOutPick }, { data: tribeImmunityPick }] = await Promise.all([
-      supabase
-        .from("vote_out_picks")
-        .select("player_id")
-        .eq("user_id", user?.id)
-        .eq("episode_id", currentEpisode.id)
-        .maybeSingle(),
-      supabase
-        .from("tribe_immunity_picks")
-        .select("tribe_id")
-        .eq("user_id", user?.id)
-        .eq("episode_id", currentEpisode.id)
-        .maybeSingle(),
+    const voteOutPickPromise = supabase
+      .from("vote_out_picks")
+      .select("player_id")
+      .eq("user_id", user?.id)
+      .eq("episode_id", currentEpisode.id)
+      .maybeSingle();
+    const tribeImmunityPickPromise = !isIndividualImmunityPhase
+      ? supabase
+          .from("tribe_immunity_picks")
+          .select("tribe_id")
+          .eq("user_id", user?.id)
+          .eq("episode_id", currentEpisode.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null });
+    const individualImmunityPickPromise = isIndividualImmunityPhase
+      ? supabase
+          .from("individual_immunity_picks")
+          .select("player_id")
+          .eq("user_id", user?.id)
+          .eq("episode_id", currentEpisode.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null });
+    const [{ data: voteOutPick }, { data: tribeImmunityPick }, { data: individualImmunityPick }] = await Promise.all([
+      voteOutPickPromise,
+      tribeImmunityPickPromise,
+      individualImmunityPickPromise,
     ]);
 
     userVoteOutPickPlayerId = voteOutPick?.player_id ?? null;
     userTribeImmunityPick = (tribeImmunityPick?.tribe_id as TribeId) ?? null;
+    userIndividualImmunityPickPlayerId = individualImmunityPick?.player_id ?? null;
   }
 
   const userVoteOutPlayer = userVoteOutPickPlayerId
     ? PLAYERS.find((p) => p.id === userVoteOutPickPlayerId) ?? null
+    : null;
+  const userIndividualImmunityPlayer = userIndividualImmunityPickPlayerId
+    ? PLAYERS.find((p) => p.id === userIndividualImmunityPickPlayerId) ?? null
     : null;
 
   return (
@@ -118,23 +139,42 @@ export default async function DashboardPage() {
               </Link>
             )}
           </li>
-          <li className="survivor-dashboard__list-item">
-            <strong>
-              Tribe immunity pick:
-              {currentEpisode ? ` (Episode ${currentEpisode.episode_number})` : ""}
-            </strong>{" "}
-            {userTribeImmunityPick ? (
-              <span
-                className={`survivor-dashboard__tribe-name--${userTribeImmunityPick}`}
-              >
-                {TRIBES[userTribeImmunityPick].name}
-              </span>
-            ) : (
-              <Link href="/dashboard/picks" className="survivor-auth__link">
-                Not picked yet
-              </Link>
-            )}
-          </li>
+          {!isIndividualImmunityPhase && (
+            <li className="survivor-dashboard__list-item">
+              <strong>
+                Tribe immunity pick:
+                {currentEpisode ? ` (Episode ${currentEpisode.episode_number})` : ""}
+              </strong>{" "}
+              {userTribeImmunityPick ? (
+                <span
+                  className={`survivor-dashboard__tribe-name--${userTribeImmunityPick}`}
+                >
+                  {TRIBES[userTribeImmunityPick].name}
+                </span>
+              ) : (
+                <Link href="/dashboard/picks" className="survivor-auth__link">
+                  Not picked yet
+                </Link>
+              )}
+            </li>
+          )}
+          {isIndividualImmunityPhase && (
+            <li className="survivor-dashboard__list-item">
+              <strong>
+                Individual immunity pick:
+                {currentEpisode ? ` (Episode ${currentEpisode.episode_number})` : ""}
+              </strong>{" "}
+              {userIndividualImmunityPlayer ? (
+                <Link href="/dashboard/picks" className="survivor-auth__link">
+                  {userIndividualImmunityPlayer.name}
+                </Link>
+              ) : (
+                <Link href="/dashboard/picks" className="survivor-auth__link">
+                  Not picked yet
+                </Link>
+              )}
+            </li>
+          )}
           <li className="survivor-dashboard__list-item">
             <strong>
               Vote-out pick:
@@ -203,7 +243,7 @@ export default async function DashboardPage() {
           </li>
           <li className="survivor-dashboard__list-item">
             <strong>Individual immunity (post-merge):</strong> After the merge, pick which castaway
-            wins immunity each week. Correct pick = points. (Coming soon.)
+            wins immunity each week. Correct pick = +1 point.
           </li>
         </ul>
         <p className="survivor-dashboard__card-body survivor-dashboard__card-body--no-margin">
@@ -216,7 +256,7 @@ export default async function DashboardPage() {
           Episode results
         </h2>
         <p className="survivor-dashboard__card-body survivor-dashboard__card-body--sm">
-          Official boots by episode. Scoring uses this list. Results publish Friday 9:00 AM ET.
+          Official boots by episode. Scoring uses this list. Results publish Sunday 9:00 PM EST.
         </p>
         {episodeResults.length === 0 ? (
           <p className="survivor-dashboard__card-body survivor-dashboard__card-body--no-margin">
