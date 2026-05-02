@@ -1286,22 +1286,6 @@ body {
   color: var(--survivor-text);
 }
 
-.survivor-leaderboard__formula {
-  margin-top: 0.2rem;
-  color: var(--survivor-text-muted);
-  font-size: 0.6875rem;
-  font-weight: 500;
-}
-
-.survivor-leaderboard__mobile-formula {
-  margin: 0.6rem 0 0;
-  padding-top: 0.55rem;
-  border-top: 1px solid var(--survivor-border);
-  color: var(--survivor-text-muted);
-  font-size: 0.75rem;
-  font-variant-numeric: tabular-nums;
-}
-
 @media (max-width: 63.99rem) {
   .survivor-leaderboard--desktop {
     display: none !important;

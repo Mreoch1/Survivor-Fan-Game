@@ -51,7 +51,6 @@ export default async function LeaderboardPage() {
       individualImmunityPoints: pts?.individual_immunity_points ?? 0,
       voteOutPoints: pts?.vote_out_points ?? 0,
       points: pts?.points ?? 0,
-      pointsFormula: `${pts?.survival_points ?? 0} + ${pts?.tribe_immunity_points ?? 0} + ${pts?.vote_out_points ?? 0} + ${pts?.individual_immunity_points ?? 0}`,
       lastWeekDelta: pts?.last_week_delta ?? null,
       status,
     };
@@ -150,9 +149,6 @@ export default async function LeaderboardPage() {
                   </td>
                   <td style={{ padding: "0.75rem", textAlign: "right", color: "var(--survivor-accent)", fontWeight: 700 }}>
                     {row.points}
-                    <div className="survivor-leaderboard__formula" aria-label="Points formula">
-                      {row.pointsFormula}
-                    </div>
                   </td>
                 </tr>
               ))}
@@ -217,9 +213,6 @@ export default async function LeaderboardPage() {
                   <dd>{row.individualImmunityPoints}</dd>
                 </div>
               </dl>
-              <p className="survivor-leaderboard__mobile-formula">
-                Total formula: {row.survivalPoints} + {row.tribeImmunityPoints} + {row.voteOutPoints} + {row.individualImmunityPoints}
-              </p>
             </li>
           ))}
         </ul>
