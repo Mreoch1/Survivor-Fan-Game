@@ -1,6 +1,6 @@
 # Survivor Fan Game – Single Source of Truth
 
-**Last updated:** 2026-04-29
+**Last updated:** 2026-05-02
 
 ## Project overview
 
@@ -110,6 +110,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-04-27: Automation schedule changed: Vercel cron for `GET /api/cron/process-pending-episodes` now runs every Sunday 9:00 PM EST (`0 2 * * 1` UTC schedule).
 - 2026-04-27: Theme color options removed: deleted `ThemePicker` UI and related `data-theme` overrides. App now always uses the default Survivor palette.
 - 2026-04-29: Episode 10 picks unlocked (migration 040): set `vote_out_lock_at` to 2026-05-06 20:00 ET (Wed 8 PM ET) so My Picks stays open after the prior Episode 10 lock passed.
+- 2026-05-02: Episode 10 Season 50 results + Episode 11 unlock (migration 041): set Episode 10 `voted_out_player_id = stephenie-lagrossa-kendrick`, `immunity_winning_player_id = tiffany-ervin`, cleared any Episode 10 `episode_immunity_tribes` rows, cleared Episode 10 from `episode_points_processed` for idempotent replay, and inserted Episode 11 lock at 2026-05-13 20:00 ET.
 - 2026-04-14: Admin Picks tab and copy aligned to post-merge behavior: episode picks table now shows individual immunity picks for Episode 7+ (instead of N/A), latest activity tracks latest individual pick in post-merge weeks, and leaderboard point-system copy removed "coming soon" for individual immunity.
 - 2026-03-23: Admin page now has tabbed sections (Episodes, Users, Picks). New Picks tab shows all users and their winner pick plus per-episode vote-out and tribe immunity picks, with episode filter for adjudicating appeals/questions.
 - 2026-03-23: Cast page tribe section headers now color the tribe name text itself (not just the border) so labels like Vatu clearly match their team color.
