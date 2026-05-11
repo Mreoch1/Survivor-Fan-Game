@@ -1,5 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { getSeason50TotalEpisodes, SEASON_50 } from "@/lib/season-50-countdown";
+import {
+  formatSeason50RemainingScheduleLabel,
+  getSeason50TotalEpisodes,
+  SEASON_50,
+} from "@/lib/season-50-countdown";
 
 function copyForRemaining(remaining: number): { headline: string; sub: string } {
   if (remaining <= 0) {
@@ -49,13 +53,14 @@ export async function SeasonCountdownBanner() {
   const completed = count ?? 0;
   const remaining = Math.max(0, total - completed);
   const { headline, sub } = copyForRemaining(remaining);
+  const scheduleLabel = formatSeason50RemainingScheduleLabel(total, remaining);
 
   return (
     <aside
       className="survivor-countdown-banner"
       role="status"
       aria-live="polite"
-      aria-label={`Season 50: ${remaining} ${remaining === 1 ? "episode" : "episodes"} remaining out of ${total} planned`}
+      aria-label={`Season 50: ${remaining} ${remaining === 1 ? "episode" : "episodes"} left out of ${total} planned`}
     >
       <div className="survivor-countdown-banner__glow" aria-hidden />
       <div className="survivor-countdown-banner__inner">
@@ -64,12 +69,15 @@ export async function SeasonCountdownBanner() {
         <p className="survivor-countdown-banner__count" aria-hidden>
           <span className="survivor-countdown-banner__number">{remaining}</span>
           <span className="survivor-countdown-banner__suffix">
-            {remaining === 1 ? "episode" : "episodes"} to go
+            {remaining === 1 ? "episode" : "episodes"} left
           </span>
         </p>
         <p className="survivor-countdown-banner__sub">{sub}</p>
+        {scheduleLabel ? (
+          <p className="survivor-countdown-banner__schedule">{scheduleLabel}</p>
+        ) : null}
         <p className="survivor-countdown-banner__meta">
-          {completed} of {total} weekly episodes already have elimination results saved here (each episode counts once when the primary boot is set).
+          {completed} of {total} weeks already have a primary boot saved here. Save and process each new episode in Admin to move the count above down by one.
         </p>
       </div>
     </aside>
