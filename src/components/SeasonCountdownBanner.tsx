@@ -22,7 +22,7 @@ function copyForRemaining(remaining: number): { headline: string; sub: string } 
   }
   if (remaining <= 4) {
     return {
-      headline: "Endgame heat — play like you mean it",
+      headline: "Endgame heat: play like you mean it",
       sub: "The merge is behind you. The fire is in front of you. Numbers do not lie, people still will.",
     };
   }
@@ -59,7 +59,7 @@ export async function SeasonCountdownBanner() {
     >
       <div className="survivor-countdown-banner__glow" aria-hidden />
       <div className="survivor-countdown-banner__inner">
-        <p className="survivor-countdown-banner__eyebrow">Season 50 — In the Hands of the Fans</p>
+        <p className="survivor-countdown-banner__eyebrow">Season 50: In the Hands of the Fans</p>
         <p className="survivor-countdown-banner__headline">{headline}</p>
         <p className="survivor-countdown-banner__count" aria-hidden>
           <span className="survivor-countdown-banner__number">{remaining}</span>
@@ -68,6 +68,9 @@ export async function SeasonCountdownBanner() {
           </span>
         </p>
         <p className="survivor-countdown-banner__sub">{sub}</p>
+        <p className="survivor-countdown-banner__meta">
+          {completed} of {total} weekly episodes already have elimination results saved here (each episode counts once when the primary boot is set).
+        </p>
       </div>
     </aside>
   );

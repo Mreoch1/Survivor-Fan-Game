@@ -1416,3 +1416,14 @@ body {
   margin-left: auto;
   margin-right: auto;
 }
+
+.survivor-countdown-banner__meta {
+  margin: 0.45rem 0 0;
+  font-size: clamp(0.625rem, 1.5vw, 0.75rem);
+  line-height: 1.4;
+  color: var(--survivor-text-muted);
+  max-width: 44rem;
+  margin-left: auto;
+  margin-right: auto;
+  opacity: 0.92;
+}
