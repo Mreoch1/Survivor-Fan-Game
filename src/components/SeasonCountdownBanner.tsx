@@ -1,9 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import {
-  formatSeason50RemainingScheduleLabel,
-  getSeason50TotalEpisodes,
-  SEASON_50,
-} from "@/lib/season-50-countdown";
+import { getSeason50TotalEpisodes, SEASON_50 } from "@/lib/season-50-countdown";
 
 function copyForRemaining(remaining: number): { headline: string; sub: string } {
   if (remaining <= 0) {
@@ -50,10 +46,8 @@ export async function SeasonCountdownBanner() {
     return null;
   }
 
-  const completed = count ?? 0;
-  const remaining = Math.max(0, total - completed);
+  const remaining = Math.max(0, total - (count ?? 0));
   const { headline, sub } = copyForRemaining(remaining);
-  const scheduleLabel = formatSeason50RemainingScheduleLabel(total, remaining);
 
   return (
     <aside
@@ -73,12 +67,6 @@ export async function SeasonCountdownBanner() {
           </span>
         </p>
         <p className="survivor-countdown-banner__sub">{sub}</p>
-        {scheduleLabel ? (
-          <p className="survivor-countdown-banner__schedule">{scheduleLabel}</p>
-        ) : null}
-        <p className="survivor-countdown-banner__meta">
-          {completed} of {total} weeks already have a primary boot saved here. Save and process each new episode in Admin to move the count above down by one.
-        </p>
       </div>
     </aside>
   );

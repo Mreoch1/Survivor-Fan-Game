@@ -10,16 +10,3 @@ export function getSeason50TotalEpisodes(): number {
   if (Number.isFinite(n) && n > 0) return n;
   return 14;
 }
-
-/**
- * Human-readable span of episode numbers still on the calendar (episode `total` is the finale).
- */
-export function formatSeason50RemainingScheduleLabel(total: number, remaining: number): string | null {
-  if (remaining <= 0) return null;
-  const first = total - remaining + 1;
-  if (first > total) return null;
-  if (remaining === 1) {
-    return `Finale week: episode ${total} is the last one on this plan.`;
-  }
-  return `Still on the calendar: episodes ${first}-${total} (episode ${total} is the finale).`;
-}
