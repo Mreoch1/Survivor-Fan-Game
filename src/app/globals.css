@@ -1305,3 +1305,114 @@ body {
     display: block;
   }
 }
+
+/* Global Season 50 countdown (all routes) */
+.survivor-countdown-banner {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  overflow: hidden;
+  border-bottom: 1px solid color-mix(in srgb, var(--survivor-flame) 55%, var(--survivor-border));
+  background:
+    radial-gradient(120% 180% at 50% -20%, rgba(232, 93, 4, 0.35) 0%, transparent 55%),
+    linear-gradient(105deg, #1a0a0a 0%, #2d0f0f 22%, #1a1208 45%, #0f1610 70%, #0a1210 100%);
+  padding: 0.65rem 1rem;
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-top: max(0.65rem, env(safe-area-inset-top, 0px));
+  text-align: center;
+}
+
+.survivor-countdown-banner__glow {
+  pointer-events: none;
+  position: absolute;
+  inset: -40% -20%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(232, 93, 4, 0.45) 0%, transparent 55%);
+  opacity: 0.55;
+  animation: survivor-countdown-pulse 3.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .survivor-countdown-banner__glow {
+    animation: none;
+    opacity: 0.35;
+  }
+}
+
+@keyframes survivor-countdown-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.65;
+    transform: scale(1.03);
+  }
+}
+
+.survivor-countdown-banner__inner {
+  position: relative;
+  max-width: 52rem;
+  margin: 0 auto;
+}
+
+.survivor-countdown-banner__eyebrow {
+  margin: 0 0 0.2rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--survivor-accent) 90%, transparent);
+}
+
+.survivor-countdown-banner__headline {
+  margin: 0 0 0.35rem;
+  font-size: clamp(0.8125rem, 2.2vw, 1rem);
+  font-weight: 800;
+  line-height: 1.25;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #fff5e6;
+  text-shadow:
+    0 0 20px rgba(232, 93, 4, 0.45),
+    0 1px 0 rgba(0, 0, 0, 0.85);
+}
+
+.survivor-countdown-banner__count {
+  margin: 0.15rem 0 0.25rem;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.survivor-countdown-banner__number {
+  font-size: clamp(2.25rem, 7vw, 3.25rem);
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--survivor-flame);
+  text-shadow:
+    0 0 28px rgba(232, 93, 4, 0.75),
+    0 0 2px rgba(0, 0, 0, 1);
+}
+
+.survivor-countdown-banner__suffix {
+  font-size: clamp(0.875rem, 2.5vw, 1.0625rem);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: color-mix(in srgb, var(--survivor-text) 92%, var(--survivor-flame));
+}
+
+.survivor-countdown-banner__sub {
+  margin: 0;
+  font-size: clamp(0.75rem, 1.9vw, 0.875rem);
+  line-height: 1.45;
+  color: color-mix(in srgb, var(--survivor-text-muted) 88%, #fff);
+  max-width: 40rem;
+  margin-left: auto;
+  margin-right: auto;
+}
