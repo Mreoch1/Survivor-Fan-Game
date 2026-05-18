@@ -12,6 +12,7 @@
     "supabase:link": "supabase link",
     "db:link": "supabase link --project-ref ${SUPABASE_PROJECT_REF}",
     "db:push": "supabase db push --yes",
+    "process-episode": "npx --yes tsx scripts/process-episode-cli.ts",
     "db:diff": "supabase db diff",
     "db:reset": "supabase db reset",
     "vercel:link": "vercel link",

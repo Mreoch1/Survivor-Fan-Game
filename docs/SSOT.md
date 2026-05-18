@@ -1,6 +1,6 @@
 # Survivor Fan Game – Single Source of Truth
 
-**Last updated:** 2026-05-13
+**Last updated:** 2026-05-17
 
 ## Project overview
 
@@ -113,6 +113,7 @@ Family-and-friends web app for Survivor Season 50 (2026). Users sign up (includi
 - 2026-05-02: Episode 10 Season 50 results + Episode 11 unlock (migration 041): set Episode 10 `voted_out_player_id = stephenie-lagrossa-kendrick`, `immunity_winning_player_id = tiffany-ervin`, cleared any Episode 10 `episode_immunity_tribes` rows, cleared Episode 10 from `episode_points_processed` for idempotent replay, and inserted Episode 11 lock at 2026-05-13 20:00 ET.
 - 2026-05-02: Leaderboard UI: removed per-row additive formula under Total (desktop and mobile); category columns and top “How totals are calculated” section remain.
 - 2026-05-14: Episode 11 Season 50 results + Episode 12 unlock (migration 042): set Episode 11 `voted_out_player_id = emily-flippen`, `second_voted_out_player_id = ozzy-lusth`, `immunity_winning_player_id = jonathan-young`, cleared Episode 11 `episode_immunity_tribes` and `episode_points_processed`, inserted Episode 12 lock at 2026-05-20 20:00 ET.
+- 2026-05-17: Episode 12 Season 50 results + Episode 13 (finale) unlock (migration 044): `voted_out_player_id = rick-devens`, `second_voted_out_player_id = cirie-fields`, `immunity_winning_player_id = joe-hunter`; cleared Episode 12 from `episode_points_processed`; inserted Episode 13 lock at 2026-05-20 20:00 ET. CLI: `npm run process-episode -- 12` after `npm run db:push`.
 - 2026-05-11: Global Season 50 countdown banner on all routes (`SeasonCountdownBanner` in root `layout.tsx`): sticky dramatic strip, episodes remaining = `NEXT_PUBLIC_SEASON_50_TOTAL_EPISODES` (default **13**: episode 12 then finale as episode 13) minus count of Season 50 episodes with `voted_out_player_id` set (each row counts once; e.g. 11 episodes with a primary boot saved yields **2** left). Root `layout.tsx` sets `dynamic = "force-dynamic"` so the count is not served from a stale static shell. Migration 043 adds `anon` SELECT on `episodes` for `season = 50` so unauthenticated pages (login, landing) can load the count; if prod still shows the wrong remainder, confirm 043 is applied and Vercel is not overriding with `NEXT_PUBLIC_SEASON_50_TOTAL_EPISODES=14`.
 - 2026-05-12: Countdown banner suffix “episodes left” (replacing “to go”). Schedule line and “X of Y weeks / Admin” meta under the banner were removed later the same week for a cleaner strip; count logic is `total` minus episodes with primary `voted_out_player_id` (default `total` is 13 as of the same week).
 - 2026-05-13: Season 50 planned episode total for the countdown banner default set to **13** (episode 12, then finale as episode 13; not 14). With 11 boots saved, banner shows **2 episodes left**.
