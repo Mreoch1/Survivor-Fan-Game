@@ -42,12 +42,18 @@ if (!Number.isFinite(episodeNumber) || episodeNumber < 1) {
 
 async function main() {
   const supabase = createServiceRoleClient();
-  const { data: ep, error: epErr } = await supabase
+  const { data: epData, error: epErr } = await supabase
     .from("episodes")
     .select("id, episode_number, voted_out_player_id")
     .eq("season", 50)
     .eq("episode_number", episodeNumber)
     .single();
+
+  const ep = epData as {
+    id: string;
+    episode_number: number;
+    voted_out_player_id: string | null;
+  } | null;
 
   if (epErr || !ep) {
     console.error("Episode not found:", epErr?.message ?? "no row");

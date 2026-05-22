@@ -1416,3 +1416,187 @@ body {
   margin-left: auto;
   margin-right: auto;
 }
+
+/* Season 50 winner banner (finale complete) */
+.survivor-winner-banner {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  overflow: hidden;
+  border-bottom: 1px solid color-mix(in srgb, var(--survivor-accent) 55%, var(--survivor-border));
+  background:
+    radial-gradient(120% 180% at 50% -20%, rgba(201, 162, 39, 0.4) 0%, transparent 55%),
+    linear-gradient(105deg, #1a1408 0%, #2d220f 22%, #1a1208 45%, #0f1610 70%, #0a1210 100%);
+  padding: 0.85rem 1rem 1rem;
+  padding-left: max(1rem, env(safe-area-inset-left, 0px));
+  padding-right: max(1rem, env(safe-area-inset-right, 0px));
+  padding-top: max(0.85rem, env(safe-area-inset-top, 0px));
+  text-align: center;
+}
+
+.survivor-winner-banner__glow {
+  pointer-events: none;
+  position: absolute;
+  inset: -40% -20%;
+  background: radial-gradient(ellipse at 50% 0%, rgba(201, 162, 39, 0.5) 0%, transparent 55%);
+  opacity: 0.5;
+}
+
+.survivor-winner-banner__inner {
+  position: relative;
+  max-width: 56rem;
+  margin: 0 auto;
+}
+
+.survivor-winner-banner__eyebrow {
+  margin: 0 0 0.25rem;
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--survivor-accent) 90%, transparent);
+}
+
+.survivor-winner-banner__title {
+  margin: 0 0 0.75rem;
+  font-size: clamp(1rem, 2.8vw, 1.25rem);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #fff8e8;
+  text-shadow: 0 0 20px rgba(201, 162, 39, 0.45);
+}
+
+.survivor-winner-banner__podium {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(0.5rem, 3vw, 1.25rem);
+  margin: 0 0 0.85rem;
+  list-style: none;
+  padding: 0;
+}
+
+.survivor-winner-banner__podium-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  flex: 0 1 7.5rem;
+  min-width: 0;
+}
+
+.survivor-winner-banner__podium-slot--first {
+  flex: 0 1 9.5rem;
+  order: 2;
+}
+
+.survivor-winner-banner__podium-slot--second {
+  order: 1;
+  padding-bottom: 0.5rem;
+}
+
+.survivor-winner-banner__podium-slot--third {
+  order: 3;
+  padding-bottom: 0.25rem;
+}
+
+.survivor-winner-banner__place {
+  margin: 0;
+  font-size: 0.625rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--survivor-text-muted);
+}
+
+.survivor-winner-banner__place--winner {
+  color: var(--survivor-accent);
+  font-size: 0.6875rem;
+}
+
+.survivor-winner-banner__photo {
+  width: 4.5rem;
+  height: 4.5rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--survivor-border);
+  background: var(--survivor-bg-card);
+}
+
+.survivor-winner-banner__photo--winner {
+  width: 6rem;
+  height: 6rem;
+  border-color: var(--survivor-accent);
+  box-shadow: 0 0 24px rgba(201, 162, 39, 0.55);
+}
+
+.survivor-winner-banner__photo--placeholder {
+  display: block;
+}
+
+.survivor-winner-banner__name {
+  margin: 0;
+  font-size: clamp(0.6875rem, 2vw, 0.8125rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--survivor-text);
+}
+
+.survivor-winner-banner__name--winner {
+  font-size: clamp(0.8125rem, 2.4vw, 1rem);
+  color: #fff5e0;
+}
+
+.survivor-winner-banner__fan-scores {
+  border-top: 1px solid color-mix(in srgb, var(--survivor-border) 80%, transparent);
+  padding-top: 0.65rem;
+  max-width: 22rem;
+  margin: 0 auto;
+}
+
+.survivor-winner-banner__fan-title {
+  margin: 0 0 0.45rem;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--survivor-text-muted);
+}
+
+.survivor-winner-banner__fan-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.survivor-winner-banner__fan-row {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.survivor-winner-banner__fan-rank {
+  font-weight: 800;
+  color: var(--survivor-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.survivor-winner-banner__fan-name {
+  font-weight: 600;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.survivor-winner-banner__fan-points {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--survivor-flame);
+}

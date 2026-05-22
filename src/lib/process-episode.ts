@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
+import { SEASON_50_FINALE } from "@/lib/season-50-finale";
 
 const SEASON = 50;
 
@@ -29,7 +30,7 @@ export async function processEpisode(
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { data: episodeData, error: epErr } = await supabase
     .from("episodes")
-    .select("id, season, voted_out_player_id, second_voted_out_player_id, third_voted_out_player_id, medevac_player_id, immunity_winning_player_id")
+    .select("id, season, episode_number, voted_out_player_id, second_voted_out_player_id, third_voted_out_player_id, medevac_player_id, immunity_winning_player_id")
     .eq("id", episodeId)
     .single();
 
@@ -40,6 +41,7 @@ export async function processEpisode(
   const episode = episodeData as {
     id: string;
     season: number;
+    episode_number: number;
     voted_out_player_id: string | null;
     second_voted_out_player_id: string | null;
     third_voted_out_player_id: string | null;
@@ -60,6 +62,10 @@ export async function processEpisode(
     episode.third_voted_out_player_id,
     episode.medevac_player_id,
   ].filter(Boolean) as string[];
+
+  if (episode.episode_number === SEASON_50_FINALE.episodeNumber) {
+    eliminatedPlayerIds.push(SEASON_50_FINALE.secondPlacePlayerId);
+  }
 
   const { data: already } = await supabase
     .from("episode_points_processed")
@@ -260,6 +266,9 @@ export async function processEpisode(
       votedOutId,
       episode.second_voted_out_player_id,
       episode.third_voted_out_player_id,
+      ...(episode.episode_number === SEASON_50_FINALE.episodeNumber
+        ? [SEASON_50_FINALE.secondPlacePlayerId]
+        : []),
     ].filter(Boolean) as string[]);
 
   const voteOutWinnerIds = (voteOutCorrectPicks ?? []).map((r: { user_id: string }) => r.user_id);

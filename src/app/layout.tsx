@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Bitter, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeMusic } from "@/components/ThemeMusic";
-import { SeasonCountdownBanner } from "@/components/SeasonCountdownBanner";
+import { SeasonTopBanner } from "@/components/SeasonTopBanner";
 
 const survivorSans = Bitter({
   variable: "--font-survivor-sans",
@@ -70,7 +70,7 @@ export default async function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head />
       <body className={`${survivorSans.variable} ${geistMono.variable} antialiased`}>
-        <SeasonCountdownBanner />
+        <SeasonTopBanner />
         {children}
         <ThemeMusic />
       </body>
