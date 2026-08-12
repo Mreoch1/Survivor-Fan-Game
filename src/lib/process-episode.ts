@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any -- legacy Season 50 processor is removed during the Season 51 scoring port */
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { SEASON_50_FINALE } from "@/lib/season-50-finale";
@@ -92,7 +93,6 @@ export async function processEpisode(
       .eq("season", SEASON)
       .maybeSingle();
     if (!existing) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await (supabase.from("user_season_points") as any).insert({
         user_id: pick.user_id,
         season: SEASON,

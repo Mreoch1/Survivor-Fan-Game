@@ -11,12 +11,7 @@ const THEME_MUSIC_SRC =
 
 export function ThemeMusic() {
   const [playing, setPlaying] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   function toggle() {
     if (!audioRef.current) return;
@@ -42,9 +37,7 @@ export function ThemeMusic() {
       audio.removeEventListener("play", onPlay);
       audio.removeEventListener("pause", onPause);
     };
-  }, [mounted]);
-
-  if (!mounted) return null;
+  }, []);
 
   return (
     <>

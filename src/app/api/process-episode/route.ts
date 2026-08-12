@@ -35,8 +35,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: result.error }, { status });
     }
     return NextResponse.json({ ok: true });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Service role not configured";
+  } catch {
     return NextResponse.json(
       { error: "Processing failed. Ensure SUPABASE_SERVICE_ROLE_KEY is set." },
       { status: 503 }

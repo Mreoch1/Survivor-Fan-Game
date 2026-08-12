@@ -9,11 +9,10 @@ function InviteAcceptContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
-  const [status, setStatus] = useState<"loading" | "accepted" | "invalid">("loading");
+  const [status, setStatus] = useState<"loading" | "accepted" | "invalid">(token ? "loading" : "invalid");
 
   useEffect(() => {
     if (!token) {
-      setStatus("invalid");
       return;
     }
     const supabase = createClient();
