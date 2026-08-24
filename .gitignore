@@ -15,10 +15,8 @@
 
 # next.js
 /.next/
+/.vinext/
 /out/
-
-# production
-/build
 
 # misc
 .DS_Store
@@ -32,12 +30,14 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
-!.env.example
+.auto-results.env
 
 # vercel
 .vercel
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+/dist/
+/.wrangler/
+/outputs/
+/work/
 .env*.local
+/supabase/.temp/
