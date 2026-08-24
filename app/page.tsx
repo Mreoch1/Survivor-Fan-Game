@@ -5,9 +5,9 @@ export default function Home() {
   return (
     <AppShell>
       <main>
-        <section className="hero wrap">
+        <section className="hero wrap island-hero">
           <div className="hero-copy">
-            <p className="eyebrow">Family fantasy league · Season 51</p>
+            <p className="eyebrow">The island is calling · Season 51</p>
             <h1>Outpick. Outlast.<br/><em>Outscore.</em></h1>
             <p className="lede">Back a castaway, call immunity and the vote-out, play your Double Down, and climb the family leaderboard every Wednesday night.</p>
             <div className="hero-actions">
@@ -18,7 +18,7 @@ export default function Home() {
           <aside className="torch-card" aria-label="Next episode countdown">
             <div className="moon"><span>51</span></div>
             <div className="torch-content">
-              <p className="card-label">Episode 1 · The marooning</p>
+              <p className="card-label">Next challenge · Episode 1</p>
               <h2>Your picks lock in</h2>
               <Countdown target="2026-09-23T19:00:00-04:00" />
               <p className="time-note">Wed, Sep 23 · 7:00 PM ET<br/>One hour before the episode</p>
