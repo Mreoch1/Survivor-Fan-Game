@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { scorePick } from "../lib/scoring";
+import { applyImmunityStreak, scorePick } from "../lib/scoring";
 
 test("six-player season simulation exercises every scoring path",()=>{const totals=[0,0,0,0,0,0],boots=["a","b","c","d"],immunity=["Savu","Toka","x","y"];for(let week=0;week<4;week++){const voted=new Set([boots[week]]),departed=new Set(voted);for(let player=0;player<6;player++){const result=scorePick({favoriteId:player===week?boots[week]:"safe",immunityPick:player<3?immunity[week]:"wrong",bootPick:player%2===0?boots[week]:"wrong",bonusPick:player<4?"Yes":"No",doubleDown:week===1&&player===1?"immunity":"",voted,departed,immunityWinners:[immunity[week]],bonusAnswer:"Yes",immunityVoid:false,favoriteShare:player===5?.1:.5});totals[player]+=result.total}}assert.deepEqual(totals,[27,17,27,7,16,8]);assert.ok(new Set(totals).size>1)})
 test("medical departures preserve the favorite survival point and void immunity scores zero",()=>{const score=scorePick({favoriteId:"injured",immunityPick:"Savu",bootPick:"injured",bonusPick:"No",doubleDown:"immunity",voted:new Set(),departed:new Set(["injured"]),immunityWinners:[],bonusAnswer:"No",immunityVoid:true,favoriteShare:.1});assert.deepEqual(score,{favorite:1,immunity:0,boot:0,bonus:1,underdog:0,doublePoint:0,total:2})})
+test("a void immunity episode neither awards points nor breaks a streak",()=>{let state=applyImmunityStreak(0,2,false);state=applyImmunityStreak(state.streak,2,false);state=applyImmunityStreak(state.streak,0,true);assert.deepEqual(state,{streak:2,bonus:0});state=applyImmunityStreak(state.streak,2,false);assert.deepEqual(state,{streak:3,bonus:2})})
