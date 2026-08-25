@@ -9,8 +9,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --import tsx --test tests/scoring.test.ts",
-    "test:simulation": "node --import tsx --test tests/scoring.test.ts",
+    "test": "node --import tsx --test tests/*.test.ts",
+    "test:simulation": "node --import tsx --test tests/*.test.ts",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "verify": "npm run lint && npm run test:simulation && npm run build"
   },
