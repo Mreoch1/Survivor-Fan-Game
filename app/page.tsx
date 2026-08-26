@@ -1,5 +1,6 @@
 import { AppShell } from "./components/AppShell";
 import { Countdown } from "./components/Countdown";
+import Image from "next/image";
 
 export default function Home() {
   return (
@@ -7,7 +8,7 @@ export default function Home() {
       <main>
         <section className="hero wrap island-hero">
           <div className="hero-copy">
-            <p className="eyebrow">The island is calling · Season 51</p>
+            <p className="eyebrow">Season 51 · The Open Era</p>
             <h1>Outpick. Outlast.<br/><em>Outscore.</em></h1>
             <p className="lede">Back a castaway, call immunity and the vote-out, play your Double Down, and climb the family leaderboard every Wednesday night.</p>
             <div className="hero-actions">
@@ -24,6 +25,11 @@ export default function Home() {
               <p className="time-note">Wed, Sep 23 · 7:00 PM ET<br/>One hour before the episode</p>
             </div>
           </aside>
+        </section>
+
+        <section className="open-era-feature wrap">
+          <div className="open-era-photo"><Image src="/season-51-cast.jpg" alt="The 21 officially revealed Survivor Season 51 castaways" fill priority sizes="(max-width: 800px) 100vw, 58vw"/></div>
+          <div className="open-era-copy"><p className="eyebrow">Official cast revealed</p><span className="whale-mark" aria-hidden="true">🐋</span><h2>Twenty-one players. No fixed playbook.</h2><p>Season 51 opens a new phase where any twist or advantage from the show’s history can surface without warning. Meet the confirmed cast before making your first picks.</p><a className="button button-primary" href="/cast">Meet the official cast →</a></div>
         </section>
 
         <section className="steps-section">
