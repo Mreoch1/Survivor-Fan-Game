@@ -37,6 +37,9 @@ Apply reviewed schema changes from `supabase/migrations/` before deploying appli
 
 - Picks lock one hour before the scheduled episode.
 - Eligible picks carry to the next episode if a player does not update them.
+- The opening Outlast Pick awards 10 points when its castaway reaches Jeff's official individual-game announcement. A one-time Final Torch window then lets players keep that castaway for full winner/finalist points or switch to a remaining castaway for half points.
+- Campfire posts support one upvote or downvote per joined player. The application serves and writes votes through authenticated server routes.
+- The once-per-season weekly scoring advantage is labeled Shot in the Dark in every player-facing view; the original database field remains unchanged for safe backward compatibility.
 - Episode results remain private until 9:00 AM Detroit time the next day.
 - Vercel Cron provides a weekly publish safety net during the fall season.
 - Commissioner, result-intake, and reminder routes require `AUTO_RESULTS_SECRET`.

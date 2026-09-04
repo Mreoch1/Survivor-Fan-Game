@@ -10,7 +10,7 @@ export default function Home() {
           <div className="hero-copy">
             <p className="eyebrow">Season 51 · The Open Era</p>
             <h1>Outpick. Outlast.<br/><em>Outscore.</em></h1>
-            <p className="lede">Back a castaway, call immunity and the vote-out, play your Double Down, and climb the family leaderboard every Wednesday night.</p>
+            <p className="lede">Back a castaway, call immunity and the vote-out, play your Shot in the Dark, and climb the family leaderboard every Wednesday night.</p>
             <div className="hero-actions">
               <a className="button button-primary" href="/play">Join the league <span>→</span></a>
               <a className="text-link" href="/rules">See how scoring works</a>
@@ -40,8 +40,8 @@ export default function Home() {
             </div>
             <div className="steps-grid">
               <article className="step-card"><span className="step-number">01</span><div className="step-icon">♟</div><h3>Sign in and join</h3><p>Create your private league account, enter the invite code from Mike, and choose a team name.</p></article>
-              <article className="step-card"><span className="step-number">02</span><div className="step-icon">◈</div><h3>Make two core picks</h3><p>Back a favorite and call immunity. Vote-out and wild-card picks are optional bonus chances.</p></article>
-              <article className="step-card"><span className="step-number">03</span><div className="step-icon">↗</div><h3>Make your move</h3><p>Build streaks, find an underdog, or spend your one Double Down at the perfect moment.</p></article>
+              <article className="step-card"><span className="step-number">02</span><div className="step-icon">◈</div><h3>Name every pick</h3><p>Choose your Weekly Favorite and Immunity Picks, then add a Vote-Out or Wild Card Pick if you want.</p></article>
+              <article className="step-card"><span className="step-number">03</span><div className="step-icon">↗</div><h3>Outlast the tribes</h3><p>Pick someone to reach the individual game, build streaks, and play your one Shot in the Dark at the right moment.</p></article>
             </div>
           </div>
         </section>
