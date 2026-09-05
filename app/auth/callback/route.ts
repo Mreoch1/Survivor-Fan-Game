@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { createAuthClient } from "../../../lib/supabase/server";
+import { safeAuthReturnPath } from "../../../lib/auth-return-path";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
-  const next = safeNextPath(url.searchParams.get("next"));
+  const next = safeAuthReturnPath(url.searchParams.get("next"));
   const supabase = await createAuthClient();
   const code = url.searchParams.get("code");
   const tokenHash = url.searchParams.get("token_hash");
@@ -26,8 +27,4 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.redirect(new URL(next, url.origin));
-}
-
-function safeNextPath(value: string | null) {
-  return value?.startsWith("/") && !value.startsWith("//") && !value.includes("\\") ? value : "/play";
 }
