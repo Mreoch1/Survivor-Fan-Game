@@ -1,0 +1,10 @@
+import type { SeasonEpisode, SeasonPick, SeasonProfile, SeasonResult } from "../../lib/season-dashboard";
+
+export const profiles: SeasonProfile[] = [
+  { id: "a", display_name: "Alex", team_name: "Camp Alpha", avatar_key: "torch", league_joined_at: "2026-09-01T00:00:00Z", individual_game_pick: "safe", endgame_pick: "finalist", endgame_pick_switched: true },
+  { id: "b", display_name: "Blair", team_name: "Camp Bravo", avatar_key: "torch", league_joined_at: "2026-09-01T00:00:00Z", individual_game_pick: "boot", endgame_pick: "winner", endgame_pick_switched: true },
+];
+export const episode = (id: number, extra: Partial<SeasonEpisode> = {}): SeasonEpisode => ({ id, title: `Episode ${id}`, phase: "tribe", lock_at: `2026-09-${20 + id}T23:00:00Z`, reveal_at: `2026-09-${21 + id}T13:00:00Z`, bonus_question: "An idol tonight?", individual_game_started: false, results_published: true, ...extra });
+export const result = (id: number, extra: Partial<SeasonResult> = {}): SeasonResult => ({ episode_id: id, departures: [], immunity_void: false, finale_winner: null, finalists: [], ...extra });
+export const pick = (user: string, id: number, extra: Partial<SeasonPick> = {}): SeasonPick => ({ user_id: user, episode_id: id, favorite_id: "safe", immunity_pick: "Savu", boot_pick: "boot", bonus_pick: "Yes", double_down: "", carried_from_episode_id: null, favorite_point: 1, immunity_point: 2, boot_point: 0, bonus_point: 0, underdog_point: 0, streak_point: 0, double_point: 0, ...extra });
+export const input = () => ({ viewerId: "a", profiles, episodes: [episode(1), episode(2, { individual_game_started: true }), episode(3, { phase: "individual" }), episode(4, { phase: "individual" })], results: [result(1, { departures: [{ castawayId: "boot", type: "vote" }] }), result(2), result(3), result(4, { finale_winner: "winner", finalists: ["finalist", "other"] })], picks: [pick("a", 1), pick("b", 1), pick("a", 2), pick("b", 2), pick("a", 3, { immunity_point: 0, carried_from_episode_id: 2 }), pick("b", 3, { boot_point: 3 }), pick("a", 4), pick("b", 4)], castawayName: (id: string | null | undefined) => id || null, now: new Date("2026-10-01T00:00:00Z") });
