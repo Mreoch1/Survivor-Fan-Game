@@ -7,6 +7,7 @@ Private family-and-friends Survivor 51 fantasy league hosted on Vercel with Supa
 ```bash
 npm ci
 npm run verify
+npm run test:smoke
 npm audit --omit=dev
 ```
 
@@ -45,3 +46,12 @@ Apply reviewed schema changes from `supabase/migrations/` before deploying appli
 - Episode results remain private until 9:00 AM Detroit time the next day.
 - Vercel Cron provides a weekly publish safety net during the fall season.
 - Commissioner, result-intake, and reminder routes require `AUTO_RESULTS_SECRET`.
+
+## Season scorecards
+
+- `/season` requires a signed-in, joined league member. It serves only published results whose spoiler reveal time has passed.
+- Episode point breakdowns reuse the recap email helper. Historical ranks include members who had joined by that episode’s lock time.
+- The post-merge championship starts with the episode after the official individual-game announcement and counts weekly points and bonuses only. Season-pick awards remain in the overall total; ties share ranks and titles.
+- Campfire highlights are derived from published scores, without creating posts or sending additional notifications.
+- Wild Card answers carry forward only when the question is unchanged and the previous answer is still available.
+- Season reads paginate the ledger and do not require a database migration.
