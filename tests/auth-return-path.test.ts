@@ -3,8 +3,9 @@ import test from "node:test";
 import { safeAuthReturnPath } from "../lib/auth-return-path";
 
 test("sign-in redirects stay on the league even after URL normalization", () => {
-  for (const value of [null, "", "https://example.org", "//example.org", "/\\example.org", "/\t/example.org", "/\n/example.org", "/\r/example.org"]) {
+  for (const value of [null, "", "https://example.org", "//example.org", "/\\example.org", "/\t/example.org", "/\n/example.org", "/\r/example.org", "/%2e%2e//example.org", "/.//example.org", "/play/..//example.org"]) {
     assert.equal(safeAuthReturnPath(value), "/play");
+    assert.equal(new URL(safeAuthReturnPath(value), "https://league.test").origin, "https://league.test");
   }
 });
 

@@ -3,8 +3,8 @@ export function safeAuthReturnPath(value: string | null) {
   const origin = "https://league.local";
   try {
     const target = new URL(value, origin);
-    // URL parsing strips some control characters: check the normalized origin too.
-    if (target.origin !== origin) return "/play";
+    // Normalization can strip controls or create a protocol-relative pathname.
+    if (target.origin !== origin || target.pathname.startsWith("//")) return "/play";
     return `${target.pathname}${target.search}${target.hash}`;
   } catch {
     return "/play";
