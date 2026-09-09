@@ -127,7 +127,7 @@ export async function GET(request: Request) {
     resultItems.push({ label: "League immunity scoring", value: "Voided for this episode" });
   }
   resultItems.push({
-    label: "Wild Card result",
+    label: "Play Your Advantage result",
     value: `${episode.bonus_question} — ${String(result.bonus_answer)}`,
   });
   if (episode.individual_game_started) {

@@ -53,5 +53,9 @@ Apply reviewed schema changes from `supabase/migrations/` before deploying appli
 - Episode point breakdowns reuse the recap email helper. Historical ranks include members who had joined by that episode’s lock time.
 - One cumulative leaderboard runs from the first episode through the finale. Weekly points and bonuses plus Opening Outlast and Final Torch awards add to the same season total; ties share ranks and the season title.
 - Campfire highlights are derived from published scores, without creating posts or sending additional notifications.
-- Wild Card answers carry forward only when the question is unchanged and the previous answer is still available.
+- Weekly Favorite, Immunity, and Vote-Out Picks are required. Play Your Advantage is optional: +1 correct, -1 wrong, or 0 when skipped. Play Your Advantage answers never carry forward, and Shot in the Dark doubles only a correct reward.
 - Season reads paginate the ledger and do not require a database migration.
+
+Play Your Advantage questions are chosen from official episode previews each week, with two to four mutually exclusive answers. Watching the previews should help; leaks and unaired outcomes are excluded. When no suitable preview question can be verified, use “Will an idol be played?” with Yes/No. Set the question before opening picks; an episode’s question and choices freeze once picks exist.
+
+Team names are unique across profiles, ignoring capitalization and extra whitespace. Blank names remain optional. Both joining and Profile editing return a clear conflict message; the database unique index also protects concurrent saves.

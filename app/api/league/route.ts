@@ -4,6 +4,8 @@ import { createAdminClient } from "../../../lib/supabase/admin";
 import { ensureDatabase, publishDueResults } from "../../../db/runtime";
 import { carryForwardPicks } from "../../../db/pick-carryover";
 
+import { isTeamNameConflict, normalizeTeamName, TEAM_NAME_TAKEN } from "../../../lib/team-name";
+
 type Standing={id:string;name:string;teamName:string;avatarKey:string;points:number;immunityStreak:number;longestStreak:number;shotUsed:number};
 
 export async function GET(){
@@ -61,6 +63,6 @@ export async function GET(){
 
 export async function POST(request:Request){
  const user=await getChatGPTUser();if(!user)return Response.json({error:"Sign in required"},{status:401});
- const body=await request.json() as {displayName?:string;teamName?:string;inviteCode?:string};const displayName=body.displayName?.trim().slice(0,40),teamName=body.teamName?.trim().slice(0,50)||"";if(!displayName)return Response.json({error:"Name is required"},{status:400});
- await ensureDatabase();const db=createAdminClient(),{data:existing}=await db.from("profiles").select("league_joined_at").eq("id",user.userId).maybeSingle();const expected=String(process.env.LEAGUE_INVITE_CODE||"").trim().toUpperCase(),supplied=String(body.inviteCode||"").trim().toUpperCase();if(!existing?.league_joined_at&&expected&&supplied!==expected)return Response.json({error:"That league invite code is not valid"},{status:403});const {error}=await db.from("profiles").update({display_name:displayName,team_name:teamName,league_joined_at:existing?.league_joined_at||new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",user.userId);if(error)return Response.json({error:"The league could not be joined"},{status:500});return Response.json({ok:true});
+ const body=await request.json() as {displayName?:string;teamName?:string;inviteCode?:string};const displayName=body.displayName?.trim().slice(0,40),teamName=normalizeTeamName(body.teamName);if(!displayName)return Response.json({error:"Name is required"},{status:400});if(teamName.length>50)return Response.json({error:"Team name must be 50 characters or fewer"},{status:400});
+ await ensureDatabase();const db=createAdminClient(),{data:existing}=await db.from("profiles").select("league_joined_at").eq("id",user.userId).maybeSingle();const expected=String(process.env.LEAGUE_INVITE_CODE||"").trim().toUpperCase(),supplied=String(body.inviteCode||"").trim().toUpperCase();if(!existing?.league_joined_at&&expected&&supplied!==expected)return Response.json({error:"That league invite code is not valid"},{status:403});const {error}=await db.from("profiles").update({display_name:displayName,team_name:teamName,league_joined_at:existing?.league_joined_at||new Date().toISOString(),updated_at:new Date().toISOString()}).eq("id",user.userId);if(isTeamNameConflict(error))return Response.json({error:TEAM_NAME_TAKEN},{status:409});if(error)return Response.json({error:"The league could not be joined"},{status:500});return Response.json({ok:true});
 }

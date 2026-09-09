@@ -8,12 +8,12 @@ const profile = { individual_game_pick: null, endgame_pick: null };
 test("only required empty picks trigger a reminder", () => {
   assert.deepEqual(
     getMissingRequiredPicks({ episodeId: 1, pick: emptyPick, profile, finalTorchDecisionOpen: false }),
-    ["Weekly Favorite Pick", "Immunity Pick", "Opening Outlast Pick"],
+    ["Weekly Favorite Pick", "Immunity Pick", "Vote-Out Pick", "Opening Outlast Pick"],
   );
   assert.deepEqual(
     getMissingRequiredPicks({
       episodeId: 2,
-      pick: { ...emptyPick, favorite_id: "ana", immunity_pick: "Savu" },
+      pick: { ...emptyPick, favorite_id: "ana", immunity_pick: "Savu", boot_pick: "brady" },
       profile,
       finalTorchDecisionOpen: false,
     }),
@@ -22,7 +22,7 @@ test("only required empty picks trigger a reminder", () => {
 });
 
 test("the one-time Final Torch decision is required only while its window is open", () => {
-  const weekly = { ...emptyPick, favorite_id: "ana", immunity_pick: "ana" };
+  const weekly = { ...emptyPick, favorite_id: "ana", immunity_pick: "ana", boot_pick: "brady" };
   assert.deepEqual(
     getMissingRequiredPicks({ episodeId: 8, pick: weekly, profile, finalTorchDecisionOpen: true }),
     ["Final Torch Pick"],
@@ -45,8 +45,8 @@ test("pick receipts clearly label the prediction and the saved choice", () => {
   assert.deepEqual(receipts, [
     { label: "Weekly Favorite Pick", selection: "Ana Sani", required: true },
     { label: "Immunity Pick", selection: "Savu Tribe", required: true },
-    { label: "Vote-Out Pick", selection: "Brady Booker", required: false },
-    { label: "Wild Card Pick", selection: "Yes", required: false },
+    { label: "Vote-Out Pick", selection: "Brady Booker", required: true },
+    { label: "Play Your Advantage", selection: "Yes", required: false },
     { label: "Shot in the Dark", selection: "Vote-Out Pick · Brady Booker", required: false },
   ]);
 });
@@ -77,4 +77,12 @@ test("the branded email is action-focused, spoiler-free, and escapes player text
   assert.match(email.html, /Blindside &amp; Co\./);
   assert.doesNotMatch(email.html, /Mike <Torch>/);
   assert.match(email.html, /Enter the voting booth/);
+});
+
+test("a missing Vote-Out requires a reminder while a skipped Play Your Advantage does not", () => {
+  const required = { ...emptyPick, favorite_id: "ana", immunity_pick: "Savu" };
+  assert.deepEqual(getMissingRequiredPicks({ episodeId: 2, pick: required, profile, finalTorchDecisionOpen: false }), ["Vote-Out Pick"]);
+  assert.deepEqual(getMissingRequiredPicks({ episodeId: 2, pick: { ...required, boot_pick: "brady" }, profile, finalTorchDecisionOpen: false }), []);
+  const receipts = getPickReceipts({ episodeId: 2, phase: "tribe", pick: { ...required, boot_pick: "brady" }, profile, finalTorchDecisionOpen: false, castawayName: id => id || null });
+  assert.deepEqual(receipts.find(row => row.label === "Play Your Advantage"), { label: "Play Your Advantage", selection: "Skipped · 0 points", required: false });
 });

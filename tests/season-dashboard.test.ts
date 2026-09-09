@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildSeasonDashboard } from "../lib/season-dashboard";
 import { readAllRows } from "../lib/read-all-rows";
-import { carryWildCardAnswer } from "../lib/wild-card-carryover";
 
 import { profiles, episode, pick, input } from "./fixtures/season";
 
@@ -85,14 +84,6 @@ test("missing published results fail closed instead of showing an incomplete tot
   assert.throws(() => buildSeasonDashboard({ ...input(), results: [] }), /missing its results/);
 });
 
-test("Wild Card carryover follows the question, not a reused Yes/No answer", () => {
-  const base = { answer: "Yes", previousQuestion: "Will someone find an idol?", nextQuestion: "Will someone quit?", nextOptions: ["Yes", "No"] };
-  assert.equal(carryWildCardAnswer(base), "");
-  assert.equal(carryWildCardAnswer({ ...base, nextQuestion: "Will someone find an idol?" }), "Yes");
-  assert.equal(carryWildCardAnswer({ ...base, nextQuestion: " Will someone  find an idol? " }), "Yes");
-  assert.equal(carryWildCardAnswer({ ...base, nextQuestion: base.previousQuestion, nextOptions: ["One", "Two"] }), "");
-  assert.equal(carryWildCardAnswer({ ...base, previousQuestion: "", nextQuestion: "" }), "");
-});
 
 test("season queries collect every page and propagate database errors", async () => {
   const population = Array.from({ length: 1201 }, (_, id) => ({ id }));
@@ -101,4 +92,15 @@ test("season queries collect every page and propagate database errors", async ()
   assert.equal(calls, 3);
   assert.deepEqual(rows, population);
   await assert.rejects(readAllRows(async () => ({ data: null, error: new Error("Unavailable") })), /Unavailable/);
+});
+
+test("Play Your Advantage penalties reduce the same season total and zero ranks above a loss", () => {
+  const args = input();
+  args.episodes = [episode(1)];
+  args.picks = [pick("a", 1, { favorite_point: 0, immunity_point: 0, bonus_point: -1 }), pick("b", 1, { favorite_point: 0, immunity_point: 0, bonus_pick: "" })];
+  const dashboard = buildSeasonDashboard(args);
+  assert.equal(dashboard.totalPoints, -1);
+  assert.equal(dashboard.history[0].points, -1);
+  assert.deepEqual(dashboard.history[0].rows.find(row => row.label === "Play Your Advantage"), { label: "Play Your Advantage", selection: "Yes", points: -1 });
+  assert.deepEqual(dashboard.overall.map(row => [row.name, row.points, row.rank]), [["Camp Bravo (Blair)", 0, 1], ["Camp Alpha (Alex)", -1, 2]]);
 });

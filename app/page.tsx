@@ -36,11 +36,11 @@ export default function Home() {
           <div className="wrap">
             <div className="section-heading split-heading">
               <div><p className="eyebrow">Your weekly ritual</p><h2>Make the read.</h2></div>
-              <p>Make two simple core picks, then add optional bonus predictions if you want. Change anything before the deadline.</p>
+              <p>Make three required picks, then choose whether to risk a point with Play Your Advantage. Change anything before the deadline.</p>
             </div>
             <div className="steps-grid">
               <article className="step-card"><span className="step-number">01</span><div className="step-icon">♟</div><h3>Sign in and join</h3><p>Create your private league account, enter the invite code from Mike, and choose a team name.</p></article>
-              <article className="step-card"><span className="step-number">02</span><div className="step-icon">◈</div><h3>Name every pick</h3><p>Choose your Weekly Favorite and Immunity Picks, then add a Vote-Out or Wild Card Pick if you want.</p></article>
+              <article className="step-card"><span className="step-number">02</span><div className="step-icon">◈</div><h3>Name every pick</h3><p>Choose your Weekly Favorite, Immunity, and Vote-Out Picks. Play Your Advantage is optional: +1 correct, −1 wrong, or 0 if skipped.</p></article>
               <article className="step-card"><span className="step-number">03</span><div className="step-icon">↗</div><h3>Outlast the tribes</h3><p>Pick someone to reach the individual game, build streaks, and play your one Shot in the Dark at the right moment.</p></article>
             </div>
           </div>

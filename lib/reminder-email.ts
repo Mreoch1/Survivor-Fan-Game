@@ -26,6 +26,7 @@ export type LeagueSnapshot = {
 const missingLabels = {
   favorite: "Weekly Favorite Pick",
   immunity: "Immunity Pick",
+  boot: "Vote-Out Pick",
   opening: "Opening Outlast Pick",
   finalTorch: "Final Torch Pick",
 } as const;
@@ -44,6 +45,7 @@ export function getMissingRequiredPicks({
   const missing: string[] = [];
   if (!pick?.favorite_id) missing.push(missingLabels.favorite);
   if (!pick?.immunity_pick) missing.push(missingLabels.immunity);
+  if (!pick?.boot_pick) missing.push(missingLabels.boot);
   if (episodeId === 1 && !profile.individual_game_pick) missing.push(missingLabels.opening);
   if (finalTorchDecisionOpen && !profile.endgame_pick) missing.push(missingLabels.finalTorch);
   return missing;
@@ -71,20 +73,20 @@ export function getPickReceipts({
       : castawayName(pick.immunity_pick) || pick.immunity_pick
     : "No pick yet";
   const voteOut = castawayName(pick?.boot_pick) || "No pick yet";
-  const wildCard = pick?.bonus_pick || "No pick yet";
+  const wildCard = pick?.bonus_pick || "Skipped · 0 points";
   const shotTarget =
     pick?.double_down === "immunity"
       ? `Immunity Pick · ${immunity}`
       : pick?.double_down === "boot"
         ? `Vote-Out Pick · ${voteOut}`
         : pick?.double_down === "bonus"
-          ? `Wild Card Pick · ${wildCard}`
+          ? `Play Your Advantage · ${wildCard}`
           : "Saved for a later episode";
   const receipts: PickReceipt[] = [
     { label: missingLabels.favorite, selection: favorite, required: true },
     { label: missingLabels.immunity, selection: immunity, required: true },
-    { label: "Vote-Out Pick", selection: voteOut, required: false },
-    { label: "Wild Card Pick", selection: wildCard, required: false },
+    { label: missingLabels.boot, selection: voteOut, required: true },
+    { label: "Play Your Advantage", selection: wildCard, required: false },
     { label: "Shot in the Dark", selection: shotTarget, required: false },
   ];
   if (episodeId === 1) {
@@ -191,7 +193,7 @@ export function buildReminderEmail({
     ...standingLines,
     "",
     "This is a spoiler-free league update—no episode recap or castaway results.",
-    "Eligible saved picks carry forward when possible. Contact Mike if you no longer want pick reminders.",
+    "Eligible Favorite, Immunity, and Vote-Out Picks carry forward. Play Your Advantage requires a fresh choice each week: +1 correct, -1 wrong, or 0 if skipped. Contact Mike if you no longer want pick reminders.",
   ].join("\n");
   const receiptRows = receipts
     .map(
@@ -208,6 +210,6 @@ export function buildReminderEmail({
   const standingRows = standingLines
     .map((line) => `<tr><td style="padding:4px 0;color:#e8e0ca;font-size:14px;line-height:20px;">${escapeHtml(line)}</td></tr>`)
     .join("");
-  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#081912;font-family:Arial,Helvetica,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;opacity:0;">You still need ${escapeHtml(missingSentence)}. Picks lock ${escapeHtml(deadline)}.</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#081912;"><tr><td align="center" style="padding:28px 12px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#f6f0df;border:1px solid #49604e;border-radius:18px;overflow:hidden;"><tr><td style="padding:30px 34px 26px;background:#102a1c;border-bottom:5px solid #e16b2c;"><p style="margin:0 0 10px;color:#e8b44f;font-size:12px;line-height:16px;font-weight:700;letter-spacing:2px;">OUTLAST 51 · EPISODE ${episodeId}</p><h1 style="margin:0;color:#fff8e7;font-family:Georgia,serif;font-size:34px;line-height:39px;font-weight:700;">Your voting booth closes tomorrow.</h1><p style="margin:14px 0 0;color:#d9e3da;font-size:15px;line-height:22px;">${escapeHtml(episodeTitle)} · Picks lock ${escapeHtml(deadline)}</p></td></tr><tr><td style="padding:28px 34px 10px;"><p style="margin:0 0 14px;color:#1d2b23;font-size:16px;line-height:24px;">Hi ${escapeHtml(firstName(playerName))}, the torches are lit, but ${escapeHtml(campName)} still has required picks missing:</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#234431;border-radius:12px;"><tr><td style="padding:17px 20px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${missingRows}</table></td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 0 22px;"><a href="${escapeHtml(leagueUrl)}" style="display:inline-block;background:#e16b2c;color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:14px 24px;border-radius:999px;">Enter the voting booth</a></td></tr></table><p style="margin:0 0 8px;color:#8b4e23;font-size:12px;line-height:16px;font-weight:700;letter-spacing:1.5px;">YOUR PARCHMENT</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${receiptRows}</table></td></tr><tr><td style="padding:24px 34px 26px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#102a1c;border-radius:12px;"><tr><td style="padding:18px 20px;"><p style="margin:0 0 9px;color:#e8b44f;font-size:12px;line-height:16px;font-weight:700;letter-spacing:1.5px;">CAMP STATUS</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${standingRows}</table></td></tr></table></td></tr><tr><td style="padding:20px 34px 28px;background:#e9dfc8;color:#655e50;font-size:12px;line-height:18px;"><strong style="color:#274131;">Spoiler-free by design.</strong> This reminder contains league standings only—no episode recap or castaway results.<br><br>Eligible saved picks carry forward when possible. Contact Mike if you no longer want pick reminders.</td></tr></table></td></tr></table></body></html>`;
+  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#081912;font-family:Arial,Helvetica,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;opacity:0;">You still need ${escapeHtml(missingSentence)}. Picks lock ${escapeHtml(deadline)}.</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#081912;"><tr><td align="center" style="padding:28px 12px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#f6f0df;border:1px solid #49604e;border-radius:18px;overflow:hidden;"><tr><td style="padding:30px 34px 26px;background:#102a1c;border-bottom:5px solid #e16b2c;"><p style="margin:0 0 10px;color:#e8b44f;font-size:12px;line-height:16px;font-weight:700;letter-spacing:2px;">OUTLAST 51 · EPISODE ${episodeId}</p><h1 style="margin:0;color:#fff8e7;font-family:Georgia,serif;font-size:34px;line-height:39px;font-weight:700;">Your voting booth closes tomorrow.</h1><p style="margin:14px 0 0;color:#d9e3da;font-size:15px;line-height:22px;">${escapeHtml(episodeTitle)} · Picks lock ${escapeHtml(deadline)}</p></td></tr><tr><td style="padding:28px 34px 10px;"><p style="margin:0 0 14px;color:#1d2b23;font-size:16px;line-height:24px;">Hi ${escapeHtml(firstName(playerName))}, the torches are lit, but ${escapeHtml(campName)} still has required picks missing:</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#234431;border-radius:12px;"><tr><td style="padding:17px 20px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${missingRows}</table></td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 0 22px;"><a href="${escapeHtml(leagueUrl)}" style="display:inline-block;background:#e16b2c;color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:14px 24px;border-radius:999px;">Enter the voting booth</a></td></tr></table><p style="margin:0 0 8px;color:#8b4e23;font-size:12px;line-height:16px;font-weight:700;letter-spacing:1.5px;">YOUR PARCHMENT</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${receiptRows}</table></td></tr><tr><td style="padding:24px 34px 26px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#102a1c;border-radius:12px;"><tr><td style="padding:18px 20px;"><p style="margin:0 0 9px;color:#e8b44f;font-size:12px;line-height:16px;font-weight:700;letter-spacing:1.5px;">CAMP STATUS</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${standingRows}</table></td></tr></table></td></tr><tr><td style="padding:20px 34px 28px;background:#e9dfc8;color:#655e50;font-size:12px;line-height:18px;"><strong style="color:#274131;">Spoiler-free by design.</strong> This reminder contains league standings only—no episode recap or castaway results.<br><br>Eligible Favorite, Immunity, and Vote-Out Picks carry forward. Play Your Advantage requires a fresh choice each week: +1 correct, -1 wrong, or 0 if skipped. Contact Mike if you no longer want pick reminders.</td></tr></table></td></tr></table></body></html>`;
   return { subject, previewText: `You still need ${missingSentence}. Picks lock ${deadline}.`, plainText, html };
 }

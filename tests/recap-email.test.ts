@@ -41,7 +41,7 @@ test("round breakdown includes every earned bonus and the carried-pick source", 
       ["Underdog Bonus", 1],
       ["Immunity Pick", 2],
       ["Vote-Out Pick", 3],
-      ["Wild Card Pick", 1],
+      ["Play Your Advantage", 1],
       ["Immunity Streak", 2],
       ["Shot in the Dark", 3],
     ],
@@ -94,4 +94,14 @@ test("results email shows episode outcomes, personal points, and both leaderboar
   assert.doesNotMatch(email.html, /Mike <Torch>/);
   assert.match(email.html, /ROUND LEADERS/);
   assert.match(email.html, /See standings &amp; make next picks/);
+});
+
+test("recap preserves Play Your Advantage penalties and displays signed losses correctly", () => {
+  const breakdown = buildPointBreakdown({ pick: { ...pick, favorite_point: 0, immunity_point: 0, boot_point: 0, bonus_point: -1, underdog_point: 0, streak_point: 0, double_down: "bonus", double_point: 0 }, phase: "tribe", castawayName, individualGameStarted: false, individualGamePick: null, individualGamePoints: 0, finale: false, endgamePick: null, endgamePoints: 0 });
+  assert.equal(breakdown.roundPoints, -1);
+  const email = buildResultsRecapEmail({ playerName: "Alex", teamName: "Camp Alpha", episodeId: 1, episodeTitle: "Premiere", resultItems: [{ label: "Play Your Advantage result", value: "No" }], pointRows: breakdown.rows, roundPoints: breakdown.roundPoints, carriedFromEpisodeId: null, roundRank: 2, overallRank: 2, overallPoints: -1, roundLeaders: [{ rank: 1, name: "Camp Bravo", points: 0 }], overallLeaders: [{ rank: 1, name: "Camp Bravo", points: 0 }], leagueUrl: "https://survivor-fan-game.vercel.app/play" });
+  assert.match(email.plainText, /Play Your Advantage — Yes: -1 point/);
+  assert.match(email.plainText, /Episode total: -1 point/);
+  assert.match(email.html, /-1 point/);
+  assert.doesNotMatch(email.html + email.plainText, /\+-1/);
 });
