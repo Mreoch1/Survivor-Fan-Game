@@ -168,9 +168,9 @@ try {
   emptySeason = false;
   negativeRound = true;
   const negative = await fetch(`${appUrl}/season`, { headers: { cookie: cookieFor("a") } });
-  const negativeHtml = (await negative.text()).replace(/<[^>]*>/g, "");
-  assert.match(negativeHtml, /-1/);
-  assert.doesNotMatch(negativeHtml, /\+-1/);
+  const negativeHtml = await negative.text();
+  assert.match(negativeHtml, /class="episode-points">-1<small>POINTS/);
+  assert.doesNotMatch(negativeHtml, /\+(?:<!-- -->)?-1/);
   negativeRound = false;
   playMode = true;
   const headers = { cookie: cookieFor("a"), "content-type": "application/json" };
