@@ -17,12 +17,12 @@ test("scorecards reconcile weekly points, one-time season awards, and half point
   assert.equal(dashboard.history[1].carriedFromEpisodeId, 2);
 });
 
-test("post-merge starts after the announcement episode and excludes both season awards", () => {
+test("one season leaderboard carries all points through the individual game and finale", () => {
   const dashboard = buildSeasonDashboard(input());
-  assert.equal(dashboard.postMerge.announcementEpisodeId, 2);
-  assert.equal(dashboard.postMerge.episodesScored, 2);
-  assert.deepEqual(dashboard.postMerge.standings.map(row => [row.name, row.points]), [["Camp Bravo (Blair)", 9], ["Camp Alpha (Alex)", 4]]);
-  assert.deepEqual(dashboard.history.map(row => row.countsForPostMerge), [true, true, false, false]);
+  assert.deepEqual(dashboard.history.map(row => row.totalPoints), [21.5, 17, 16, 3]);
+  assert.deepEqual(dashboard.overall.map(row => [row.name, row.points]), [["Camp Alpha (Alex)", 21.5], ["Camp Bravo (Blair)", 20]]);
+  assert.equal("postMerge" in dashboard, false);
+  assert.ok(dashboard.history.every(row => !("countsForPostMerge" in row)));
 });
 
 test("a hidden or early-published episode cannot reveal scores, a merge, or player selections", () => {
@@ -33,7 +33,6 @@ test("a hidden or early-published episode cannot reveal scores, a merge, or play
   assert.equal(dashboard.totalPoints, 3);
   assert.equal(dashboard.history.length, 1);
   assert.equal(dashboard.spotlight?.episodeId, 1);
-  assert.equal(dashboard.postMerge.announcementEpisodeId, null);
   assert.doesNotMatch(JSON.stringify(dashboard), /SECRET_FUTURE_PICK/);
 });
 

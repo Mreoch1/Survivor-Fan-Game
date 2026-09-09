@@ -110,7 +110,8 @@ try {
   const html = await member.text();
   assert.match(html, /Your season scorecard/);
   assert.match(html, /21\.5/);
-  assert.match(html, /Post-merge championship/);
+  assert.match(html, /Leaderboard/);
+  assert.doesNotMatch(html, /Post-merge championship|Your second chance|POST-MERGE/);
   assert.match(html, /Final Torch Pick/);
   assert.match(html, /1\.5/);
   assert.doesNotMatch(html, /SECRET_FUTURE|HIDDEN_FUTURE|could not load/);

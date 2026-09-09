@@ -40,7 +40,6 @@
 .episode-running{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;padding:13px;background:#173b2b;color:#fff2d5;font-size:.73rem}
 .season-boards{display:grid;gap:24px}
 .season-board{padding:25px;background:#f8efda;border:1px solid #bca674}
-.post-merge-board{background:linear-gradient(135deg,#e9dcaf,#fbf3dc);border-top:4px solid #aa7429}
 .season-board .eyebrow{font-size:.61rem}
 .season-board h2{font-size:1.8rem}
 .season-board .board-footnote{font-size:.7rem;border-top:1px solid #d1bf96;padding-top:13px;margin:18px 0 0}
@@ -53,10 +52,6 @@
 .standing-name small{display:block;font:700 .52rem var(--font-mono);letter-spacing:.1em;color:#785b2c;margin-top:3px}
 .season-standing-list li>strong{text-align:right;font:700 1rem var(--font-mono)}
 .season-standing-list li>strong small{display:block;font-size:.48rem;color:#7b6b4d;margin-top:2px}
-.series-waiting{border:1px dashed #b39b62;padding:18px;margin:19px 0;background:#fff6dd}
-.series-waiting strong,.series-waiting span{display:block;font-size:.8rem;line-height:1.6}
-.series-waiting span{margin-top:7px;color:#655b48}
-.series-status{font-weight:700;color:#364a2e!important}
 .season-empty{text-align:center;border:1px dashed #b8a072;background:#f9f0d9;padding:42px 27px;margin-top:22px}
 .season-empty>span{display:block;font-size:2.6rem;color:#9b742d;margin-bottom:16px}
 .season-empty h3{font:400 1.8rem Georgia;margin-bottom:12px}
@@ -72,5 +67,5 @@
 .spotlight-prompt{border-top:1px solid #42513c;padding-top:17px;margin:20px 0 0}
 .season-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .episode-card summary:focus-visible,.season-jump-links a:focus-visible{outline:3px solid #6487c5;outline-offset:3px}
-@media(max-width:900px){.season-layout{grid-template-columns:minmax(0,1fr)}.season-boards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:900px){.season-layout{grid-template-columns:minmax(0,1fr)}}
 @media(max-width:600px){.season-boards{grid-template-columns:1fr}.season-stats>div{padding:20px 12px}.season-stats strong{font-size:2.1rem}.season-stats>div>span{font-size:.52rem;line-height:1.6}.season-stats p{font-size:.67rem;line-height:1.5}.season-jump-links{overflow:visible;font-size:.65rem;gap:13px}.episode-card summary{padding:18px 16px;gap:10px}.episode-detail{padding:16px}.spotlight-grid{grid-template-columns:1fr;gap:15px}.spotlight-heading{align-items:flex-start;flex-direction:column}.episode-spotlight{padding:24px 20px}.season-hero h1{font-size:2.8rem}}

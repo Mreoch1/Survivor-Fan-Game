@@ -51,7 +51,7 @@ Apply reviewed schema changes from `supabase/migrations/` before deploying appli
 
 - `/season` requires a signed-in, joined league member. It serves only published results whose spoiler reveal time has passed.
 - Episode point breakdowns reuse the recap email helper. Historical ranks include members who had joined by that episode’s lock time.
-- The post-merge championship starts with the episode after the official individual-game announcement and counts weekly points and bonuses only. Season-pick awards remain in the overall total; ties share ranks and titles.
+- One cumulative leaderboard runs from the first episode through the finale. Weekly points and bonuses plus Opening Outlast and Final Torch awards add to the same season total; ties share ranks and the season title.
 - Campfire highlights are derived from published scores, without creating posts or sending additional notifications.
 - Wild Card answers carry forward only when the question is unchanged and the previous answer is still available.
 - Season reads paginate the ledger and do not require a database migration.
