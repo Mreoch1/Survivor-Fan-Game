@@ -4,6 +4,8 @@ import { createAdminClient } from "../../../lib/supabase/admin";
 import { ensureDatabase, publishDueResults } from "../../../db/runtime";
 import { carryForwardPicks } from "../../../db/pick-carryover";
 
+import { playerLabel } from "../../../lib/player-label";
+
 type Standing={id:string;name:string;teamName:string;avatarKey:string;points:number;lastScore:number;immunityStreak:number;longestStreak:number;shotUsed:number};
 
 export async function GET(){
@@ -39,7 +41,7 @@ export async function GET(){
  let pickPercentages:null|Record<string,{value:string;count:number;percent:number}[]>=null;
  if(locked){pickPercentages={};for(const field of ["favorite_id","immunity_pick","boot_pick"] as const){const counts=new Map<string,number>();for(const row of (allPicks||[]).filter(k=>k.episode_id===episode.id)){const value=row[field];if(value)counts.set(value,(counts.get(value)||0)+1)}const total=[...counts.values()].reduce((a,b)=>a+b,0);pickPercentages[field]=[...counts].map(([value,count])=>({value,count,percent:total?Math.round(count*100/total):0}))}}
 
- const matchups=[];for(let index=0;index<leaderboard.length;index+=2){const a=leaderboard[index],b=leaderboard[index+1];if(a)matchups.push({a:{name:a.teamName||a.name,points:a.lastScore},b:b?{name:b.teamName||b.name,points:b.lastScore}:null})}
+ const matchups=[];for(let index=0;index<leaderboard.length;index+=2){const a=leaderboard[index],b=leaderboard[index+1];if(a)matchups.push({a:{name:playerLabel(a.teamName,a.name),points:a.lastScore},b:b?{name:playerLabel(b.teamName,b.name),points:b.lastScore}:null})}
  const statusMap=new Map((statuses||[]).map(status=>[status.castaway_id,status.status]));
  const activeCastaways=castaways.filter(c=>(statusMap.get(c.id)||"active")==="active");
  const currentStanding=standings.find(standing=>standing.id===profile.id);

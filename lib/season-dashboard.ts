@@ -1,4 +1,5 @@
 import { buildPointBreakdown, type RecapPick } from "./recap-email";
+import { playerLabel } from "./player-label";
 import { scoreSeasonPick } from "./scoring";
 
 export type SeasonProfile = {
@@ -83,7 +84,7 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
   } | null = null;
   const name = (id: string) => {
     const profile = profiles.find(row => row.id === id)!;
-    return profile.team_name || profile.display_name;
+    return playerLabel(profile.team_name, profile.display_name);
   };
 
   for (const episode of published) {
@@ -148,7 +149,7 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
   const overall = publicBoard(totals);
   const postMergeEpisodes = individualEpisode ? published.filter(episode => episode.id > individualEpisode.id).length : 0;
   return {
-    playerName: viewer.team_name || viewer.display_name,
+    playerName: playerLabel(viewer.team_name, viewer.display_name),
     totalPoints: totals.get(viewerId) || 0,
     overallRank: published.length ? overall.find(row => row.isYou)!.rank : null,
     history: history.reverse(), overall, spotlight,
