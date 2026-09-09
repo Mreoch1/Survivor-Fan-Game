@@ -14,14 +14,14 @@ export function SeasonView({ data }: { data: SeasonDashboard }) {
       <div><span>Latest episode</span><strong>{latest ? `+${latest.points}` : "—"}</strong><p>{latest ? `Episode ${latest.episodeId} · round rank #${latest.roundRank}` : "Your first score is ahead"}</p></div>
     </div>
     <nav className="season-jump-links" aria-label="Season sections">
-      <a href="#score-history">My scorecard</a><a href="#post-merge">Post-merge championship</a><a href="#season-standings">Overall standings</a>
+      <a href="#score-history">My scorecard</a><a href="#season-standings">Leaderboard</a>
     </nav>
     <div className="season-layout">
       <section id="score-history" aria-labelledby="score-history-title">
         <div className="season-heading"><p className="eyebrow">Every pick. Every point.</p><h2 id="score-history-title">Your season scorecard</h2><p>Open an episode to see exactly how your score adds up. Results appear after 9:00 AM ET the following morning.</p></div>
         {!latest ? <div className="season-empty"><span aria-hidden="true">◈</span><h3>Your story starts with a pick.</h3><p>Your published episode scores will collect here. Save your opening picks and come back after the first results reveal.</p><a className="button button-primary" href="/play">Make my picks →</a></div> :
           <div className="episode-ledger">{data.history.map((episode, index) => <details className="episode-card" key={episode.episodeId} open={index === 0}>
-            <summary><span><small>EPISODE {episode.episodeId}{episode.countsForPostMerge ? " · POST-MERGE" : ""}</small><strong>{episode.title}</strong></span><span className="episode-points">+{episode.points}<small>POINTS</small></span><span className="episode-toggle" aria-hidden="true">⌄</span></summary>
+            <summary><span><small>EPISODE {episode.episodeId}</small><strong>{episode.title}</strong></span><span className="episode-points">+{episode.points}<small>POINTS</small></span><span className="episode-toggle" aria-hidden="true">⌄</span></summary>
             <div className="episode-detail">
               <div className="episode-ranks"><span>Round <strong>#{episode.roundRank}</strong></span><span>Overall <strong>#{episode.overallRank}</strong></span><span>{movement(episode.movement)}</span></div>
               {!episode.hasPick && <p className="episode-note">No weekly picks were on file. Any season-pick awards are listed below.</p>}
@@ -30,16 +30,11 @@ export function SeasonView({ data }: { data: SeasonDashboard }) {
               <table className="point-ledger"><caption className="season-sr-only">Episode {episode.episodeId} point breakdown</caption><thead><tr><th scope="col">Pick or bonus</th><th scope="col">Points</th></tr></thead><tbody>{episode.rows.map(row => <tr key={row.label}><th scope="row"><strong>{row.label}</strong><span>{row.selection}</span></th><td className={row.points > 0 ? "earned" : ""}>{row.points > 0 ? "+" : ""}{row.points}</td></tr>)}</tbody><tfoot><tr><th scope="row">Episode total</th><td>+{episode.points}</td></tr></tfoot></table>
               <p className="episode-question"><strong>Wild Card question:</strong> {episode.bonusQuestion}</p>
               <div className="episode-running"><span>Season total after this episode</span><strong>{points(episode.totalPoints)}</strong></div>
-              {episode.countsForPostMerge && <p className="episode-note">{points(episode.weeklyPoints)} also count toward the post-merge championship.</p>}
             </div>
           </details>)}</div>}
       </section>
       <aside className="season-boards">
-        <section id="post-merge" className="season-board post-merge-board" aria-labelledby="post-merge-title"><p className="eyebrow">A fresh race. The same picks.</p><h2 id="post-merge-title">Post-merge championship</h2><p>Starts with the episode after Jeff announces the individual game. Your normal weekly points and bonuses count; Opening Outlast and Final Torch awards stay in the overall competition.</p>
-          {data.postMerge.episodesScored ? <><p className="series-status">{data.postMerge.episodesScored} {data.postMerge.episodesScored === 1 ? "episode scored" : "episodes scored"}</p><Standings rows={data.postMerge.standings}/></> : <div className="series-waiting"><strong>{data.postMerge.announcementEpisodeId ? `The announcement was in Episode ${data.postMerge.announcementEpisodeId}.` : "Your second chance is coming."}</strong><span>{data.postMerge.announcementEpisodeId ? "Standings open when the following episode’s results are published." : "Everyone begins this competition at zero. Keep making your regular picks."}</span></div>}
-          <p className="board-footnote">Your overall season score keeps growing. Tied scores share the same rank and title.</p>
-        </section>
-        <section id="season-standings" className="season-board" aria-labelledby="overall-title"><p className="eyebrow">The full season</p><h2 id="overall-title">Overall standings</h2>{data.overallRank ? <Standings rows={data.overall}/> : <p>Standings begin when the first episode’s results are published.</p>}<p className="board-footnote">Weekly points plus Opening Outlast and Final Torch awards.</p></section>
+        <section id="season-standings" className="season-board" aria-labelledby="overall-title"><p className="eyebrow">The full season</p><h2 id="overall-title">Leaderboard</h2>{data.overallRank ? <Standings rows={data.overall}/> : <p>Standings begin when the first episode’s results are published.</p>}<p className="board-footnote">One season total: weekly points, bonuses, Opening Outlast, and Final Torch awards.</p></section>
       </aside>
     </div>
     <EpisodeSpotlight spotlight={data.spotlight}/>

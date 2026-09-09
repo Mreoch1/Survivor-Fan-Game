@@ -31,11 +31,6 @@ export type SeasonResult = {
 };
 export type SeasonPick = RecapPick & { user_id: string; episode_id: number };
 
-export function weeklyPoints(pick: RecapPick | null | undefined) {
-  return pick ? pick.favorite_point + pick.immunity_point + pick.boot_point + pick.bonus_point +
-    pick.underdog_point + pick.streak_point + pick.double_point : 0;
-}
-
 function rankScores(rows: { id: string; points: number }[]) {
   const sorted = [...rows].sort((a, b) => b.points - a.points || a.id.localeCompare(b.id));
   let rank = 0;
@@ -75,7 +70,6 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
     }
   }
   const totals = new Map(profiles.map(profile => [profile.id, 0]));
-  const postMergeTotals = new Map(profiles.map(profile => [profile.id, 0]));
   let previousRanks = new Map<string, number>();
   const history = [];
   let spotlight: {
@@ -109,12 +103,8 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
         individualGamePick: original, individualGamePoints: season.individualGamePoints,
         finale: episode.id === finaleEpisode?.id, endgamePick: endgame, endgamePoints: season.endgamePoints,
       });
-      const weekly = weeklyPoints(pick);
       totals.set(profile.id, (totals.get(profile.id) || 0) + breakdown.roundPoints);
-      if (individualEpisode && episode.id > individualEpisode.id) {
-        postMergeTotals.set(profile.id, (postMergeTotals.get(profile.id) || 0) + weekly);
-      }
-      return { id: profile.id, points: breakdown.roundPoints, weeklyPoints: weekly, hasPick: Boolean(pick), ...breakdown };
+      return { id: profile.id, points: breakdown.roundPoints, hasPick: Boolean(pick), ...breakdown };
     });
     const roundRanks = rankScores(rounds);
     const overallRanks = rankScores(eligible.map(profile => ({ id: profile.id, points: totals.get(profile.id) || 0 })));
@@ -124,12 +114,11 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
       history.push({
         episodeId: episode.id, title: episode.title, revealAt: episode.reveal_at,
         bonusQuestion: episode.bonus_question, immunityVoid: result.immunity_void,
-        points: myRound.points, weeklyPoints: myRound.weeklyPoints,
+        points: myRound.points,
         rows: myRound.rows, carriedFromEpisodeId: myRound.carriedFromEpisodeId,
         hasPick: myRound.hasPick, roundRank: roundRanks.find(row => row.id === viewerId)!.rank,
         overallRank: myOverall.rank, totalPoints: myOverall.points,
         movement: previousRanks.has(viewerId) ? previousRanks.get(viewerId)! - myOverall.rank : null,
-        countsForPostMerge: Boolean(individualEpisode && episode.id > individualEpisode.id),
       });
     }
     const climbs = overallRanks.map(row => ({ id: row.id, climb: previousRanks.has(row.id) ? previousRanks.get(row.id)! - row.rank : 0 }));
@@ -147,16 +136,11 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
     .map(row => ({ name: name(row.id), points: row.points, rank: row.rank,
       avatarKey: profiles.find(profile => profile.id === row.id)!.avatar_key, isYou: row.id === viewerId }));
   const overall = publicBoard(totals);
-  const postMergeEpisodes = individualEpisode ? published.filter(episode => episode.id > individualEpisode.id).length : 0;
   return {
     playerName: playerLabel(viewer.team_name, viewer.display_name),
     totalPoints: totals.get(viewerId) || 0,
     overallRank: published.length ? overall.find(row => row.isYou)!.rank : null,
     history: history.reverse(), overall, spotlight,
-    postMerge: {
-      announcementEpisodeId: individualEpisode?.id || null, episodesScored: postMergeEpisodes,
-      standings: postMergeEpisodes ? publicBoard(postMergeTotals) : [],
-    },
   };
 }
 
