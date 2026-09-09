@@ -21,7 +21,7 @@ test("post-merge starts after the announcement episode and excludes both season 
   const dashboard = buildSeasonDashboard(input());
   assert.equal(dashboard.postMerge.announcementEpisodeId, 2);
   assert.equal(dashboard.postMerge.episodesScored, 2);
-  assert.deepEqual(dashboard.postMerge.standings.map(row => [row.name, row.points]), [["Camp Bravo", 9], ["Camp Alpha", 4]]);
+  assert.deepEqual(dashboard.postMerge.standings.map(row => [row.name, row.points]), [["Camp Bravo (Blair)", 9], ["Camp Alpha (Alex)", 4]]);
   assert.deepEqual(dashboard.history.map(row => row.countsForPostMerge), [true, true, false, false]);
 });
 
@@ -43,10 +43,10 @@ test("ties share ranks and highlights; moving into a tie counts as a climb", () 
   args.picks = [pick("a", 1), pick("b", 1, { immunity_point: 0 }), pick("a", 2, { immunity_point: 0 }), pick("b", 2)];
   const dashboard = buildSeasonDashboard(args);
   assert.deepEqual(dashboard.overall.map(row => row.rank), [1, 1]);
-  assert.deepEqual(dashboard.spotlight?.climbers, ["Camp Bravo"]);
+  assert.deepEqual(dashboard.spotlight?.climbers, ["Camp Bravo (Blair)"]);
   assert.equal(dashboard.spotlight?.placesClimbed, 1);
   const tied = buildSeasonDashboard({ ...args, picks: [pick("a", 1), pick("b", 1), pick("a", 2), pick("b", 2)] });
-  assert.deepEqual(tied.spotlight?.winners, ["Camp Alpha", "Camp Bravo"]);
+  assert.deepEqual(tied.spotlight?.winners, ["Camp Alpha (Alex)", "Camp Bravo (Blair)"]);
 });
 
 test("missing weekly picks show zero and keep eligible season-pick awards", () => {

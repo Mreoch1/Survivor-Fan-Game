@@ -9,6 +9,8 @@ import {
 } from "../../../../lib/recap-email";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 
+import { playerLabel } from "../../../../lib/player-label";
+
 type Profile = {
   id: string;
   display_name: string;
@@ -153,7 +155,7 @@ export async function GET(request: Request) {
       endgamePick: profile.endgame_pick,
       endgamePoints: Number(profile.endgame_points),
     });
-    return { ...profile, ...breakdown, publicName: profile.team_name || profile.display_name };
+    return { ...profile, ...breakdown, publicName: playerLabel(profile.team_name, profile.display_name) };
   });
   const roundRanked = addRanks(
     [...playerRounds].sort(
@@ -165,7 +167,7 @@ export async function GET(request: Request) {
     .filter((profile) => profile.rank <= 3)
     .map((profile) => ({
       rank: profile.rank,
-      name: profile.team_name || profile.display_name,
+      name: playerLabel(profile.team_name, profile.display_name),
       points: Number(profile.total_points),
     }));
   const roundLeaders: RankedScore[] = roundRanked
