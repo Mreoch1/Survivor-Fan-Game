@@ -34,6 +34,7 @@
 .point-ledger tbody th span{display:block;font-size:.74rem;color:#70634d;margin-top:4px;overflow-wrap:anywhere}
 .point-ledger td{border-top:1px solid #e2d6ba;font:700 1rem var(--font-mono);color:#837962}
 .point-ledger td.earned{color:#9b471f}
+.point-ledger td.lost{color:#9c2f25}
 .point-ledger td,.point-ledger th:last-child{text-align:right}
 .point-ledger tfoot th,.point-ledger tfoot td{border-top:2px solid #b5a279;padding:14px 0;color:#213c2b;font-size:.86rem}
 .episode-question{font-size:.73rem;line-height:1.6;color:#655b48;margin:12px 0 18px}

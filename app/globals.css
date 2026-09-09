@@ -59,3 +59,5 @@ footer{border-top:2px solid rgba(229,184,75,.4);background:#041711;color:#d2c7aa
 @media(max-width:520px){.site-header nav{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px 8px;overflow:visible;width:100%;text-align:center}.site-header nav a{white-space:nowrap;justify-content:center}}
 
 .leaderboard-name{min-width:0;overflow-wrap:anywhere}.leaderboard-player{display:block;margin-top:3px;font-size:.75rem;line-height:1.4;color:#52685d}
+
+.bonus-options .skip-option{flex-basis:100%}

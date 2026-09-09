@@ -2,6 +2,8 @@ import { createAdminClient } from "../../../../lib/supabase/admin";
 import { ensureDatabase, publishDueResults } from "../../../../db/runtime";
 import { scheduleEpisode } from "../../../../db/schedule";
 
+import { DEFAULT_ADVANTAGE_OPTIONS, DEFAULT_ADVANTAGE_QUESTION } from "../../../../lib/advantage-question";
+
 function authorized(request: Request) {
   const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
   const expected = process.env.AUTO_RESULTS_SECRET || "";
@@ -48,6 +50,10 @@ export async function GET(request: Request) {
     ? new Date(new Date(lastAirAt).getTime() + 7 * 86400000).toISOString()
     : "2026-09-24T00:00:00.000Z";
   const individualGameRecorded = Boolean(individualGameEpisode);
+  const { count: savedPickCount, error: pickCountError } = open
+    ? await db.from("picks").select("id", { count: "exact", head: true }).eq("episode_id", open.id)
+    : { count: 0, error: null };
+  if (pickCountError) return Response.json({ error: "Could not verify whether the episode question is frozen" }, { status: 500 });
 
   return Response.json({
     target: open
@@ -60,6 +66,7 @@ export async function GET(request: Request) {
           bonusQuestion: open.bonus_question,
           bonusOptions: open.bonus_options,
           existing: true,
+          choicesFrozen: Boolean(savedPickCount),
         }
       : { id: maxId + 1, suggestedAirAt, existing: false },
     recentEpisodes: (latest || []).map((row) => ({
@@ -80,8 +87,11 @@ export async function GET(request: Request) {
       phaseRule: individualGameRecorded
         ? "The individual game has been confirmed; schedule individual immunity picks."
         : "Keep tribe immunity unless the individual game was confirmed in an aired episode. Do not guess the transition.",
+      advantageQuestion: "Play Your Advantage: choose a different, objectively answerable question from the official pre-episode previews each week. Watching the previews should offer an edge. Avoid leaks, unaired outcomes, and near-duplicates in recent history. If no suitable preview is available, use the default question.",
+      defaultBonusQuestion: DEFAULT_ADVANTAGE_QUESTION,
+      defaultBonusOptions: DEFAULT_ADVANTAGE_OPTIONS,
       bonusOptions: "Two to four short, mutually exclusive choices",
-      freeze: "Do not change phase or bonus choices after any player picks exist",
+      freeze: "Do not change phase, Play Your Advantage question, or choices after any player picks exist",
     },
   });
 }
