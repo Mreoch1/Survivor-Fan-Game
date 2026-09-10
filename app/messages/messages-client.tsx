@@ -8,6 +8,7 @@ type Member = { id: string; name: string; displayName: string; avatarKey: string
 type Conversation = Member & { otherId: string; latestBody: string; latestAt: string; unread: number };
 type PrivateMessage = { id: number; senderId: string; body: string; readAt: string | null; createdAt: string };
 type MessageData = {
+  readThrough: string;
   currentUserId: string;
   members: Member[];
   conversations: Conversation[];
@@ -56,18 +57,17 @@ export function MessagesClient() {
     const next = output as MessageData;
     setError("");
     setData(next);
-    const messageIds = next.messages.filter(message => message.senderId === memberId && !message.readAt).map(message => message.id);
-    if (!messageIds.length || document.visibilityState !== "visible") return;
+    if (document.visibilityState !== "visible") return;
     const readResponse = await fetch("/api/messages", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ withUserId: memberId, messageIds }),
+      body: JSON.stringify({ withUserId: memberId, readThrough: next.readThrough }),
     });
     if (!readResponse.ok) setError("New messages loaded, but their unread status could not be updated.");
     else {
       window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
       if (requestId === conversationRequest.current.id) setData({ ...next, conversations: next.conversations.map(conversation =>
-        conversation.otherId === memberId ? { ...conversation, unread: Math.max(0, conversation.unread - messageIds.length) } : conversation) });
+        conversation.otherId === memberId ? { ...conversation, unread: 0 } : conversation) });
     }
   }
 

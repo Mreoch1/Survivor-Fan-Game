@@ -132,12 +132,22 @@ try {
   assert.equal((await counts()).campfire, 1, "New replies remain unread");
   const conversation = await (await fetch(`${appUrl}/api/messages?with=${b}`, { headers })).json();
   assert.deepEqual(conversation.messages.map((message: { id: number }) => message.id), [1, 3], "Conversation contains only this pair of players");
-  messages.push({ id: 4, sender_id: b, recipient_id: a, body: "Arrived during loading", read_at: null, created_at: new Date().toISOString() });
-  const read = await fetch(`${appUrl}/api/messages`, { method: "PUT", headers, body: JSON.stringify({ withUserId: b, messageIds: [1, 2, 3] }) });
+  const cutoff = conversation.readThrough;
+  messages.push({ id: 4, sender_id: b, recipient_id: a, body: "Arrived during loading", read_at: null, created_at: new Date(Date.parse(cutoff) + 1).toISOString() });
+  const read = await fetch(`${appUrl}/api/messages`, { method: "PUT", headers, body: JSON.stringify({ withUserId: b, readThrough: cutoff }) });
   assert.equal(read.status, 200);
   assert.equal((await counts()).messages, 2, "Other senders, outgoing messages, and later arrivals remain unread");
   assert.equal(messages[1].read_at, null);
   assert.equal(messages[2].read_at, null);
+  const oldHistory = Array.from({ length: 1100 }, (_, i) => ({ id: i + 10, sender_id: b, recipient_id: a, body: "Older conversation history", read_at: null, created_at: "2026-09-01T09:00:00Z" }));
+  messages.push(...oldHistory);
+  const longConversation = await (await fetch(`${appUrl}/api/messages?with=${b}`, { headers })).json();
+  assert.equal(longConversation.messages.length, 500);
+  const clearHistory = await fetch(`${appUrl}/api/messages`, { method: "PUT", headers, body: JSON.stringify({ withUserId: b, readThrough: longConversation.readThrough }) });
+  assert.equal(clearHistory.status, 200);
+  assert.ok(oldHistory.every(message => message.read_at !== null), "Unread history outside both display limits can clear");
+  assert.equal((await counts()).messages, 1, "The other conversation stays unread");
+  messages.splice(4);
   for (const remembered of [true, false]) {
     usedRefresh = false;
     const refreshed = await fetch(`${appUrl}/rules`, { headers: { cookie: `${cookie(true)}; outlast-remember=${remembered}` } });
