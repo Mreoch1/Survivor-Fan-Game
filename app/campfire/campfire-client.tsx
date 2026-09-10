@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { profileIcon } from "../profile-icons";
+import { NOTIFICATIONS_CHANGED } from "../../lib/notifications";
 
 type Reply = { id: number; body: string; createdAt: string; name: string; teamName: string; avatarKey: string };
 type Thread = Reply & { upvotes: number; downvotes: number; score: number; myVote: -1 | 0 | 1; replies: Reply[] };
@@ -36,8 +37,22 @@ export function CampfireClient() {
     setThreads(data.threads || []);
     setLocked(Boolean(data.locked));
     setRevealAt(data.revealAt || null);
+    if (document.visibilityState === "visible" && data.readThrough) {
+      const read = await fetch("/api/notifications", {
+        method: "PUT", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ readThrough: data.readThrough }),
+      });
+      if (read.ok) window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
+      else setError("Campfire loaded, but its unread status could not be updated.");
+    }
   });
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    const refresh = () => { if (document.visibilityState === "visible") void load().catch(() => setError("The Campfire could not connect. Please try again.")); };
+    refresh();
+    const interval = window.setInterval(refresh, 20000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", refresh); };
+  }, []);
 
   const sortedThreads = useMemo(() => [...threads].sort((a, b) => sort === "top"
     ? b.score - a.score || new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()

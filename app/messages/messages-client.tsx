@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { profileIcon } from "../profile-icons";
+import { NOTIFICATIONS_CHANGED } from "../../lib/notifications";
 
 type Member = { id: string; name: string; displayName: string; avatarKey: string };
 type Conversation = Member & { otherId: string; latestBody: string; latestAt: string; unread: number };
 type PrivateMessage = { id: number; senderId: string; body: string; readAt: string | null; createdAt: string };
 type MessageData = {
+  readThrough: string;
   currentUserId: string;
   members: Member[];
   conversations: Conversation[];
@@ -25,6 +27,7 @@ export function MessagesClient() {
   const [loadingConversation, setLoadingConversation] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
+  const conversationRequest = useRef({ id: 0 });
 
   async function loadOverview() {
     const response = await fetch("/api/messages");
@@ -40,35 +43,46 @@ export function MessagesClient() {
   }
 
   async function loadConversation(memberId: string, quiet = false) {
+    if (document.visibilityState !== "visible") return;
+    const requestId = ++conversationRequest.current.id;
     if (!quiet) setLoadingConversation(true);
     const response = await fetch(`/api/messages?with=${encodeURIComponent(memberId)}`);
     const output = await response.json();
+    if (requestId !== conversationRequest.current.id) return;
     if (!quiet) setLoadingConversation(false);
     if (!response.ok) {
       setError(output.error || "That conversation could not load.");
       return;
     }
     const next = output as MessageData;
-    next.conversations = next.conversations.map((conversation) => conversation.otherId === memberId ? { ...conversation, unread: 0 } : conversation);
     setError("");
     setData(next);
+    if (document.visibilityState !== "visible") return;
     const readResponse = await fetch("/api/messages", {
       method: "PUT",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ withUserId: memberId }),
+      body: JSON.stringify({ withUserId: memberId, readThrough: next.readThrough }),
     });
     if (!readResponse.ok) setError("New messages loaded, but their unread status could not be updated.");
+    else {
+      window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
+      if (requestId === conversationRequest.current.id) setData({ ...next, conversations: next.conversations.map(conversation =>
+        conversation.otherId === memberId ? { ...conversation, unread: 0 } : conversation) });
+    }
   }
 
   useEffect(() => {
-    const initialLoad = window.setTimeout(() => { loadOverview(); }, 0);
+    const initialLoad = window.setTimeout(() => { void loadOverview().catch(() => setError("Private Messages could not connect. Please try again.")); }, 0);
     return () => window.clearTimeout(initialLoad);
   }, []);
   useEffect(() => {
     if (!selectedId) return;
-    const initialLoad = window.setTimeout(() => { loadConversation(selectedId); }, 0);
-    const refresh = window.setInterval(() => { loadConversation(selectedId, true); }, 20000);
-    return () => { window.clearTimeout(initialLoad); window.clearInterval(refresh); };
+    const requests = conversationRequest.current;
+    const refresh = () => { void loadConversation(selectedId, true).catch(() => { setLoadingConversation(false); setError("Private Messages could not connect. Please try again."); }); };
+    const initialLoad = window.setTimeout(() => { void loadConversation(selectedId).catch(() => { setLoadingConversation(false); setError("Private Messages could not connect. Please try again."); }); }, 0);
+    const interval = window.setInterval(refresh, 20000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => { requests.id++; window.clearTimeout(initialLoad); window.clearInterval(interval); document.removeEventListener("visibilitychange", refresh); };
   }, [selectedId]);
 
   const orderedMembers = useMemo(() => {

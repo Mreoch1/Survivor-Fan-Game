@@ -1,6 +1,7 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { createAdminClient } from "../../../lib/supabase/admin";
 import { ensureDatabase } from "../../../db/runtime";
+import { validReadThrough } from "../../../lib/notifications";
 
 type MemberRow = { id: string; display_name: string; team_name: string; avatar_key: string };
 type MessageRow = {
@@ -29,6 +30,7 @@ function memberName(member: MemberRow) {
 }
 
 export async function GET(request: Request) {
+  const readThrough = new Date().toISOString();
   const user = await joinedUser();
   if (!user) return Response.json({ error: "Join the league first" }, { status: 403 });
   await ensureDatabase();
@@ -44,6 +46,7 @@ export async function GET(request: Request) {
       .from("private_messages")
       .select("id,sender_id,recipient_id,body,read_at,created_at")
       .or(`sender_id.eq.${user.userId},recipient_id.eq.${user.userId}`)
+      .lte("created_at", readThrough)
       .order("created_at", { ascending: false })
       .limit(1000),
   ]);
@@ -77,6 +80,7 @@ export async function GET(request: Request) {
       .or(
         `and(sender_id.eq.${user.userId},recipient_id.eq.${selectedId}),and(sender_id.eq.${selectedId},recipient_id.eq.${user.userId})`,
       )
+      .lte("created_at", readThrough)
       .order("created_at", { ascending: false })
       .limit(500);
     if (error) return Response.json({ error: "That conversation could not load" }, { status: 500 });
@@ -100,6 +104,7 @@ export async function GET(request: Request) {
     .filter(Boolean);
 
   return Response.json({
+    readThrough,
     currentUserId: user.userId,
     members: otherMembers.map((member) => ({
       id: member.id,
@@ -161,11 +166,16 @@ export async function PUT(request: Request) {
   const user = await joinedUser();
   if (!user) return Response.json({ error: "Join the league first" }, { status: 403 });
   await ensureDatabase();
-  const body = (await request.json().catch(() => null)) as { withUserId?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { withUserId?: unknown; readThrough?: unknown } | null;
   const withUserId = typeof body?.withUserId === "string" ? body.withUserId : "";
   if (!UUID_PATTERN.test(withUserId) || withUserId === user.userId) {
     return Response.json({ error: "Choose a conversation" }, { status: 400 });
   }
+
+  if (!validReadThrough(body?.readThrough)) {
+    return Response.json({ error: "Invalid conversation read time" }, { status: 400 });
+  }
+  const readThrough = new Date(body.readThrough).toISOString();
 
   const db = createAdminClient();
   const { data: member } = await db
@@ -182,6 +192,8 @@ export async function PUT(request: Request) {
     .update({ read_at: readAt })
     .eq("sender_id", withUserId)
     .eq("recipient_id", user.userId)
+    // Include older history outside the latest 500, but never later arrivals.
+    .lte("created_at", readThrough)
     .is("read_at", null);
   return error
     ? Response.json({ error: "Messages could not be marked as read" }, { status: 500 })

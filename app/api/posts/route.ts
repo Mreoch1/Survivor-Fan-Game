@@ -29,6 +29,7 @@ async function joinedUser() {
 }
 
 export async function GET() {
+  const readThrough = new Date().toISOString();
   const user = await joinedUser();
   if (!user) return Response.json({ error: "Join the league first" }, { status: 403 });
   await ensureDatabase();
@@ -70,6 +71,7 @@ export async function GET() {
     threads: buildCampfireThreads(posts, votes || [], profiles || [], user.userId),
     locked: Boolean(locked),
     revealAt: locked?.reveal_at || null,
+    readThrough,
   });
 }
 
