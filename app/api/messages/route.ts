@@ -161,11 +161,17 @@ export async function PUT(request: Request) {
   const user = await joinedUser();
   if (!user) return Response.json({ error: "Join the league first" }, { status: 403 });
   await ensureDatabase();
-  const body = (await request.json().catch(() => null)) as { withUserId?: unknown } | null;
+  const body = (await request.json().catch(() => null)) as { withUserId?: unknown; messageIds?: unknown } | null;
   const withUserId = typeof body?.withUserId === "string" ? body.withUserId : "";
   if (!UUID_PATTERN.test(withUserId) || withUserId === user.userId) {
     return Response.json({ error: "Choose a conversation" }, { status: 400 });
   }
+
+  const messageIds = body?.messageIds;
+  if (!Array.isArray(messageIds) || messageIds.length > 500 || messageIds.some(id => !Number.isSafeInteger(id) || id <= 0)) {
+    return Response.json({ error: "Choose the messages you opened" }, { status: 400 });
+  }
+  if (!messageIds.length) return Response.json({ ok: true });
 
   const db = createAdminClient();
   const { data: member } = await db
@@ -182,6 +188,7 @@ export async function PUT(request: Request) {
     .update({ read_at: readAt })
     .eq("sender_id", withUserId)
     .eq("recipient_id", user.userId)
+    .in("id", messageIds)
     .is("read_at", null);
   return error
     ? Response.json({ error: "Messages could not be marked as read" }, { status: 500 })

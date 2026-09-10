@@ -13,7 +13,7 @@
     "test:simulation": "node --import tsx --test tests/*.test.ts",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "verify": "npm run lint && npm run test:simulation && npm run build",
-    "test:smoke": "node --import tsx scripts/season-smoke.ts"
+    "test:smoke": "node --import tsx scripts/season-smoke.ts && node --import tsx scripts/auth-community-smoke.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
