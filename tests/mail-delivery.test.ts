@@ -3,7 +3,7 @@ import test from "node:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { deliveryKey, deliverOnce } from "../scripts/mail-delivery.mjs";
+import { deliveryKey, deliverOnce, deliverBatch } from "../scripts/mail-delivery.mjs";
 import { renderTreeMail } from "../lib/email-brand";
 
 const recipient = "player@example.test";
@@ -44,6 +44,25 @@ test("ambiguous delivery stops retries instead of risking a duplicate", async ()
 test("separate editions have separate keys and multi-recipient inputs are refused", () => {
   assert.notEqual(deliveryKey("reminder", "1", recipient), deliveryKey("reminder", "2", recipient));
   assert.throws(() => deliveryKey("reminder", "1", "a@example.com,b@example.com"));
+});
+
+test("an uncertain recipient does not prevent independent recipients from receiving mail", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "outlast-mail-"));
+  try {
+    const calls: string[] = [];
+    const graph = async (_path: string, options: { body: string }) => {
+      const recipient = JSON.parse(options.body).message.toRecipients[0].emailAddress.address;
+      calls.push(recipient);
+      if (recipient === "blocked@example.test") throw new Error("Timeout");
+      return new Response(null, { status: 202 });
+    };
+    const input = { graph, directory, kind: "tree-mail", edition: "2026-09-21", players: [
+      { email: "blocked@example.test", emailContent: email }, { email: recipient, emailContent: email },
+    ] };
+    assert.deepEqual((await deliverBatch(input)).map(row => row.status), ["failed", "accepted"]);
+    assert.deepEqual((await deliverBatch(input)).map(row => row.status), ["failed", "already-accepted"]);
+    assert.deepEqual(calls, ["blocked@example.test", recipient]);
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });
 
 test("editorial is escaped while exact score text and website spoiler notice stay intact", () => {

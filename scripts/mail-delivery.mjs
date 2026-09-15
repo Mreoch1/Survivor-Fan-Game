@@ -53,3 +53,16 @@ export async function deliverOnce({ graph, directory, key, recipient, email }) {
     await record.close();
   }
 }
+
+export async function deliverBatch({ graph, directory, kind, edition, players }) {
+  const results = [];
+  for (const player of players) {
+    const key = deliveryKey(kind, edition, player.email);
+    try {
+      results.push(await deliverOnce({ graph, directory, key, recipient: player.email, email: player.emailContent }));
+    } catch (error) {
+      results.push({ status: "failed", key, error: error instanceof Error ? error.message : "Delivery needs review" });
+    }
+  }
+  return results;
+}

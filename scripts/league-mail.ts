@@ -2,7 +2,7 @@ import { readFile, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { mailClient, mailbox, stateDirectory } from "./mail-client.mjs";
-import { deliveryKey, deliverOnce } from "./mail-delivery.mjs";
+import { deliveryKey, deliverBatch } from "./mail-delivery.mjs";
 import { emailFrame, emailSection, emailParagraph, emailButton, LEAGUE_SITE, renderTreeMail, type EditorialSection } from "../lib/email-brand";
 
 type Email = { subject: string; html: string; plainText: string; previewText?: string };
@@ -118,10 +118,9 @@ async function main() {
     return;
   }
   const client = await mailClient();
-  const results = [];
-  for (const player of players) results.push(await deliverOnce({ graph: client.graph,
-    directory: join(stateDirectory, "deliveries"), key: deliveryKey(kind, edition, player.email), recipient: player.email, email: player.emailContent }));
+  const results = await deliverBatch({ graph: client.graph, directory: join(stateDirectory, "deliveries"), kind, edition, players });
   console.log(JSON.stringify({ kind, edition, sender: mailbox, results, note: "Accepted means Microsoft accepted the request, not proof of inbox delivery." }));
+  if (results.some(result => result.status === "failed")) process.exitCode = 1;
 }
 
 main().catch(error => { console.error(error instanceof Error ? error.message : "League mail failed"); process.exitCode = 1; });
