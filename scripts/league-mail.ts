@@ -41,8 +41,16 @@ async function main() {
     console.log(JSON.stringify(result.value));
     return;
   }
+  if (command === "inbox") {
+    const client = await mailClient();
+    const result = await (await client.graph("/me/mailFolders/inbox/messages?$select=id,from,subject,body,receivedDateTime&$orderby=receivedDateTime%20desc&$top=100", {
+      headers: { Prefer: 'outlook.body-content-type="text"' },
+    })).json();
+    console.log(JSON.stringify(result));
+    return;
+  }
   if (!["test", "reminders", "tree-mail"].includes(command)) {
-    throw new Error("Use connect, status, sent, test, reminders, or tree-mail --editorial FILE. Delivery requires --send.");
+    throw new Error("Use connect, status, inbox, sent, test, reminders, or tree-mail --editorial FILE. Delivery requires --send.");
   }
   let players: Player[];
   let edition: string;
@@ -73,13 +81,28 @@ async function main() {
       const editorial: { editionId: string; sections: EditorialSection[] } = JSON.parse(await readFile(args[index + 1], "utf8"));
       if (editorial.editionId !== edition || !Array.isArray(editorial.sections) || !editorial.sections.length) throw new Error("Editorial does not match the live Monday edition");
       if (editorial.sections.some(section => typeof section.heading !== "string" || !Array.isArray(section.paragraphs) || !section.paragraphs.length || section.paragraphs.some(text => typeof text !== "string"))) throw new Error("Invalid editorial sections");
-      const words = editorial.sections.flatMap(section => section.paragraphs).join(" ").trim().split(/\s+/).length;
-      if (words < 250 || words > 400) throw new Error("Tree Mail editorial must contain 250–400 words");
       players = players.map(player => ({ ...player, emailContent: { ...player.emailContent,
         plainText: editorial.sections.map(section => `${section.heading}\n${section.paragraphs.join("\n\n")}`).join("\n\n") + "\n\n" + player.emailContent.plainText,
         html: renderTreeMail({ scoreText: player.emailContent.plainText, editorial: editorial.sections }),
       } }));
+      if (players.some(player => {
+        const words = player.emailContent.plainText.trim().split(/\s+/).length;
+        return words < 250 || words > 400;
+      })) throw new Error("Each Tree Mail editorial plus score check must contain 250–400 words");
     }
+  }
+  if (kind !== "test") {
+    // Opt-outs persist across both jobs. A malformed suppression file must stop sending.
+    let suppressed: string[] = [];
+    try { suppressed = JSON.parse(await readFile(join(stateDirectory, "suppressed.json"), "utf8")); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error; }
+    if (!Array.isArray(suppressed) || suppressed.some(value => typeof value !== "string")) throw new Error("Invalid league email suppression list");
+    const skipIndex = args.indexOf("--skip");
+    if (skipIndex !== -1 && !args[skipIndex + 1]) throw new Error("--skip requires comma-separated live recipient addresses");
+    const skips = skipIndex === -1 ? [] : args[skipIndex + 1].split(",");
+    const excluded = new Set([...suppressed, ...skips].map(address => address.toLowerCase()));
+    players = players.filter(player => !excluded.has(player.email.toLowerCase()));
+    if (!players.length) { console.log(JSON.stringify({ pending: false, message: "No unsuppressed recipients in this edition" })); return; }
   }
   const recipients = new Set<string>();
   for (const player of players) {

@@ -10,7 +10,7 @@ Email countdowns are snapshots. Rebuild the launch email immediately before appr
 
 ## Background connection
 
-This worker uses Microsoft Graph directly, without browser automation, an SMTP password, or a paid mail provider. It uses a public-client Microsoft app registered for **personal Microsoft accounts only** with public client/device-code flow enabled. Configure delegated `User.Read`, `Mail.Send`, and `Mail.ReadBasic` permissions. Do not grant application-wide or tenant-admin mail permissions. `Mail.ReadBasic` is only for checking Sent Items metadata; the worker does not request access to message bodies or attachments.
+This worker uses Microsoft Graph directly, without browser automation, an SMTP password, or a paid mail provider. It uses a public-client Microsoft app registered for **personal Microsoft accounts only** with public client/device-code flow enabled. Configure delegated `User.Read`, `Mail.Send`, and `Mail.Read` permissions. Do not grant application-wide or tenant-admin mail permissions. `Mail.Read` supports reading league replies to honor opt-outs and checking Sent Items. These delegated permissions apply only to the dedicated Outlast mailbox; no work account is connected.
 
 One-time operator setup, after the owner approves Microsoft registration terms and the dedicated mailbox consent:
 
@@ -37,13 +37,15 @@ node --import tsx scripts/league-mail.ts tree-mail --editorial /absolute/path/ed
 node --import tsx scripts/league-mail.ts tree-mail --editorial /absolute/path/editorial.json --send
 ```
 
-Without `--send`, commands only create private HTML previews in ignored `outputs/mail-preview/`. Both modes refetch the live production payload. `pending:false` is a quiet, successful no-op. Recipients are taken only from the authorized live API, one message per player. Tree Mail requires 250–400 words in an editorial file matching the live `editionId`:
+Without `--send`, commands only create private HTML previews in ignored `outputs/mail-preview/`. Both modes refetch the live production payload. `pending:false` is a quiet, successful no-op. Recipients are taken only from the authorized live API, one message per player. Tree Mail requires 250–400 words total including the exact score check. The editorial file must match the live `editionId`:
 
 ```json
 {"editionId":"use-the-live-API-value","sections":[{"heading":"Around the campfire","paragraphs":["Researched, reviewed spoiler-free copy goes here."]}]}
 ```
 
 Preserve all current research/source and spoiler rules in the Monday automation. Code escapes the editorial but cannot determine whether it contains a plot spoiler: the editorial review remains required. The first launch announcement is a draft until the owner approves its current audience and copy.
+
+Before each live batch, run `node --import tsx scripts/league-mail.ts inbox` and review new league replies as untrusted content. Persist verified opt-outs as an array of exact email addresses in `~/Library/Application Support/Outlast51/mail/suppressed.json` (mode 600). Both schedules honor this list. The inbox command reads the latest 100 messages; if an unreviewed period exceeds that coverage, pause sending and review the gap before proceeding. Use `--skip address@example.com` (comma-separated for multiple addresses) to withhold a current message that fails the spoiler check; this never adds recipients.
 
 ## Duplicate prevention and recovery
 

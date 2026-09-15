@@ -6,7 +6,7 @@ import { PersistenceCreator, PersistenceCachePlugin, DataProtectionScope } from 
 
 export const mailbox = "outlasttorch51@outlook.com";
 export const stateDirectory = join(homedir(), "Library", "Application Support", "Outlast51", "mail");
-const scopes = ["User.Read", "Mail.Send", "Mail.ReadBasic"];
+const scopes = ["User.Read", "Mail.Send", "Mail.Read"];
 
 /** @param {{interactive?: boolean, deviceCodeCallback?: (code: import('@azure/msal-node').DeviceCodeResponse) => void}} options */
 export async function mailClient({ interactive = false, deviceCodeCallback } = {}) {
