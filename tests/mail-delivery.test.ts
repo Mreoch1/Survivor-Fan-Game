@@ -52,5 +52,5 @@ test("editorial is escaped while exact score text and website spoiler notice sta
   assert.match(html, /Episode 2: -1.5 points · Round rank #2/);
   assert.match(html, /Open when you are caught up/);
   assert.match(html, /Camp &lt;script&gt;/);
-  assert.doesNotMatch(html, /<script>|<img src=x/);
+  assert.doesNotMatch(html, /<script>|<img src=x/i);
 });

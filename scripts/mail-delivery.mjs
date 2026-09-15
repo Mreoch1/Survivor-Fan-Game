@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { mkdir, open, readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import { mkdir, open } from "node:fs/promises";
 import { join } from "node:path";
 
 export function deliveryKey(kind, edition, recipient) {
@@ -18,9 +19,13 @@ export async function deliverOnce({ graph, directory, key, recipient, email }) {
     record = await open(path, "wx", 0o600);
   } catch (error) {
     if (error.code !== "EEXIST") throw error;
-    const previous = JSON.parse(await readFile(path, "utf8"));
-    if (previous.status === "accepted") return { status: "already-accepted", key };
-    throw new Error(`Delivery ${key} needs review in Sent Items. It will not be sent again automatically.`);
+    const existing = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    try {
+      const previous = JSON.parse(await existing.readFile("utf8"));
+      if (previous.key !== key) throw new Error("Delivery record identity does not match");
+      if (previous.status === "accepted") return { status: "already-accepted", key };
+      throw new Error(`Delivery ${key} needs review in Sent Items. It will not be sent again automatically.`);
+    } finally { await existing.close(); }
   }
   const startedAt = new Date().toISOString();
   try {
