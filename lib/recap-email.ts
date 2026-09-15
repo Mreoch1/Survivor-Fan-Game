@@ -1,3 +1,5 @@
+import { renderTreeMail } from "./email-brand";
+
 export type RecapPick = {
   favorite_id: string;
   immunity_pick: string;
@@ -95,15 +97,6 @@ export function buildPointBreakdown({
   };
 }
 
-function escapeHtml(value: string | number) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 function firstName(value: string) {
   return value.trim().split(/\s+/)[0] || "castaway";
 }
@@ -130,7 +123,7 @@ export function buildResultsRecapEmail({
   const preseason = overallRank === null;
   const subject = `Tree Mail · Outlast 51 ${preseason ? "players to watch" : "Monday score check"}`;
   const scoreLines = preseason ? [
-    "YOUR CAMP IS READY",
+    "BEFORE THE FIRST EPISODE",
     `${campName}: the season has not started. Your first scoring update arrives on the Monday after the premiere.`,
   ] : [
     "YOUR MONDAY SCORE CHECK",
@@ -149,6 +142,6 @@ export function buildResultsRecapEmail({
     "", "Unofficial Outlast 51 Family League. Contact Mike if you no longer want league emails.",
   ].join("\n");
   const previewText = "Your weekly camp dispatch and fantasy league check-in. No episode outcomes inside.";
-  const html = `<!doctype html><html><body style="margin:0;background:#081912;font-family:Arial,Helvetica,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(previewText)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px;"><table role="presentation" width="100%" style="max-width:640px;background:#f6f0df;border-radius:16px;"><tr><td style="padding:28px;background:#102a1c;border-bottom:5px solid #e16b2c;"><p style="color:#e8b44f;letter-spacing:2px;font-size:12px;">OUTLAST 51 · SPOILER-FREE</p><h1 style="margin:0;color:#fff8e7;font:700 36px Georgia,serif;">Tree Mail</h1></td></tr><tr><td style="padding:28px;color:#16291f;font-size:16px;line-height:25px;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(plainText)}</td></tr></table></td></tr></table></body></html>`;
+  const html = renderTreeMail({ scoreText: plainText });
   return { subject, previewText, plainText, html };
 }

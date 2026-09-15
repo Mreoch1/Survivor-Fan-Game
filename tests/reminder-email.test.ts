@@ -76,7 +76,7 @@ test("the branded email is action-focused, spoiler-free, and escapes player text
   assert.match(email.plainText, /This is a spoiler-free league update/);
   assert.match(email.html, /Blindside &amp; Co\./);
   assert.doesNotMatch(email.html, /Mike <Torch>/);
-  assert.match(email.html, /Enter the voting booth/);
+  assert.match(email.html, /Sign in &amp; make picks/);
 });
 
 test("a missing Vote-Out requires a reminder while a skipped Play Your Advantage does not", () => {
