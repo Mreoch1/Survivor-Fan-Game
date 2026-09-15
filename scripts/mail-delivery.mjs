@@ -14,12 +14,15 @@ export async function deliverOnce({ graph, directory, key, recipient, email }) {
   if (!email.subject || !email.html || !email.plainText || /[\r\n]/.test(email.subject)) throw new Error("Email content is incomplete");
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const path = join(directory, `${key}.json`);
+  const receiptPath = join(directory, `${key}.accepted.json`);
   let record;
   try {
     record = await open(path, "wx", 0o600);
   } catch (error) {
     if (error.code !== "EEXIST") throw error;
-    const existing = await open(path, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const existing = await open(receiptPath, constants.O_RDONLY | constants.O_NOFOLLOW).catch(() => {
+      throw new Error(`Delivery ${key} needs review in Sent Items. It will not be sent again automatically.`);
+    });
     try {
       const previous = JSON.parse(await existing.readFile("utf8"));
       if (previous.key !== key) throw new Error("Delivery record identity does not match");
@@ -39,9 +42,12 @@ export async function deliverOnce({ graph, directory, key, recipient, email }) {
       saveToSentItems: true,
     }) });
     if (response.status !== 202) throw new Error("Microsoft did not accept the message; review before retrying.");
-    await record.truncate(0);
-    await record.write(JSON.stringify({ key, recipient, subject: email.subject, startedAt, status: "accepted" }), 0, "utf8");
-    await record.sync();
+    // Keep the intent immutable. A separate receipt is created only after acceptance.
+    const receipt = await open(receiptPath, "wx", 0o600);
+    try {
+      await receipt.writeFile(JSON.stringify({ key, recipient, subject: email.subject, startedAt, status: "accepted" }));
+      await receipt.sync();
+    } finally { await receipt.close(); }
     return { status: "accepted", key };
   } finally {
     await record.close();
