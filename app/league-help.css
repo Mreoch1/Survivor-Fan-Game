@@ -6,7 +6,7 @@
 .help-page .page-hero h1 { font-size: clamp(2.7rem, 6vw, 5rem); line-height: 1; letter-spacing: -.04em; }
 .help-page .page-hero p:last-child { font-size: 1.05rem; }
 .save-intro { display: flex; gap: 24px; align-items: flex-start; padding: 28px; margin-bottom: 24px; background: #f8edce; border: 1px solid #c7b485; }
-.save-app-icon { flex: 0 0 76px; height: 76px; border-radius: 16px; overflow: hidden; background: #102a1c url('/icons/outlast-192.png') center / cover; font-size: 0; }
+.save-app-icon { flex: 0 0 76px; width: 76px; height: 76px; border-radius: 16px; overflow: hidden; background: #102a1c url('/icons/outlast-192.png') center / cover; font-size: 0; }
 .save-intro h2, .save-guide h2, .acknowledgement-panel h2 { font: 400 1.8rem/1.2 Georgia, serif; }
 .save-intro p, .save-guide p, .save-guide li, .acknowledgement-panel p { font-size: 1rem; line-height: 1.7; }
 .save-guides { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
