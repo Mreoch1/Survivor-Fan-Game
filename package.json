@@ -13,7 +13,10 @@
     "test:simulation": "node --import tsx --test tests/*.test.ts",
     "lint": "eslint . --ignore-pattern dist --ignore-pattern .next",
     "verify": "npm run lint && npm run test:simulation && npm run build",
-    "test:smoke": "node --import tsx scripts/season-smoke.ts && node --import tsx scripts/auth-community-smoke.ts"
+    "test:smoke": "node --import tsx scripts/season-smoke.ts && node --import tsx scripts/auth-community-smoke.ts",
+    "mail:connect": "node --import tsx scripts/league-mail.ts connect",
+    "mail:status": "node --import tsx scripts/league-mail.ts status",
+    "mail:test": "node --import tsx scripts/league-mail.ts test"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
@@ -23,6 +26,8 @@
     "react-dom": "^19.2.8"
   },
   "devDependencies": {
+    "@azure/msal-node": "^6.0.0",
+    "@azure/msal-node-extensions": "^5.5.0",
     "@eslint/js": "9.39.4",
     "@next/eslint-plugin-next": "16.2.6",
     "@tailwindcss/postcss": "4.2.1",

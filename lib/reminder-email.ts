@@ -1,3 +1,5 @@
+import { emailButton, emailFrame, emailParagraph, emailSection, escapeHtml, LEAGUE_SITE } from "./email-brand";
+
 export type ReminderPick = {
   favorite_id: string;
   immunity_pick: string;
@@ -122,15 +124,6 @@ export function formatEasternDeadline(value: string | Date) {
   return `${datePart} at ${timePart} ET`;
 }
 
-function escapeHtml(value: string | number) {
-  return String(value)
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 function firstName(value: string) {
   return value.trim().split(/\s+/)[0] || "castaway";
 }
@@ -210,6 +203,18 @@ export function buildReminderEmail({
   const standingRows = standingLines
     .map((line) => `<tr><td style="padding:4px 0;color:#e8e0ca;font-size:14px;line-height:20px;">${escapeHtml(line)}</td></tr>`)
     .join("");
-  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#081912;font-family:Arial,Helvetica,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;opacity:0;">You still need ${escapeHtml(missingSentence)}. Picks lock ${escapeHtml(deadline)}.</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#081912;"><tr><td align="center" style="padding:28px 12px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;background:#f6f0df;border:1px solid #49604e;border-radius:18px;overflow:hidden;"><tr><td style="padding:30px 34px 26px;background:#102a1c;border-bottom:5px solid #e16b2c;"><p style="margin:0 0 10px;color:#e8b44f;font-size:12px;line-height:16px;font-weight:700;letter-spacing:2px;">OUTLAST 51 · EPISODE ${episodeId}</p><h1 style="margin:0;color:#fff8e7;font-family:Georgia,serif;font-size:34px;line-height:39px;font-weight:700;">Your voting booth closes tomorrow.</h1><p style="margin:14px 0 0;color:#d9e3da;font-size:15px;line-height:22px;">${escapeHtml(episodeTitle)} · Picks lock ${escapeHtml(deadline)}</p></td></tr><tr><td style="padding:28px 34px 10px;"><p style="margin:0 0 14px;color:#1d2b23;font-size:16px;line-height:24px;">Hi ${escapeHtml(firstName(playerName))}, the torches are lit, but ${escapeHtml(campName)} still has required picks missing:</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#234431;border-radius:12px;"><tr><td style="padding:17px 20px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${missingRows}</table></td></tr></table><table role="presentation" width="100%" cellspacing="0" cellpadding="0"><tr><td align="center" style="padding:24px 0 22px;"><a href="${escapeHtml(leagueUrl)}" style="display:inline-block;background:#e16b2c;color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:14px 24px;border-radius:999px;">Enter the voting booth</a></td></tr></table><p style="margin:0 0 8px;color:#8b4e23;font-size:12px;line-height:16px;font-weight:700;letter-spacing:1.5px;">YOUR PARCHMENT</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${receiptRows}</table></td></tr><tr><td style="padding:24px 34px 26px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#102a1c;border-radius:12px;"><tr><td style="padding:18px 20px;"><p style="margin:0 0 9px;color:#e8b44f;font-size:12px;line-height:16px;font-weight:700;letter-spacing:1.5px;">CAMP STATUS</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${standingRows}</table></td></tr></table></td></tr><tr><td style="padding:20px 34px 28px;background:#e9dfc8;color:#655e50;font-size:12px;line-height:18px;"><strong style="color:#274131;">Spoiler-free by design.</strong> This reminder contains league standings only—no episode recap or castaway results.<br><br>Eligible Favorite, Immunity, and Vote-Out Picks carry forward. Play Your Advantage requires a fresh choice each week: +1 correct, -1 wrong, or 0 if skipped. Contact Mike if you no longer want pick reminders.</td></tr></table></td></tr></table></body></html>`;
+  const html = emailFrame({
+    title: "Your picks close tomorrow.",
+    eyebrow: `EPISODE ${episodeId} · PICK REMINDER`,
+    previewText: `You still need ${missingSentence}. Picks lock ${deadline}.`,
+    sections: emailSection("1. Finish your picks", emailParagraph(`Hi ${firstName(playerName)}, ${campName} still needs these picks:`) +
+      `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#234431"><tr><td style="padding:16px 20px;"><table role="presentation" width="100%">${missingRows}</table></td></tr></table>` +
+      `<p style="margin:18px 0 0;font-size:16px;line-height:25px;color:#10291f;"><strong>Picks close ${escapeHtml(deadline)}.</strong><br>${escapeHtml(episodeTitle)}</p>` +
+      emailButton("Sign in & make picks", `${new URL(leagueUrl).origin}/login?returnTo=%2Fplay`)) +
+      emailSection("2. Your picks on file", `<table role="presentation" width="100%" cellpadding="0" cellspacing="0">${receiptRows}</table>`) +
+      emailSection("3. Around camp", `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#10291f"><tr><td style="padding:16px 20px;"><table role="presentation" width="100%">${standingRows}</table></td></tr></table>` +
+        `<p style="margin:16px 0 0;font-size:14px;line-height:22px;color:#43584c;">Eligible Favorite, Immunity, and Vote-Out Picks carry forward. Play Your Advantage needs a fresh choice each week: +1 correct, -1 wrong, or 0 if skipped.</p>` +
+        `<p style="margin:12px 0 0;font-size:14px;line-height:22px;color:#43584c;">This reminder contains league standings only, with no episode recap or castaway results. <a href="${LEAGUE_SITE}/updates" style="color:#10291f;">See what’s new in Outlast</a>.</p>`),
+  });
   return { subject, previewText: `You still need ${missingSentence}. Picks lock ${deadline}.`, plainText, html };
 }
