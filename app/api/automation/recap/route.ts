@@ -1,29 +1,10 @@
-import { castaways } from "../../../data";
-import { ensureDatabase, publishDueResults } from "../../../../db/runtime";
-import {
-  buildPointBreakdown,
-  buildResultsRecapEmail,
-  type RankedScore,
-  type RecapPick,
-  type ResultItem,
-} from "../../../../lib/recap-email";
+import { buildResultsRecapEmail } from "../../../../lib/recap-email";
+import { buildSeasonDashboard, type SeasonEpisode, type SeasonPick, type SeasonProfile, type SeasonResult } from "../../../../lib/season-dashboard";
+import { readAllRows } from "../../../../lib/read-all-rows";
+import { mondayMailWindow, selectWeeklyEdition, type MailEpisode } from "../../../../lib/weekly-edition";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 
-import { playerLabel } from "../../../../lib/player-label";
-
-type Profile = {
-  id: string;
-  display_name: string;
-  team_name: string;
-  total_points: number;
-  individual_game_pick: string | null;
-  endgame_pick: string | null;
-  individual_game_points: number;
-  endgame_points: number;
-  created_at: string;
-};
-
-type Departure = { castawayId?: string; type?: "vote" | "medical" | "quit" };
+export const dynamic = "force-dynamic";
 
 function authorized(request: Request) {
   const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
@@ -34,201 +15,75 @@ function authorized(request: Request) {
   return difference === 0;
 }
 
-function addRanks<T>(rows: T[], getPoints: (row: T) => number) {
-  let rank = 0;
-  let lastPoints: number | null = null;
-  return rows.map((row, index) => {
-    const rowPoints = getPoints(row);
-    if (lastPoints !== rowPoints) rank = index + 1;
-    lastPoints = rowPoints;
-    return { ...row, rank };
-  });
-}
+const json = (body: unknown, status = 200) => Response.json(body, {
+  status, headers: { "cache-control": "no-store" },
+});
 
 export async function GET(request: Request) {
-  if (!authorized(request)) return Response.json({ error: "Automation access required" }, { status: 401 });
-  await ensureDatabase();
-  await publishDueResults();
-  const db = createAdminClient();
+  if (!authorized(request)) return json({ error: "Automation access required" }, 401);
   const now = new Date();
-  const recentCutoff = new Date(now.getTime() - 36 * 3_600_000);
-  const { data: episode, error: episodeError } = await db
-    .from("episodes")
-    .select("id,title,phase,bonus_question,reveal_at,individual_game_started")
-    .eq("results_published", true)
-    .lte("reveal_at", now.toISOString())
-    .gte("reveal_at", recentCutoff.toISOString())
-    .order("id", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (episodeError) throw episodeError;
-  if (!episode) {
-    return Response.json({ pending: false, message: "No newly published episode is ready for a recap" });
+  if (!mondayMailWindow(now).open) {
+    return json({ pending: false, message: "Tree Mail opens Mondays at 10 AM America/Detroit" });
   }
+  const db = createAdminClient();
+  // This endpoint only reads. The established results workflow owns publication.
+  const episodes = await readAllRows<SeasonEpisode & MailEpisode>((from, to) => db.from("episodes")
+    .select("id,title,phase,air_at,lock_at,reveal_at,bonus_question,individual_game_started,results_published")
+    .eq("season", 51).order("id").range(from, to));
+  const edition = selectWeeklyEdition(episodes, now);
+  if (!edition.pending) return json(edition);
 
-  const [resultResponse, profilesResponse, picksResponse, usersResponse] = await Promise.all([
-    db
-      .from("episode_results")
-      .select("departures,immunity_winners,immunity_void,bonus_answer,finale_winner,finalists")
-      .eq("episode_id", episode.id)
-      .maybeSingle(),
-    db
-      .from("profiles")
-      .select(
-        "id,display_name,team_name,total_points,individual_game_pick,endgame_pick,individual_game_points,endgame_points,created_at",
-      )
-      .not("league_joined_at", "is", null)
-      .order("total_points", { ascending: false })
-      .order("created_at"),
-    db
-      .from("picks")
-      .select(
-        "user_id,favorite_id,immunity_pick,boot_pick,bonus_pick,double_down,carried_from_episode_id,favorite_point,immunity_point,boot_point,bonus_point,underdog_point,streak_point,double_point",
-      )
-      .eq("episode_id", episode.id),
-    db.auth.admin.listUsers({ page: 1, perPage: 1000 }),
-  ]);
-  if (resultResponse.error || profilesResponse.error || picksResponse.error || usersResponse.error) {
-    throw resultResponse.error || profilesResponse.error || picksResponse.error || usersResponse.error;
-  }
-  if (!resultResponse.data) {
-    return Response.json({ pending: false, message: "The published episode has no recorded results", episodeId: episode.id });
-  }
+  const profiles = await readAllRows<SeasonProfile>((from, to) => db.from("profiles")
+    .select("id,display_name,team_name,avatar_key,league_joined_at,individual_game_pick,endgame_pick,endgame_pick_switched")
+    .not("league_joined_at", "is", null).order("id").range(from, to));
+  if (!profiles.length) return json({ pending: false, message: "No joined players" });
 
-  const result = resultResponse.data;
-  const profiles = (profilesResponse.data || []) as Profile[];
-  const picks = new Map(
-    (picksResponse.data || []).map((pick) => [pick.user_id, pick as RecapPick & { user_id: string }]),
-  );
-  const emails = new Map(usersResponse.data.users.map((user) => [user.id, user.email || ""]));
-  const castawayName = (id: string | null | undefined) =>
-    castaways.find((castaway) => castaway.id === id)?.name || null;
-  const outcomeName = (id: string) => (["Savu", "Toka"].includes(id) ? `${id} Tribe` : castawayName(id) || id);
-  const departures = (Array.isArray(result.departures) ? result.departures : []) as Departure[];
-  const immunityWinners = (Array.isArray(result.immunity_winners) ? result.immunity_winners : []).map(String);
-  const finalists = (Array.isArray(result.finalists) ? result.finalists : []).map(String);
-  const resultItems: ResultItem[] = [];
-  for (const [type, label] of [
-    ["vote", "Voted out"],
-    ["medical", "Medical removal"],
-    ["quit", "Quit the game"],
-  ] as const) {
-    const names = departures
-      .filter((departure) => departure.type === type && departure.castawayId)
-      .map((departure) => outcomeName(String(departure.castawayId)));
-    if (names.length) resultItems.push({ label, value: names.join(" & ") });
+  // Only the published ledger feeds totals; never expose current/hidden picks.
+  const published = episodes.filter(episode => episode.results_published &&
+    new Date(episode.reveal_at) <= now && new Date(episode.air_at) <= now);
+  const ids = published.map(episode => episode.id);
+  const [picks, results] = ids.length ? await Promise.all([
+    readAllRows<SeasonPick>((from, to) => db.from("picks")
+      .select("user_id,episode_id,favorite_id,immunity_pick,boot_pick,bonus_pick,double_down,carried_from_episode_id,favorite_point,immunity_point,boot_point,bonus_point,underdog_point,streak_point,double_point")
+      .in("episode_id", ids).order("episode_id").order("user_id").range(from, to)),
+    readAllRows<SeasonResult>((from, to) => db.from("episode_results")
+      .select("episode_id,departures,immunity_void,finale_winner,finalists")
+      .in("episode_id", ids).order("episode_id").range(from, to)),
+  ]) : [[], []];
+  const emails = new Map<string, string>();
+  for (let page = 1; ; page++) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 500 });
+    if (error) throw error;
+    for (const user of data.users) if (user.email) emails.set(user.id, user.email);
+    if (data.users.length < 500) break;
   }
-  if (!departures.length) resultItems.push({ label: "Departure", value: "No departure recorded" });
-  resultItems.push({
-    label: immunityWinners.length > 1 ? "Immunity winners" : "Immunity winner",
-    value: immunityWinners.length ? immunityWinners.map(outcomeName).join(" & ") : "No winner recorded",
-  });
-  if (result.immunity_void) {
-    resultItems.push({ label: "League immunity scoring", value: "Voided for this episode" });
-  }
-  resultItems.push({
-    label: "Play Your Advantage result",
-    value: `${episode.bonus_question} — ${String(result.bonus_answer)}`,
-  });
-  if (episode.individual_game_started) {
-    resultItems.push({ label: "Individual game", value: "Officially began; Opening Outlast points awarded" });
-  }
-  const finaleWinner = String(result.finale_winner || "");
-  if (finaleWinner) {
-    resultItems.push({ label: "Sole Survivor", value: outcomeName(finaleWinner) });
-    resultItems.push({
-      label: "Final three",
-      value: [finaleWinner, ...finalists].map(outcomeName).join(" · "),
-    });
-  }
-
-  const overallRanked = addRanks(profiles, (profile) => Number(profile.total_points));
-  const playerRounds = overallRanked.map((profile) => {
-    const breakdown = buildPointBreakdown({
-      pick: picks.get(profile.id) || null,
-      phase: episode.phase as "tribe" | "individual",
-      castawayName,
-      individualGameStarted: Boolean(episode.individual_game_started),
-      individualGamePick: profile.individual_game_pick,
-      individualGamePoints: Number(profile.individual_game_points),
-      finale: Boolean(finaleWinner),
-      endgamePick: profile.endgame_pick,
-      endgamePoints: Number(profile.endgame_points),
-    });
-    return { ...profile, ...breakdown, publicName: playerLabel(profile.team_name, profile.display_name) };
-  });
-  const roundRanked = addRanks(
-    [...playerRounds].sort(
-      (a, b) => b.roundPoints - a.roundPoints || Number(b.total_points) - Number(a.total_points) || a.created_at.localeCompare(b.created_at),
-    ),
-    (profile) => profile.roundPoints,
-  );
-  const overallLeaders: RankedScore[] = overallRanked
-    .filter((profile) => profile.rank <= 3)
-    .map((profile) => ({
-      rank: profile.rank,
-      name: playerLabel(profile.team_name, profile.display_name),
-      points: Number(profile.total_points),
-    }));
-  const roundLeaders: RankedScore[] = roundRanked
-    .filter((profile) => profile.rank <= 3)
-    .map((profile) => ({ rank: profile.rank, name: profile.publicName, points: profile.roundPoints }));
-  const overallById = new Map(overallRanked.map((profile) => [profile.id, profile]));
-  const roundById = new Map(roundRanked.map((profile) => [profile.id, profile]));
   const leagueUrl = `${process.env.NEXT_PUBLIC_SITE_URL || new URL(request.url).origin}/play`;
-  const subject = `The tribe has spoken · Outlast 51 Episode ${episode.id} results`;
-  const players = playerRounds.flatMap((profile) => {
-    const email = emails.get(profile.id) || "";
-    const overall = overallById.get(profile.id);
-    const round = roundById.get(profile.id);
-    if (!email || !overall || !round) return [];
-    return [
-      {
-        name: profile.display_name,
-        teamName: profile.team_name,
-        email,
-        roundPoints: profile.roundPoints,
-        roundRank: round.rank,
-        overallRank: overall.rank,
-        overallPoints: Number(profile.total_points),
-        pointBreakdown: profile.rows,
-        emailContent: buildResultsRecapEmail({
-          playerName: profile.display_name,
-          teamName: profile.team_name,
-          episodeId: episode.id,
-          episodeTitle: episode.title,
-          resultItems,
-          pointRows: profile.rows,
-          roundPoints: profile.roundPoints,
-          carriedFromEpisodeId: profile.carriedFromEpisodeId,
-          roundRank: round.rank,
-          overallRank: overall.rank,
-          overallPoints: Number(profile.total_points),
-          roundLeaders,
-          overallLeaders,
-          leagueUrl,
-        }),
-      },
-    ];
+  const recipients = new Set<string>();
+  const players = profiles.flatMap(profile => {
+    const email = emails.get(profile.id);
+    if (!email) return [];
+    const key = email.toLowerCase();
+    if (recipients.has(key)) throw new Error("Multiple joined profiles share a recipient; resolve before mailing");
+    recipients.add(key);
+    const dashboard = buildSeasonDashboard({ viewerId: profile.id, profiles, episodes: published,
+      picks, results, now, castawayName: () => null });
+    const rounds = dashboard.history.filter(round => edition.episodeIds.includes(round.episodeId))
+      .reverse().map(round => ({ episodeId: round.episodeId, points: round.points, rank: round.roundRank }));
+    const overallLeaders = dashboard.overall.filter(row => row.rank <= 3)
+      .map(row => ({ name: row.name, rank: row.rank, points: row.points }));
+    // Deliberately whitelist totals/ranks: no titles, cast names, selections,
+    // category scores, outcomes, phase changes, or spoiler-bearing highlights.
+    return [{
+      name: profile.display_name, teamName: profile.team_name, email,
+      rounds, overallRank: dashboard.overallRank, overallPoints: dashboard.totalPoints,
+      emailContent: buildResultsRecapEmail({ playerName: profile.display_name,
+        teamName: profile.team_name, rounds, overallRank: dashboard.overallRank,
+        overallPoints: dashboard.totalPoints, overallLeaders, leagueUrl }),
+    }];
   });
-  if (!players.length) {
-    return Response.json({ pending: false, message: "No joined players have an email address", episodeId: episode.id });
-  }
-  return Response.json({
-    pending: true,
-    episode: {
-      id: episode.id,
-      title: episode.title,
-      revealAt: episode.reveal_at,
-      results: resultItems,
-    },
-    players,
-    leagueUrl,
-    rules: {
-      sendIndividually: true,
-      spoilersAllowedAfterReveal: true,
-      useExactEmailContent: true,
-      subject,
-    },
-  });
+  if (!players.length) return json({ pending: false, message: "No joined players have an email address" });
+  return json({ ...edition, players, leagueUrl, rules: {
+    sendIndividually: true, spoilersAllowed: false, scoringContentMustRemainExact: true,
+    addResearchedSpoilerFreeEditorial: true,
+  } });
 }
