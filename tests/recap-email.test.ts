@@ -67,41 +67,28 @@ test("individual-game and finale awards are part of the episode total", () => {
   ]);
 });
 
-test("results email shows episode outcomes, personal points, and both leaderboards", () => {
+test("Monday email contains fantasy totals and ranks without any outcome fields", () => {
   const email = buildResultsRecapEmail({
-    playerName: "Mike <Torch>",
-    teamName: "Blindside & Co.",
-    episodeId: 2,
-    episodeTitle: "A Test Episode",
-    resultItems: [
-      { label: "Voted out", value: "Brady Booker" },
-      { label: "Immunity winner", value: "Savu Tribe" },
-    ],
-    pointRows: [{ label: "Vote-Out Pick", selection: "Brady Booker", points: 3 }],
-    roundPoints: 3,
-    carriedFromEpisodeId: null,
-    roundRank: 1,
-    overallRank: 2,
-    overallPoints: 7,
-    roundLeaders: [{ rank: 1, name: "Blindside & Co.", points: 3 }],
+    playerName: "Mike <Torch>", teamName: "Blindside & Co.",
+    rounds: [{ episodeId: 2, points: -1.5, rank: 2 }],
+    overallRank: 2, overallPoints: 7,
     overallLeaders: [{ rank: 1, name: "Camp Chaos", points: 9 }],
     leagueUrl: "https://survivor-fan-game.vercel.app/play",
   });
-  assert.match(email.subject, /Episode 2 results/);
-  assert.match(email.plainText, /Voted out: Brady Booker/);
-  assert.match(email.plainText, /Episode total: \+3 points/);
+  assert.match(email.subject, /Tree Mail/);
+  assert.match(email.plainText, /Episode 2: -1.5 points · Round rank #2/);
+  assert.match(email.plainText, /7 points overall · League rank #2/);
   assert.match(email.html, /Blindside &amp; Co\./);
   assert.doesNotMatch(email.html, /Mike <Torch>/);
-  assert.match(email.html, /ROUND LEADERS/);
-  assert.match(email.html, /See standings &amp; make next picks/);
+  assert.doesNotMatch(JSON.stringify(email), /Voted out:|Immunity winner|Vote-Out Pick|Final Torch Pick|SPOILERS AHEAD/);
+  assert.match(email.plainText, /Open when you are caught up/);
 });
 
-test("recap preserves Play Your Advantage penalties and displays signed losses correctly", () => {
-  const breakdown = buildPointBreakdown({ pick: { ...pick, favorite_point: 0, immunity_point: 0, boot_point: 0, bonus_point: -1, underdog_point: 0, streak_point: 0, double_down: "bonus", double_point: 0 }, phase: "tribe", castawayName, individualGameStarted: false, individualGamePick: null, individualGamePoints: 0, finale: false, endgamePick: null, endgamePoints: 0 });
-  assert.equal(breakdown.roundPoints, -1);
-  const email = buildResultsRecapEmail({ playerName: "Alex", teamName: "Camp Alpha", episodeId: 1, episodeTitle: "Premiere", resultItems: [{ label: "Play Your Advantage result", value: "No" }], pointRows: breakdown.rows, roundPoints: breakdown.roundPoints, carriedFromEpisodeId: null, roundRank: 2, overallRank: 2, overallPoints: -1, roundLeaders: [{ rank: 1, name: "Camp Bravo", points: 0 }], overallLeaders: [{ rank: 1, name: "Camp Bravo", points: 0 }], leagueUrl: "https://survivor-fan-game.vercel.app/play" });
-  assert.match(email.plainText, /Play Your Advantage — Yes: -1 point/);
-  assert.match(email.plainText, /Episode total: -1 point/);
-  assert.match(email.html, /-1 point/);
-  assert.doesNotMatch(email.html + email.plainText, /\+-1/);
+test("preseason introduces scoring without inventing ranks or an episode result", () => {
+  const email = buildResultsRecapEmail({
+    playerName: "Mike", teamName: "Torch", rounds: [], overallRank: null,
+    overallPoints: 0, overallLeaders: [], leagueUrl: "https://example.test/play",
+  });
+  assert.match(email.plainText, /season has not started/);
+  assert.doesNotMatch(email.plainText, /rank #|0 points overall/);
 });

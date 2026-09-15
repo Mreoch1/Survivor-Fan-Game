@@ -113,96 +113,42 @@ function points(value: number, signed = false) {
   return `${signed && value > 0 ? "+" : ""}${formatted} ${Math.abs(value) === 1 ? "point" : "points"}`;
 }
 
-function scoreRows(rows: RankedScore[]) {
-  return rows
-    .map(
-      (row) =>
-        `<tr><td style="padding:7px 0;border-bottom:1px solid #385343;color:#e8e0ca;font-size:14px;line-height:20px;"><span style="display:inline-block;width:30px;color:#e8b44f;font-weight:700;">#${row.rank}</span>${escapeHtml(row.name)}</td><td align="right" style="padding:7px 0;border-bottom:1px solid #385343;color:#fff8e7;font-size:14px;line-height:20px;font-weight:700;">${escapeHtml(points(row.points))}</td></tr>`,
-    )
-    .join("");
-}
+export type MailRound = { episodeId: number; points: number; rank: number };
 
 export function buildResultsRecapEmail({
-  playerName,
-  teamName,
-  episodeId,
-  episodeTitle,
-  resultItems,
-  pointRows,
-  roundPoints,
-  carriedFromEpisodeId,
-  roundRank,
-  overallRank,
-  overallPoints,
-  roundLeaders,
-  overallLeaders,
-  leagueUrl,
+  playerName, teamName, rounds, overallRank, overallPoints, overallLeaders, leagueUrl,
 }: {
   playerName: string;
   teamName: string;
-  episodeId: number;
-  episodeTitle: string;
-  resultItems: ResultItem[];
-  pointRows: PointRow[];
-  roundPoints: number;
-  carriedFromEpisodeId: number | null;
-  roundRank: number;
-  overallRank: number;
+  rounds: MailRound[];
+  overallRank: number | null;
   overallPoints: number;
-  roundLeaders: RankedScore[];
   overallLeaders: RankedScore[];
   leagueUrl: string;
 }) {
   const campName = teamName || playerName;
-  const subject = `The tribe has spoken · Outlast 51 Episode ${episodeId} results`;
-  const resultLines = resultItems.map((item) => `${item.label}: ${item.value}`);
-  const pointLines = pointRows.map((row) => `${row.label} — ${row.selection}: ${points(row.points, true)}`);
-  const roundLeaderLines = roundLeaders.map((row) => `#${row.rank} ${row.name}: ${points(row.points)}`);
-  const overallLeaderLines = overallLeaders.map((row) => `#${row.rank} ${row.name}: ${points(row.points)}`);
-  const carryLine = carriedFromEpisodeId ? `Your eligible weekly picks were carried forward from Episode ${carriedFromEpisodeId}.` : null;
+  const preseason = overallRank === null;
+  const subject = `Tree Mail · Outlast 51 ${preseason ? "players to watch" : "Monday score check"}`;
+  const scoreLines = preseason ? [
+    "YOUR CAMP IS READY",
+    `${campName}: the season has not started. Your first scoring update arrives on the Monday after the premiere.`,
+  ] : [
+    "YOUR MONDAY SCORE CHECK",
+    ...rounds.map(round => `Episode ${round.episodeId}: ${points(round.points, true)} · Round rank #${round.rank}`),
+    ...(rounds.length ? [] : ["You joined after this week's picks locked. Your first round is still ahead."]),
+    `${campName}: ${points(overallPoints)} overall · League rank #${overallRank}`,
+    "",
+    "AT THE TOP OF THE FANTASY LEAGUE",
+    ...overallLeaders.map(row => `#${row.rank} ${row.name}: ${points(row.points)}`),
+  ];
   const plainText = [
-    `OUTLAST 51 · EPISODE ${episodeId} RESULTS`,
-    "SPOILERS AHEAD — RESULTS ARE PUBLISHED",
-    "",
-    `Hi ${firstName(playerName)},`,
-    "",
-    `The tribe has spoken. ${campName} scored ${points(roundPoints)} this round and finished #${roundRank}.`,
-    carryLine,
-    "",
-    "EPISODE RESULTS",
-    ...resultLines,
-    "",
-    "YOUR POINTS",
-    ...pointLines,
-    `Episode total: ${points(roundPoints, true)}`,
-    "",
-    "ROUND LEADERS",
-    ...roundLeaderLines,
-    "",
-    `OVERALL STANDING — #${overallRank} · ${points(overallPoints)}`,
-    ...overallLeaderLines,
-    "",
-    `See the full standings and make your next picks: ${leagueUrl}`,
-  ]
-    .filter((line): line is string => line !== null)
-    .join("\n");
-  const resultRows = resultItems
-    .map(
-      (item) =>
-        `<tr><td style="padding:9px 0;border-bottom:1px solid #d8cfb8;color:#655e50;font-size:13px;line-height:18px;">${escapeHtml(item.label)}</td><td align="right" style="padding:9px 0 9px 16px;border-bottom:1px solid #d8cfb8;color:#16291f;font-size:14px;line-height:19px;font-weight:700;">${escapeHtml(item.value)}</td></tr>`,
-    )
-    .join("");
-  const breakdownRows = pointRows
-    .map(
-      (row) =>
-        `<tr><td style="padding:9px 0;border-bottom:1px solid #d8cfb8;color:#16291f;font-size:14px;line-height:19px;"><strong>${escapeHtml(row.label)}</strong><br><span style="color:#6f685c;font-size:12px;">${escapeHtml(row.selection)}</span></td><td align="right" style="padding:9px 0 9px 16px;border-bottom:1px solid #d8cfb8;color:${row.points > 0 ? "#a94620" : row.points < 0 ? "#9c2f25" : "#777064"};font-size:15px;line-height:20px;font-weight:700;">${escapeHtml(points(row.points, true))}</td></tr>`,
-    )
-    .join("");
-  const html = `<!doctype html><html><body style="margin:0;padding:0;background:#081912;font-family:Arial,Helvetica,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(playerName)}, you scored ${escapeHtml(points(roundPoints))} in Episode ${episodeId}.</div><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#081912;"><tr><td align="center" style="padding:28px 12px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:640px;background:#f6f0df;border:1px solid #49604e;border-radius:18px;overflow:hidden;"><tr><td style="padding:12px 34px;background:#8d2f24;color:#fff7e9;font-size:12px;line-height:16px;font-weight:700;letter-spacing:1.5px;text-align:center;">SPOILERS AHEAD · RESULTS ARE PUBLISHED</td></tr><tr><td style="padding:28px 34px;background:#102a1c;border-bottom:5px solid #e16b2c;"><p style="margin:0 0 10px;color:#e8b44f;font-size:12px;line-height:16px;font-weight:700;letter-spacing:2px;">OUTLAST 51 · EPISODE ${episodeId}</p><h1 style="margin:0;color:#fff8e7;font-family:Georgia,serif;font-size:36px;line-height:41px;font-weight:700;">The tribe has spoken.</h1><p style="margin:13px 0 0;color:#d9e3da;font-size:15px;line-height:22px;">${escapeHtml(episodeTitle)}</p></td></tr><tr><td style="padding:28px 34px 12px;"><p style="margin:0 0 16px;color:#1d2b23;font-size:16px;line-height:24px;">Hi ${escapeHtml(firstName(playerName))}, here is the official league scoring report for ${escapeHtml(campName)}.</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#e9dfc8;border-radius:12px;"><tr><td align="center" style="padding:20px 12px;"><p style="margin:0 0 4px;color:#7e3e20;font-size:12px;font-weight:700;letter-spacing:1.5px;">YOUR ROUND</p><p style="margin:0;color:#163122;font-family:Georgia,serif;font-size:34px;line-height:40px;font-weight:700;">${escapeHtml(points(roundPoints, true))}</p><p style="margin:4px 0 0;color:#655e50;font-size:13px;">Round rank #${roundRank}</p></td></tr></table>${carryLine ? `<p style="margin:12px 0 0;color:#6f685c;font-size:12px;line-height:18px;">${escapeHtml(carryLine)}</p>` : ""}</td></tr><tr><td style="padding:20px 34px 8px;"><p style="margin:0 0 8px;color:#8b4e23;font-size:12px;font-weight:700;letter-spacing:1.5px;">EPISODE RESULTS</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${resultRows}</table></td></tr><tr><td style="padding:24px 34px 8px;"><p style="margin:0 0 8px;color:#8b4e23;font-size:12px;font-weight:700;letter-spacing:1.5px;">YOUR POINTS</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${breakdownRows}<tr><td style="padding:13px 0;color:#16291f;font-size:15px;font-weight:700;">Episode total</td><td align="right" style="padding:13px 0;color:#a94620;font-size:17px;font-weight:700;">${escapeHtml(points(roundPoints, true))}</td></tr></table></td></tr><tr><td style="padding:24px 34px;"><table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#102a1c;border-radius:12px;"><tr><td width="50%" valign="top" style="padding:18px 18px 18px 20px;border-right:1px solid #385343;"><p style="margin:0 0 9px;color:#e8b44f;font-size:12px;font-weight:700;letter-spacing:1.3px;">ROUND LEADERS</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${scoreRows(roundLeaders)}</table></td><td width="50%" valign="top" style="padding:18px 20px 18px 18px;"><p style="margin:0 0 9px;color:#e8b44f;font-size:12px;font-weight:700;letter-spacing:1.3px;">OVERALL · YOU ARE #${overallRank}</p><table role="presentation" width="100%" cellspacing="0" cellpadding="0">${scoreRows(overallLeaders)}</table></td></tr></table></td></tr><tr><td align="center" style="padding:2px 34px 30px;"><a href="${escapeHtml(leagueUrl)}" style="display:inline-block;background:#e16b2c;color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;padding:14px 24px;border-radius:999px;">See standings &amp; make next picks</a></td></tr><tr><td style="padding:18px 34px 24px;background:#e9dfc8;color:#655e50;font-size:12px;line-height:18px;">This report uses the published Outlast 51 league results and scoring only. Contact Mike if you no longer want league emails.</td></tr></table></td></tr></table></body></html>`;
-  return {
-    subject,
-    previewText: `${playerName}, you scored ${points(roundPoints)} in Episode ${episodeId}.`,
-    plainText,
-    html,
-  };
+    `Hi ${firstName(playerName)},`, "", ...scoreLines, "",
+    "Your next move starts at camp. Check the league for your next picks.",
+    `League: ${leagueUrl}`,
+    "The website's scorecards and cast status may reveal episode outcomes. Open when you are caught up.",
+    "", "Unofficial Outlast 51 Family League. Contact Mike if you no longer want league emails.",
+  ].join("\n");
+  const previewText = "Your weekly camp dispatch and fantasy league check-in. No episode outcomes inside.";
+  const html = `<!doctype html><html><body style="margin:0;background:#081912;font-family:Arial,Helvetica,sans-serif;"><div style="display:none;max-height:0;overflow:hidden;">${escapeHtml(previewText)}</div><table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:24px 12px;"><table role="presentation" width="100%" style="max-width:640px;background:#f6f0df;border-radius:16px;"><tr><td style="padding:28px;background:#102a1c;border-bottom:5px solid #e16b2c;"><p style="color:#e8b44f;letter-spacing:2px;font-size:12px;">OUTLAST 51 · SPOILER-FREE</p><h1 style="margin:0;color:#fff8e7;font:700 36px Georgia,serif;">Tree Mail</h1></td></tr><tr><td style="padding:28px;color:#16291f;font-size:16px;line-height:25px;white-space:pre-wrap;overflow-wrap:anywhere;">${escapeHtml(plainText)}</td></tr></table></td></tr></table></body></html>`;
+  return { subject, previewText, plainText, html };
 }
