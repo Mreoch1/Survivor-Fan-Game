@@ -2,6 +2,7 @@ import { getChatGPTUser, chatGPTSignInPath, chatGPTSignOutPath } from "../chatgp
 import { profileIcon } from "../profile-icons";
 import { createAdminClient } from "../../lib/supabase/admin";
 import { CommunityNotifications } from "./CommunityNotifications";
+import { LeagueUpdates } from "./LeagueUpdates";
 
 export async function AppShell({ children }: { children: React.ReactNode }) {
   const user = await getChatGPTUser();
@@ -20,6 +21,8 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
         {user ? <div className="account-actions"><a className="account-pill" href="/profile" title={profile?.display_name || user.displayName}><span aria-hidden="true">{icon.symbol}</span> Profile</a><a className="signout-link" href={chatGPTSignOutPath("/")}>Sign out</a></div> : <a className="account-pill" href={chatGPTSignInPath("/play")}>Sign in <span className="arrow">→</span></a>}
       </div>
     </header>
+    <div className="league-help-bar"><div className="wrap"><a href="/save">Save to my phone</a><a href="/updates">What&apos;s new</a></div></div>
+    {user && <LeagueUpdates/>}
     {children}
     <footer><div className="wrap footer-inner"><div className="brand"><span className="brand-mark">51</span><span>OUTLAST<br/><small>FANTASY LEAGUE</small></span></div><p>Made for family, friends, and bragging rights.<br/>Unofficial fan league. Not affiliated with CBS or Paramount.</p><div><a href="/messages">Private Messages</a><a href="/rules">Rules</a><a href="/commissioner">Commissioner</a></div></div></footer>
   </>;
