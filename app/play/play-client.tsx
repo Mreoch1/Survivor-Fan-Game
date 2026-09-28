@@ -6,10 +6,10 @@ import { Countdown } from "../components/Countdown";
 import { profileIcon } from "../profile-icons";
 import { getPickCompletion, getPickSaveState, isPickDirty, savePickRequest, type WeeklyPickDraft } from "../../lib/pick-form";
 
-type Castaway={id:string;name:string;tribe:string;image:string;status:string};
+type Castaway={id:string;name:string;tribe:string;image:string;status:string;departureLabel?:"Voted out"|"Left the game"};
 type Percent={value:string;count:number;percent:number};
 type SeasonPick={stage:"opening"|"waiting"|"repick"|"locked";originalId:string;originalName:string|null;endgameId:string;endgameName:string|null;switched:boolean;individualGamePoints:number;endgamePoints:number;repickClosesAt:string|null;updatedAt:string|null};
-type LeagueData={joined:boolean;profile?:{displayName:string;teamName:string;immunityStreak:number};episode:{id:number;title:string;airAt:string;lockAt:string;phase:string;bonusQuestion:string;bonusOptions:string[]};castaways:Castaway[];pick?:{favoriteId:string;immunityPick:string;bootPick:string;bonusPick:string;shotInTheDark:string;carriedFromEpisodeId:number|null;updatedAt:string};seasonPick:SeasonPick;leaderboard:{id:string;rank:number;name:string;teamName:string;avatarKey:string;points:number;badges:string[]}[];locked:boolean;preseasonLocked:boolean;pickPercentages:null|Record<string,Percent[]>;pendingReveal?:{id:number;title:string;revealAt:string};shotInTheDarkAvailable:boolean};
+type LeagueData={joined:boolean;profile?:{displayName:string;teamName:string;immunityStreak:number};episode:{id:number;title:string;airAt:string;lockAt:string;phase:string;bonusQuestion:string;bonusOptions:string[]};castaways:Castaway[];departedCastaways?:Castaway[];pick?:{favoriteId:string;immunityPick:string;bootPick:string;bonusPick:string;shotInTheDark:string;carriedFromEpisodeId:number|null;updatedAt:string};seasonPick:SeasonPick;leaderboard:{id:string;rank:number;name:string;teamName:string;avatarKey:string;points:number;badges:string[]}[];locked:boolean;preseasonLocked:boolean;pickPercentages:null|Record<string,Percent[]>;pendingReveal?:{id:number;title:string;revealAt:string};shotInTheDarkAvailable:boolean};
 
 export function PlayClient() {
   const [data, setData] = useState<LeagueData | null>(null);
@@ -64,7 +64,8 @@ export function PlayClient() {
   const locked = deadlinePassed || waitingForReveal;
   const endgameDirty = endgamePick !== data.seasonPick.endgameId;
   const endgameLocked = Boolean(data.seasonPick.repickClosesAt && now >= Date.parse(data.seasonPick.repickClosesAt));
-  const name = (id: string) => data.castaways.find(c => c.id === id)?.name || id;
+  const favoriteCastaways = [...data.castaways, ...(data.departedCastaways || [])].sort((a, b) => a.name.localeCompare(b.name));
+  const name = (id: string) => favoriteCastaways.find(c => c.id === id)?.name || id;
   const choice = (value: string) => value ? name(value) : "No pick yet";
   const immunityChoice = immunity ? (data.episode.phase === "individual" ? choice(immunity) : immunity) : "No pick yet";
   const shotChoice = shot === "immunity" ? `Immunity Pick · ${immunityChoice}` : shot === "boot" ? `Vote-Out Pick · ${choice(boot)}` : shot === "bonus" ? `Play Your Advantage · ${bonus || "No pick yet"}` : !shotAvailable ? "Already used this season" : "Saved for a later episode";
@@ -129,7 +130,15 @@ export function PlayClient() {
       <section className="panel" id="weekly-favorite" tabIndex={-1} aria-labelledby="favorite-heading">
         <div className="panel-title"><div><p className="eyebrow">Required · 1 point · +1 underdog bonus</p><h2 id="favorite-heading">1. Weekly Favorite</h2></div><span className="status-pill">{favorite ? "Selected" : "Needed"}</span></div>
         <p className="pick-help">Who will survive this episode? Earn an extra point if fewer than 20% of submitted favorites choose the same survivor.</p>
-        <div className="pick-options">{data.castaways.map(c => <div className={`pick-option ${c.tribe.toLowerCase()}`} key={c.id}><input aria-label={`Choose ${c.name} as your Weekly Favorite Pick`} disabled={locked} checked={favorite === c.id} onChange={() => setFavorite(c.id)} id={`fav-${c.id}`} name="favorite" type="radio"/><label htmlFor={`fav-${c.id}`}><span className="avatar"><Image src={c.image} alt="" width={38} height={38}/></span><span><strong>{c.name}</strong><small>{c.tribe === "Unassigned" ? "Tribe TBA" : c.tribe}</small></span></label></div>)}</div>
+        {Boolean(data.departedCastaways?.length) && <p className="pick-help pick-departure-guide">A red X means this player has left the game and cannot be picked.</p>}
+        <div className="pick-options">{favoriteCastaways.map(c => {
+          const departed = c.status === "eliminated";
+          const departureLabel = c.departureLabel || "Left the game";
+          return <div className={`pick-option ${c.tribe.toLowerCase()}${departed ? " pick-option-departed" : ""}`} key={c.id}>
+            <input aria-label={departed ? `${c.name}: ${departureLabel}. Not available for Weekly Favorite.` : `Choose ${c.name} as your Weekly Favorite Pick`} disabled={locked || departed} checked={favorite === c.id} onChange={() => { if (!locked && !departed) setFavorite(c.id); }} id={`fav-${c.id}`} name="favorite" type="radio"/>
+            <label htmlFor={`fav-${c.id}`}><span className="avatar"><Image src={c.image} alt="" width={38} height={38}/>{departed && <span className="pick-departure-x" aria-hidden="true"><svg viewBox="0 0 100 100" focusable="false"><path d="M15 15L85 85M85 15L15 85"/></svg></span>}</span><span><strong>{c.name}</strong>{departed ? <small className="pick-departure-label">{departureLabel} · Cannot pick</small> : <small>{c.tribe === "Unassigned" ? "Tribe TBA" : c.tribe}</small>}</span></label>
+          </div>;
+        })}</div>
         <PickReceipt label="Weekly Favorite" value={choice(favorite)}/>
       </section>
       <section className="panel prediction-panel" id="weekly-immunity" tabIndex={-1} aria-labelledby="immunity-heading">

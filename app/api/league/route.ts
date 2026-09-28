@@ -4,6 +4,7 @@ import { createAdminClient } from "../../../lib/supabase/admin";
 import { ensureDatabase, publishDueResults } from "../../../db/runtime";
 import { carryForwardPicks } from "../../../db/pick-carryover";
 import { loadSeasonDashboard } from "../../../db/season";
+import { loadCastDepartures } from "../../../db/cast-status";
 
 import { isTeamNameConflict, normalizeTeamName, TEAM_NAME_TAKEN } from "../../../lib/team-name";
 
@@ -54,6 +55,16 @@ export async function GET(){
 
  const statusMap=new Map((statuses||[]).map(status=>[status.castaway_id,status.status]));
  const activeCastaways=castaways.filter(c=>(statusMap.get(c.id)||"active")==="active");
+ // Disabled Favorite cards need both an ineligible status and a spoiler-safe departure label.
+ // If labels cannot load, preserve the existing active-only pick form without guessing a departure.
+ const revealedDepartures=(statuses||[]).some(status=>status.status==="eliminated")?await loadCastDepartures().catch(()=>{
+  console.error("Departed castaway labels could not be loaded");
+  return null;
+ }):null;
+ const departedCastaways=castaways.flatMap(c=>{
+  const departure=revealedDepartures?.get(c.id);
+  return statusMap.get(c.id)==="eliminated"&&departure?[{...c,status:"eliminated",departureLabel:departure.label}]:[];
+ });
  const currentStanding=standings.find(standing=>standing.id===profile.id);
  const {data:nextAfterIndividual}=individualEvent?await db.from("episodes").select("id,lock_at").gt("id",individualEvent.id).order("id").limit(1).maybeSingle():{data:null};
  const repickClosesAt=nextAfterIndividual?.lock_at||null;
@@ -66,6 +77,7 @@ export async function GET(){
   profile:{displayName:profile.display_name,teamName:profile.team_name,immunityStreak:profile.immunity_streak},
   episode:{id:episode.id,title:episode.title,airAt:episode.air_at,lockAt:episode.lock_at,revealAt:episode.reveal_at,phase:episode.phase,bonusQuestion:episode.bonus_question,bonusOptions:episode.bonus_options},
   castaways:activeCastaways.map(c=>({...c,status:"active"})),
+  departedCastaways,
   pick:pick?{favoriteId:pick.favorite_id,immunityPick:pick.immunity_pick,bootPick:pick.boot_pick,bonusPick:pick.bonus_pick,shotInTheDark:pick.double_down,carriedFromEpisodeId:pick.carried_from_episode_id,updatedAt:pick.updated_at}:null,
   seasonPick:{stage:seasonPickStage,originalId:profile.individual_game_pick||"",originalName:castawayName(profile.individual_game_pick),endgameId:profile.endgame_pick||"",endgameName:castawayName(profile.endgame_pick),switched:Boolean(profile.endgame_pick_switched),individualGamePoints:Number(profile.individual_game_points||0),endgamePoints:Number(profile.endgame_points||0),repickClosesAt,updatedAt:profile.endgame_pick_updated_at},
   leaderboard,locked,preseasonLocked,pickPercentages,
