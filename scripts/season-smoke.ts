@@ -9,6 +9,7 @@ import { once } from "node:events";
 import { input } from "../tests/fixtures/season";
 import { castaways } from "../app/data";
 import { publishedUpdates } from "../lib/league-updates";
+import { DEFAULT_ADVANTAGE_QUESTION } from "../lib/advantage-question";
 
 const serve = process.argv.includes("--serve");
 const appPort = Number(process.env.SMOKE_APP_PORT || 3107);
@@ -278,10 +279,14 @@ try {
   assert.equal(ownName.status, 200, "Keeping your own team name is allowed");
   assert.equal((await ownName.json()).profile.teamName, "Camp Alpha");
   const schedule = (body: object) => fetch(`${appUrl}/api/automation/commissioner`, { method: "POST", headers: { authorization: "Bearer fixture-automation", "content-type": "application/json" }, body: JSON.stringify(body) });
+  const tooLong = await schedule({ episodeId: 6, title: "Overlong question", airAt: "2999-01-09T00:00:00Z", phase: "individual", bonusQuestion: `${DEFAULT_ADVANTAGE_QUESTION} Another scoring condition.`, bonusOptions: ["Yes", "No"] });
+  assert.equal(tooLong.status, 400, "Question conditions must never be silently truncated");
+  assert.match((await tooLong.json()).error, /140 characters/);
   const scheduled = await schedule({ episodeId: 6, title: "Default question", airAt: "2999-01-09T00:00:00Z", phase: "individual" });
   assert.equal(scheduled.status, 200);
   const defaultEpisode = await scheduled.json();
-  assert.equal(defaultEpisode.bonusQuestion, "Will an idol be played?");
+  assert.equal(defaultEpisode.bonusQuestion, DEFAULT_ADVANTAGE_QUESTION);
+  assert.ok(defaultEpisode.bonusQuestion.length <= 140, "The complete default must fit without dropping its scoring conditions");
   assert.deepEqual(defaultEpisode.bonusOptions, ["Yes", "No"]);
   const previewEpisode = await schedule({ episodeId: 7, title: "A new preview", airAt: "2999-01-16T00:00:00Z", phase: "individual", bonusQuestion: "Will an idol be found?", bonusOptions: ["Yes", "No"] });
   assert.equal(previewEpisode.status, 200);

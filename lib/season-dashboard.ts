@@ -26,6 +26,7 @@ export type SeasonResult = {
   episode_id: number;
   departures: unknown;
   immunity_void: boolean;
+  bonus_answer?: string;
   finale_winner: string | null;
   finalists: unknown;
 };
@@ -43,7 +44,7 @@ type PublicEpisodeScore = {
   rows: PublicPointRow[];
 };
 
-function pointOutcome(row: PointRow, pick: SeasonPick | null, immunityVoid: boolean) {
+function pointOutcome(row: PointRow, pick: SeasonPick | null, immunityVoid: boolean, bonusVoid: boolean) {
   switch (row.label) {
     case "Weekly Favorite Pick":
       return !pick?.favorite_id ? "No pick on file" : row.points > 0 ? "Not voted out" : "Voted out";
@@ -52,12 +53,14 @@ function pointOutcome(row: PointRow, pick: SeasonPick | null, immunityVoid: bool
     case "Vote-Out Pick":
       return !pick?.boot_pick ? "No pick on file" : row.points > 0 ? "Correct prediction" : "Incorrect prediction";
     case "Play Your Advantage":
+      if (bonusVoid) return "Question voided — no points awarded";
       return !pick?.bonus_pick ? "Skipped · no points risked" : row.points > 0 ? "Correct answer" : row.points < 0 ? "Incorrect answer" : "No points awarded";
     case "Underdog Bonus":
       return "Fewer than 20% chose this favorite, who stayed in the game";
     case "Immunity Streak":
       return "Three consecutive correct immunity picks";
     case "Shot in the Dark":
+      if (bonusVoid && pick?.double_down === "bonus") return "Question voided — no extra points awarded";
       return row.points > 0 ? "Extra reward for a correct prediction" : "No extra points earned";
     case "Opening Outlast Pick":
       return row.selection === "No pick on file" ? "No pick on file" : row.points > 0 ? "Reached the individual game" : "Did not reach the individual game";
@@ -146,7 +149,8 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
       });
       totals.set(profile.id, (totals.get(profile.id) || 0) + breakdown.roundPoints);
       return { id: profile.id, points: breakdown.roundPoints, hasPick: Boolean(pick), ...breakdown,
-        rows: breakdown.rows.map(row => ({ ...row, outcome: pointOutcome(row, pick, result.immunity_void) })),
+        // Only an explicitly empty published answer means void; an absent legacy field does not.
+        rows: breakdown.rows.map(row => ({ ...row, outcome: pointOutcome(row, pick, result.immunity_void, result.bonus_answer === "") })),
       };
     });
     const roundRanks = rankScores(rounds);
