@@ -101,6 +101,85 @@ test("Play Your Advantage penalties reduce the same season total and zero ranks 
   const dashboard = buildSeasonDashboard(args);
   assert.equal(dashboard.totalPoints, -1);
   assert.equal(dashboard.history[0].points, -1);
-  assert.deepEqual(dashboard.history[0].rows.find(row => row.label === "Play Your Advantage"), { label: "Play Your Advantage", selection: "Yes", points: -1 });
+  assert.deepEqual(dashboard.history[0].rows.find(row => row.label === "Play Your Advantage"), { label: "Play Your Advantage", selection: "Yes", points: -1, outcome: "Incorrect answer" });
   assert.deepEqual(dashboard.overall.map(row => [row.name, row.points, row.rank]), [["Camp Bravo (Blair)", 0, 1], ["Camp Alpha (Alex)", -1, 2]]);
+});
+
+
+test("every member's episode categories reconcile to their running total without selection fields", () => {
+  const dashboard = buildSeasonDashboard(input());
+  for (const member of dashboard.overall) {
+    assert.equal(member.episodes.reduce((total, episode) => total + episode.points, 0), member.points);
+    assert.equal(member.episodes[0].totalPoints, member.points);
+    assert.equal(member.latestPoints, member.episodes[0].points);
+    assert.equal(member.latestEpisodeId, 4);
+    for (const episode of member.episodes) {
+      assert.equal(episode.rows.reduce((total, row) => total + row.points, 0), episode.points);
+      assert.ok(episode.rows.every(row => Object.keys(row).sort().join(",") === "label,outcome,points"));
+    }
+  }
+  assert.equal(dashboard.latestPublishedEpisodeId, 4);
+  assert.equal(dashboard.overall[0].latestPoints, 4.5);
+  assert.equal(dashboard.overall[1].latestPoints, 8);
+  assert.match(dashboard.overall[0].episodes[0].rows.at(-1)!.outcome, /Final three.*half points/);
+});
+
+test("member score drilldowns strip every other player's weekly and season selection", () => {
+  const args = input();
+  args.profiles = args.profiles.map(profile => profile.id === "b" ? {
+    ...profile, individual_game_pick: "PRIVATE_OPENING", endgame_pick: "PRIVATE_FINAL",
+  } : profile);
+  args.picks = args.picks.map(row => row.user_id === "b" ? {
+    ...row, favorite_id: "PRIVATE_FAVORITE", immunity_pick: "PRIVATE_IMMUNITY",
+    boot_pick: "PRIVATE_VOTE", bonus_pick: "PRIVATE_ANSWER", double_down: "boot",
+  } : row);
+  const dashboard = buildSeasonDashboard(args);
+  assert.equal(dashboard.overall.find(member => member.id === "b")!.episodes.length, 4);
+  assert.doesNotMatch(JSON.stringify(dashboard), /PRIVATE_/);
+  assert.ok(dashboard.history[0].rows.some(row => row.selection === "safe"), "The viewer keeps their own selections");
+});
+
+test("public drilldowns keep hidden rounds and future awards out of all payloads", () => {
+  const args = input();
+  args.episodes = [episode(1), episode(2, { title: "SECRET_UNPUBLISHED", results_published: false }), episode(3, { title: "SECRET_EARLY", reveal_at: "2999-01-01T00:00:00Z" })];
+  const dashboard = buildSeasonDashboard(args);
+  assert.equal(dashboard.latestPublishedEpisodeId, 1);
+  assert.ok(dashboard.overall.every(member => member.episodes.length === 1 && member.latestEpisodeId === 1));
+  assert.doesNotMatch(JSON.stringify(dashboard), /SECRET_|Opening Outlast Pick|Final Torch Pick/);
+});
+
+test("outcomes distinguish missing, skipped, incorrect, void, and bonus points", () => {
+  const args = input();
+  args.episodes = [episode(1), episode(2)];
+  args.results[1].immunity_void = true;
+  args.picks = [pick("a", 1, { favorite_id: "", favorite_point: 0, bonus_point: -1, immunity_point: 0 }),
+    pick("a", 2, { immunity_point: 0, bonus_pick: "", underdog_point: 1, streak_point: 2, double_down: "boot", double_point: 0 })];
+  const dashboard = buildSeasonDashboard(args);
+  const [second, first] = dashboard.overall.find(member => member.isYou)!.episodes;
+  assert.equal(first.rows.find(row => row.label === "Weekly Favorite Pick")!.outcome, "No pick on file");
+  assert.equal(first.rows.find(row => row.label === "Immunity Pick")!.outcome, "Incorrect prediction");
+  assert.equal(first.rows.find(row => row.label === "Play Your Advantage")!.outcome, "Incorrect answer");
+  assert.match(second.rows.find(row => row.label === "Immunity Pick")!.outcome, /Void.*streak preserved/);
+  assert.match(second.rows.find(row => row.label === "Play Your Advantage")!.outcome, /Skipped/);
+  assert.match(second.rows.find(row => row.label === "Underdog Bonus")!.outcome, /Fewer than 20%/);
+  assert.match(second.rows.find(row => row.label === "Immunity Streak")!.outcome, /Three consecutive/);
+  assert.equal(second.rows.find(row => row.label === "Shot in the Dark")!.outcome, "No extra points earned");
+  assert.equal(dashboard.overall.find(member => member.id === "b")!.episodes[0].points, 0);
+});
+
+test("leaderboard movement follows shared ranks and late members get no invented episode", () => {
+  const args = input();
+  args.episodes = [episode(1), episode(2)];
+  args.picks = [pick("a", 1), pick("b", 1, { immunity_point: 0 }), pick("a", 2, { immunity_point: 0 }), pick("b", 2)];
+  args.profiles = [...profiles, { ...profiles[0], id: "new", display_name: "New", team_name: "New Camp", league_joined_at: "2026-10-01T00:00:00Z", individual_game_pick: null, endgame_pick: null }];
+  const dashboard = buildSeasonDashboard(args);
+  const rising = dashboard.overall.find(member => member.id === "b")!;
+  assert.equal(rising.rank, 1);
+  assert.equal(rising.movement, 1);
+  assert.equal(rising.episodes[0].movement, 1);
+  const newcomer = dashboard.overall.find(member => member.id === "new")!;
+  assert.deepEqual(newcomer.episodes, []);
+  assert.equal(newcomer.latestPoints, null);
+  assert.equal(newcomer.latestEpisodeId, null);
+  assert.equal(newcomer.movement, null);
 });

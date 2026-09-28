@@ -1,4 +1,4 @@
-import { buildPointBreakdown, type RecapPick } from "./recap-email";
+import { buildPointBreakdown, type PointRow, type RecapPick } from "./recap-email";
 import { playerLabel } from "./player-label";
 import { scoreSeasonPick } from "./scoring";
 
@@ -30,6 +30,46 @@ export type SeasonResult = {
   finalists: unknown;
 };
 export type SeasonPick = RecapPick & { user_id: string; episode_id: number };
+
+type PublicPointRow = { label: string; points: number; outcome: string };
+type PublicEpisodeScore = {
+  episodeId: number;
+  title: string;
+  points: number;
+  totalPoints: number;
+  roundRank: number;
+  overallRank: number;
+  movement: number | null;
+  rows: PublicPointRow[];
+};
+
+function pointOutcome(row: PointRow, pick: SeasonPick | null, immunityVoid: boolean) {
+  switch (row.label) {
+    case "Weekly Favorite Pick":
+      return !pick?.favorite_id ? "No pick on file" : row.points > 0 ? "Not voted out" : "Voted out";
+    case "Immunity Pick":
+      return immunityVoid ? "Void · existing streak preserved" : !pick?.immunity_pick ? "No pick on file" : row.points > 0 ? "Correct prediction" : "Incorrect prediction";
+    case "Vote-Out Pick":
+      return !pick?.boot_pick ? "No pick on file" : row.points > 0 ? "Correct prediction" : "Incorrect prediction";
+    case "Play Your Advantage":
+      return !pick?.bonus_pick ? "Skipped · no points risked" : row.points > 0 ? "Correct answer" : row.points < 0 ? "Incorrect answer" : "No points awarded";
+    case "Underdog Bonus":
+      return "Fewer than 20% chose this favorite, who stayed in the game";
+    case "Immunity Streak":
+      return "Three consecutive correct immunity picks";
+    case "Shot in the Dark":
+      return row.points > 0 ? "Extra reward for a correct prediction" : "No extra points earned";
+    case "Opening Outlast Pick":
+      return row.selection === "No pick on file" ? "No pick on file" : row.points > 0 ? "Reached the individual game" : "Did not reach the individual game";
+    case "Final Torch Pick":
+      if (row.selection === "No pick on file") return "No pick on file";
+      if (row.points === 10 || row.points === 5) return row.points === 5 ? "Winner · switched pick earns half points" : "Winner award";
+      if (row.points === 3 || row.points === 1.5) return row.points === 1.5 ? "Final three · switched pick earns half points" : "Final-three award";
+      return "No finale award";
+    default:
+      return "No points awarded";
+  }
+}
 
 function rankScores(rows: { id: string; points: number }[]) {
   const sorted = [...rows].sort((a, b) => b.points - a.points || a.id.localeCompare(b.id));
@@ -72,6 +112,7 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
   const totals = new Map(profiles.map(profile => [profile.id, 0]));
   let previousRanks = new Map<string, number>();
   const history = [];
+  const memberHistory = new Map(profiles.map(profile => [profile.id, [] as PublicEpisodeScore[]]));
   let spotlight: {
     episodeId: number; title: string; winners: string[]; winningPoints: number;
     climbers: string[]; placesClimbed: number; voteOutReaders: string[];
@@ -104,10 +145,23 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
         finale: episode.id === finaleEpisode?.id, endgamePick: endgame, endgamePoints: season.endgamePoints,
       });
       totals.set(profile.id, (totals.get(profile.id) || 0) + breakdown.roundPoints);
-      return { id: profile.id, points: breakdown.roundPoints, hasPick: Boolean(pick), ...breakdown };
+      return { id: profile.id, points: breakdown.roundPoints, hasPick: Boolean(pick), ...breakdown,
+        rows: breakdown.rows.map(row => ({ ...row, outcome: pointOutcome(row, pick, result.immunity_void) })),
+      };
     });
     const roundRanks = rankScores(rounds);
     const overallRanks = rankScores(eligible.map(profile => ({ id: profile.id, points: totals.get(profile.id) || 0 })));
+    for (const round of rounds) {
+      const overall = overallRanks.find(row => row.id === round.id)!;
+      // Explicit allowlist: never serialize another member's pick values, even inside collapsed UI.
+      memberHistory.get(round.id)!.push({
+        episodeId: episode.id, title: episode.title, points: round.points,
+        totalPoints: overall.points, roundRank: roundRanks.find(row => row.id === round.id)!.rank,
+        overallRank: overall.rank,
+        movement: previousRanks.has(round.id) ? previousRanks.get(round.id)! - overall.rank : null,
+        rows: round.rows.map(row => ({ label: row.label, points: row.points, outcome: row.outcome })),
+      });
+    }
     const myRound = rounds.find(round => round.id === viewerId);
     const myOverall = overallRanks.find(row => row.id === viewerId);
     if (myRound && myOverall) {
@@ -133,14 +187,21 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
     previousRanks = new Map(overallRanks.map(row => [row.id, row.rank]));
   }
   const publicBoard = (scores: Map<string, number>) => rankScores(profiles.map(profile => ({ id: profile.id, points: scores.get(profile.id) || 0 })))
-    .map(row => ({ name: name(row.id), points: row.points, rank: row.rank,
-      avatarKey: profiles.find(profile => profile.id === row.id)!.avatar_key, isYou: row.id === viewerId }));
+    .map(row => {
+      const episodes = [...memberHistory.get(row.id)!].reverse();
+      const latest = episodes[0];
+      return { id: row.id, name: name(row.id), points: row.points, rank: row.rank,
+        avatarKey: profiles.find(profile => profile.id === row.id)!.avatar_key, isYou: row.id === viewerId,
+        latestPoints: latest?.points ?? null, latestEpisodeId: latest?.episodeId ?? null,
+        movement: latest?.movement ?? null, episodes };
+    });
   const overall = publicBoard(totals);
   return {
     playerName: playerLabel(viewer.team_name, viewer.display_name),
     totalPoints: totals.get(viewerId) || 0,
     overallRank: published.length ? overall.find(row => row.isYou)!.rank : null,
     history: history.reverse(), overall, spotlight,
+    latestPublishedEpisodeId: published.at(-1)?.id ?? null,
   };
 }
 
