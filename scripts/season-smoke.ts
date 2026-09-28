@@ -26,6 +26,28 @@ const hidden = { ...episodes[0], id: 99, title: "HIDDEN_FUTURE_EPISODE", individ
 let emptySeason = false;
 let playMode = false;
 let negativeRound = false;
+let castReviewMode = false;
+let castQueryFailure: "episodes" | "episode_results" | null = null;
+let eliminatedStatusMode = false;
+let prematureStatusMode = false;
+let departureLabelsFailure = false;
+let serveDepartedCard = false;
+const departureCast = { voted: castaways[1], medical: castaways[5], quit: castaways[6], hidden: castaways[7], early: castaways[8] };
+const revealedDepartures = [
+  { castawayId: departureCast.voted.id, type: "vote" },
+  { castawayId: departureCast.medical.id, type: "medical" },
+  { castawayId: departureCast.quit.id, type: "quit" },
+];
+const castReviewEpisodes = [
+  episodes[0],
+  { ...hidden, id: 98, reveal_at: "2025-01-01T13:00:00Z" },
+  { ...hidden, results_published: true },
+];
+const castReviewResults = [
+  { ...results[0], departures: revealedDepartures },
+  { ...results[0], episode_id: 98, departures: [{ castawayId: departureCast.hidden.id, type: "vote" }] },
+  { ...results[0], episode_id: 99, departures: [{ castawayId: departureCast.early.id, type: "vote" }] },
+];
 type Row = Record<string, unknown>;
 const playEpisodes: Row[] = [...episodes, { ...episodes[3], id: 5, title: "Preview predictions", individual_game_started: false, results_posted: false, results_published: false, lock_at: "2999-01-01T23:00:00Z", air_at: "2999-01-02T00:00:00Z", reveal_at: "2999-01-02T13:00:00Z", bonus_question: "Will an idol be found?" }];
 const playPicks: Row[] = structuredClone(picks);
@@ -61,12 +83,20 @@ const server = createServer(async (request, response) => {
     return response.end(JSON.stringify({ message: "Smoke database is read-only" }));
   }
   queries.push(url.pathname + url.search);
+  if ((castReviewMode && table === castQueryFailure) || (departureLabelsFailure && table === "episodes" && url.searchParams.get("select") === "id,reveal_at,results_published")) {
+    response.statusCode = 503;
+    return response.end(JSON.stringify({ message: "Cast fixture query unavailable" }));
+  }
   const scoredPicks = picks.map(pick => pick.user_id === "b" ? {
     ...pick, favorite_id: "PRIVATE_OTHER_FAVORITE", immunity_pick: "PRIVATE_OTHER_IMMUNITY",
     boot_pick: "PRIVATE_OTHER_VOTE", bonus_pick: "PRIVATE_OTHER_ANSWER", double_down: "boot",
   } : negativeRound && pick.episode_id === 4 ? { ...pick, favorite_point: 0, immunity_point: 0, bonus_point: -1 } : pick);
   const scoredResults = negativeRound ? results.map(result => ({ ...result, finale_winner: null, finalists: [] })) : results;
-  const tables: Record<string, unknown[]> = { league_update_acknowledgements: serve ? profiles.flatMap(profile => publishedUpdates().map(update => ({ user_id: profile.id, update_id: update.id }))) : [], profiles, episodes: emptySeason ? [] : playMode ? playEpisodes : [...episodes, hidden], picks: playMode ? playPicks : [...scoredPicks, { ...picks[0], episode_id: 99, favorite_id: "SECRET_FUTURE_PICK", favorite_point: 99 }], episode_results: playMode ? results : [...scoredResults, { ...results[0], episode_id: 99, finale_winner: "SECRET_FUTURE_WINNER" }], private_messages: [] };
+  const departedStatuses = revealedDepartures.map(departure => ({ castaway_id: departure.castawayId, status: "eliminated" }));
+  if (prematureStatusMode) departedStatuses.push(...[departureCast.hidden, departureCast.early].map(castaway => ({ castaway_id: castaway.id, status: "eliminated" })));
+  const departedEpisodes = [...playEpisodes, { ...hidden, id: 98 }, { ...hidden, results_published: true }];
+  const departedResults = [...results.map(result => result.episode_id === 1 ? { ...result, departures: revealedDepartures } : result), ...castReviewResults.slice(1)];
+  const tables: Record<string, unknown[]> = { league_update_acknowledgements: serve ? profiles.flatMap(profile => publishedUpdates().map(update => ({ user_id: profile.id, update_id: update.id }))) : [], profiles, cast_status: eliminatedStatusMode ? departedStatuses : serveDepartedCard ? [{ castaway_id: departureCast.voted.id, status: "eliminated" }] : [], episodes: castReviewMode ? castReviewEpisodes : eliminatedStatusMode ? departedEpisodes : emptySeason ? [] : playMode ? playEpisodes : [...episodes, hidden], picks: playMode ? playPicks : [...scoredPicks, { ...picks[0], episode_id: 99, favorite_id: "SECRET_FUTURE_PICK", favorite_point: 99 }], episode_results: castReviewMode ? castReviewResults : eliminatedStatusMode ? departedResults : playMode ? results : [...scoredResults, { ...results[0], episode_id: 99, finale_winner: "SECRET_FUTURE_WINNER" }], private_messages: [] };
   let rows = (tables[table] || []) as Row[];
   for (const [field, filter] of url.searchParams) {
     if (["select", "order", "limit", "offset", "on_conflict"].includes(field)) continue;
@@ -190,6 +220,7 @@ try {
   };
   const carried = await league();
   assert.equal(carried.episode.id, 5);
+  assert.deepEqual(carried.departedCastaways, [], "An active choice is never duplicated as an eliminated card");
   assert.deepEqual(carried.leaderboard.map((row: { id: string; points: number; rank: number }) => [row.id, row.points, row.rank]), [["a", 21.5, 1], ["b", 20, 2]], "Play uses the same published totals/ranks as My Season, not stale profile totals");
   assert.ok(profiles.every(profile => profile.total_points === 0), "Reading the leaderboard does not repair or mutate stored scores");
   assert.ok(carried.leaderboard.every((row: Record<string, unknown>) => !("episodes" in row) && !("rows" in row) && !("history" in row)), "Play receives only leaderboard summaries");
@@ -260,8 +291,89 @@ try {
   const frozen = await schedule({ episodeId: 5, title: "Preview predictions", airAt: "2999-01-02T00:00:00Z", phase: "individual", bonusQuestion: "Will an idol be played?", bonusOptions: ["Yes", "No"] });
   assert.equal(frozen.status, 409, "Question wording cannot change after picks exist");
   assert.equal((await league()).episode.bonusQuestion, "Will an idol be found?");
-  console.log("Season and weekly-pick smoke passed: auth, current home status, scores, member breakdowns, private selections, spoilers, negative totals, required Vote-Out, optional advantage save/skip, fresh carryover, unique names, default question, and frozen saved questions.");
+  castReviewMode = true;
+  const castQueryStart = queries.length;
+  const castResponse = await fetch(`${appUrl}/cast`);
+  assert.equal(castResponse.status, 200);
+  const castHtml = (await castResponse.text()).replaceAll("<!-- -->", "");
+  const castCards = castHtml.match(/<article\b[^>]*>[\s\S]*?<\/article>/g) || [];
+  assert.equal(castCards.length, castaways.length, "Cast page keeps every original castaway card");
+  const cardFor = (name: string) => {
+    const card = castCards.find(card => card.includes(`<h2>${name}</h2>`));
+    assert.ok(card, `Card is present for ${name}`);
+    return card;
+  };
+  const votedCard = cardFor(departureCast.voted.name);
+  assert.match(votedCard, /cast-departure-x/);
+  assert.match(votedCard, /Voted out/);
+  assert.match(votedCard, /Not available for picks/);
+  for (const departed of [departureCast.medical, departureCast.quit]) {
+    const card = cardFor(departed.name);
+    assert.match(card, /cast-departure-x/);
+    assert.match(card, /Left the game/);
+    assert.match(card, /Not available for picks/);
+    assert.doesNotMatch(card, /Voted out/, "Medical removals and quits are never described as vote-outs");
+  }
+  for (const unrevealed of [departureCast.hidden, departureCast.early, castaways[0]]) {
+    assert.doesNotMatch(cardFor(unrevealed.name), /cast-departed|cast-departure-x|Voted out|Left the game|Not available for picks/, "Unpublished, early-published, and active castaways remain unmarked");
+  }
+  assert.ok(queries.slice(castQueryStart).some(query => query.includes("results_published=eq.true") && query.includes("reveal_at=lte.")), "Cast departure query enforces both spoiler gates");
+  for (const table of ["episodes", "episode_results"] as const) {
+    castQueryFailure = table;
+    const failedCastResponse = await fetch(`${appUrl}/cast`);
+    assert.equal(failedCastResponse.status, 200, "A status outage preserves the cast page");
+    const failedCast = (await failedCastResponse.text()).replaceAll("<!-- -->", "");
+    assert.match(failedCast, /status[^<]*unavailable/i);
+    const neutralCards = failedCast.match(/<article\b[^>]*>[\s\S]*?<\/article>/g) || [];
+    assert.equal(neutralCards.length, castaways.length);
+    for (const card of neutralCards) {
+      assert.doesNotMatch(card, /cast-departed|cast-departure-x|Voted out|Left the game|Still in the game|Not available for picks|Available for picks/, "Unknown status cannot claim a castaway is active or eliminated");
+    }
+  }
+  castQueryFailure = null;
+  castReviewMode = false;
+
+  eliminatedStatusMode = true;
+  const picksBeforeRejectedDepartures = JSON.stringify(playPicks);
+  const eligibleLeague = await league();
+  assert.deepEqual(eligibleLeague.departedCastaways.map((castaway: { id: string; status: string; departureLabel: string }) => [castaway.id, castaway.status, castaway.departureLabel]), [
+    [departureCast.voted.id, "eliminated", "Voted out"],
+    [departureCast.medical.id, "eliminated", "Left the game"],
+    [departureCast.quit.id, "eliminated", "Left the game"],
+  ], "Weekly Favorite receives only revealed departed cards with accurate labels");
+  assert.doesNotMatch(JSON.stringify(eligibleLeague.departedCastaways), /favorite_id|immunity_pick|boot_pick|bonus_pick|selection|PRIVATE_OTHER_|SECRET_FUTURE/);
+  assert.ok(eligibleLeague.departedCastaways.every((departed: { id: string }) => !eligibleLeague.castaways.some((active: { id: string }) => active.id === departed.id)), "Disabled cards never enter the active-only dropdown collection");
+  prematureStatusMode = true;
+  const earlyStatuses = await league();
+  assert.ok(earlyStatuses.departedCastaways.every((castaway: { id: string }) => ![departureCast.hidden.id, departureCast.early.id].includes(castaway.id)), "Unpublished and future results cannot label a departure even if cast status was changed early");
+  prematureStatusMode = false;
+  departureLabelsFailure = true;
+  const labelsUnavailable = await league();
+  assert.deepEqual(labelsUnavailable.departedCastaways, [], "Unavailable departure labels are never guessed");
+  assert.deepEqual(labelsUnavailable.castaways, eligibleLeague.castaways, "A label outage preserves the existing eligible choices");
+  departureLabelsFailure = false;
+  for (const departure of revealedDepartures) {
+    assert.ok(!eligibleLeague.castaways.some((castaway: { id: string }) => castaway.id === departure.castawayId), "All revealed departed castaways are unavailable for new picks");
+  }
+  assert.ok(eligibleLeague.castaways.some((castaway: { id: string }) => castaway.id === departureCast.hidden.id), "Hidden future departures do not remove a castaway from choices");
+  const activePicks = { ...core, bootPick: castIds.other };
+  for (const departure of revealedDepartures) {
+    const rejected = await savePick({ ...activePicks, favoriteId: departure.castawayId });
+    assert.equal(rejected.status, 400);
+    assert.match((await rejected.json()).error, /already left the game/);
+  }
+  for (const field of ["immunityPick", "bootPick"]) {
+    const rejected = await savePick({ ...activePicks, [field]: departureCast.voted.id });
+    assert.equal(rejected.status, 400);
+    assert.match((await rejected.json()).error, /already left the game/);
+  }
+  assert.equal(JSON.stringify(playPicks), picksBeforeRejectedDepartures, "Rejected eliminated picks preserve the existing saved selections");
+  eliminatedStatusMode = false;
+  console.log("Season and weekly-pick smoke passed: auth, current home status, scores, member breakdowns, private selections, spoilers, negative totals, revealed cast markers, disabled Favorite card data, eliminated-pick rejection, required Vote-Out, optional advantage save/skip, fresh carryover, unique names, default question, and frozen saved questions.");
   if (serve) {
+    // Keep one real fixture departure visible for browser review without changing ordinary smoke cases.
+    serveDepartedCard = true;
+    for (const pick of playPicks.filter(pick => pick.episode_id === 5)) pick.boot_pick = castIds.other;
     console.log(`Visual review: ${fixtureUrl}/sign-in`);
     await new Promise(() => {});
   }
