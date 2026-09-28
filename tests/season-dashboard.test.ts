@@ -105,6 +105,61 @@ test("Play Your Advantage penalties reduce the same season total and zero ranks 
   assert.deepEqual(dashboard.overall.map(row => [row.name, row.points, row.rank]), [["Camp Bravo (Blair)", 0, 1], ["Camp Alpha (Alex)", -1, 2]]);
 });
 
+test("a voided question explains zero for every answer, skip, and missing submission without changing historical choices", () => {
+  const args = input();
+  const originalQuestion = "Will an idol or advantage be played?";
+  args.episodes = [episode(1, { bonus_question: originalQuestion })];
+  args.results[0] = { ...args.results[0], bonus_answer: "" };
+  args.profiles = [...profiles,
+    { ...profiles[0], id: "skipped", display_name: "Skipped", team_name: "Skipped Camp" },
+    { ...profiles[0], id: "missing", display_name: "Missing", team_name: "Missing Camp" },
+  ];
+  args.picks = [pick("a", 1, { bonus_pick: "No", double_down: "bonus" }),
+    pick("b", 1, { bonus_pick: "Yes" }), pick("skipped", 1, { bonus_pick: "" })];
+  const dashboard = buildSeasonDashboard(args);
+  assert.equal(dashboard.history[0].bonusQuestion, originalQuestion);
+  assert.deepEqual(dashboard.history[0].rows.find(row => row.label === "Play Your Advantage"), {
+    label: "Play Your Advantage", selection: "No", points: 0, outcome: "Question voided — no points awarded",
+  });
+  assert.equal(dashboard.history[0].rows.find(row => row.label === "Shot in the Dark")?.outcome, "Question voided — no extra points awarded");
+  for (const member of dashboard.overall) {
+    const round = member.episodes[0];
+    assert.deepEqual(round.rows.find(row => row.label === "Play Your Advantage"), {
+      label: "Play Your Advantage", points: 0, outcome: "Question voided — no points awarded",
+    });
+    assert.equal(round.rows.reduce((sum, row) => sum + row.points, 0), round.points);
+    assert.equal(round.points, member.points);
+  }
+  assert.equal(dashboard.overall.find(member => member.id === "missing")?.points, 0);
+});
+
+test("a persisted void correction restores the penalty in all totals without changing other components", () => {
+  const args = input();
+  args.episodes = [episode(1)];
+  args.results[0] = { ...args.results[0], bonus_answer: "Yes" };
+  args.picks = [pick("a", 1, { bonus_pick: "No", bonus_point: -1 }), pick("b", 1, { bonus_pick: "" })];
+  const before = buildSeasonDashboard(args);
+  args.results[0] = { ...args.results[0], bonus_answer: "" };
+  args.picks[0] = { ...args.picks[0], bonus_point: 0 };
+  const after = buildSeasonDashboard(args);
+  assert.equal(after.totalPoints, before.totalPoints + 1);
+  assert.equal(after.history[0].points, before.history[0].points + 1);
+  assert.equal(after.overall.find(member => member.id === "a")!.points, before.overall.find(member => member.id === "a")!.points + 1);
+  assert.equal(after.overall.find(member => member.id === "b")!.points, before.overall.find(member => member.id === "b")!.points);
+  assert.deepEqual(after.history[0].rows.filter(row => row.label !== "Play Your Advantage"), before.history[0].rows.filter(row => row.label !== "Play Your Advantage"));
+});
+
+test("missing answer fields and hidden void results never imply a published void", () => {
+  const args = input();
+  args.episodes = [episode(1), episode(2, { results_published: false }), episode(3, { reveal_at: "2999-01-01T00:00:00Z" })];
+  args.results[1] = { ...args.results[1], bonus_answer: "" };
+  args.results[2] = { ...args.results[2], bonus_answer: "" };
+  args.picks[0] = { ...args.picks[0], bonus_point: -1 };
+  const dashboard = buildSeasonDashboard(args);
+  assert.equal(dashboard.history[0].rows.find(row => row.label === "Play Your Advantage")?.outcome, "Incorrect answer");
+  assert.doesNotMatch(JSON.stringify(dashboard), /Question voided/);
+});
+
 
 test("every member's episode categories reconcile to their running total without selection fields", () => {
   const dashboard = buildSeasonDashboard(input());

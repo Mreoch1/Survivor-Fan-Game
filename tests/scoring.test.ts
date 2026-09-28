@@ -30,3 +30,13 @@ test("Play Your Advantage is +1 correct, -1 wrong, and 0 when skipped", () => {
  assert.equal(rightWithShot.total, 2);
  assert.equal(scorePick({ ...base, doubleDown: "bonus" }).total, 0);
 });
+
+
+test("a voided question zeros every answer and its Shot while preserving other scores", () => {
+ const base = { favoriteId: "safe", immunityPick: "Savu", bootPick: "out", doubleDown: "bonus", voted: new Set(["out"]), departed: new Set(["out"]), immunityWinners: ["Savu"], bonusAnswer: "", immunityVoid: false, favoriteShare: .1 };
+ for (const bonusPick of ["Yes", "No", ""]) {
+  assert.deepEqual(scorePick({ ...base, bonusPick }), { favorite: 1, immunity: 2, boot: 3, bonus: 0, underdog: 1, doublePoint: 0, total: 7 });
+ }
+ assert.deepEqual(scorePick({ ...base, bonusPick: "Yes", doubleDown: "immunity" }), { favorite: 1, immunity: 2, boot: 3, bonus: 0, underdog: 1, doublePoint: 2, total: 9 });
+ assert.deepEqual(scorePick({ ...base, bonusPick: "No", doubleDown: "boot" }), { favorite: 1, immunity: 2, boot: 3, bonus: 0, underdog: 1, doublePoint: 3, total: 10 });
+});

@@ -38,7 +38,7 @@ export function SeasonView({ data }: { data: SeasonDashboard }) {
       <p className="board-footnote">Totals include weekly points, bonuses, and season awards. Equal scores share a rank. Rank movement compares scored episodes. Only revealed results appear; each player’s selections stay private.</p>
     </section>
     <section id="score-history" className="season-score-history" aria-labelledby="score-history-title">
-      <div className="season-heading"><p className="eyebrow">Your picks. Every point.</p><h2 id="score-history-title">Your season scorecard</h2><p>Your saved selections and scoring outcomes, episode by episode. Results appear after 9:00 AM ET the following morning.</p></div>
+      <div className="season-heading"><p className="eyebrow">Your picks. Every point.</p><h2 id="score-history-title">Your season scorecard</h2><p>Your saved selections and scoring outcomes, episode by episode. Results appear the following Monday at 6:30 AM ET.</p></div>
       {!latest ? <div className="season-empty"><span aria-hidden="true">◈</span><h3>Your story starts with a pick.</h3><p>Your published episode scores will collect here. Make this week’s picks and come back after the results reveal.</p><a className="button button-primary" href="/play">Make my picks →</a></div> :
         <div className="episode-ledger">{data.history.map((episode, index) => <details className="episode-card" key={episode.episodeId} open={index === 0}>
           <summary><span><small>EPISODE {episode.episodeId}</small><strong>{episode.title}</strong></span><span className="episode-points">{signed(episode.points)}<small>POINTS</small></span><span className="episode-toggle" aria-hidden="true">⌄</span></summary>

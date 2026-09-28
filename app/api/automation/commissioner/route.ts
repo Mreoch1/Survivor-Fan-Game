@@ -2,7 +2,7 @@ import { createAdminClient } from "../../../../lib/supabase/admin";
 import { ensureDatabase, publishDueResults } from "../../../../db/runtime";
 import { scheduleEpisode } from "../../../../db/schedule";
 
-import { DEFAULT_ADVANTAGE_OPTIONS, DEFAULT_ADVANTAGE_QUESTION } from "../../../../lib/advantage-question";
+import { ADVANTAGE_QUESTION_CHECKLIST, DEFAULT_ADVANTAGE_OPTIONS, DEFAULT_ADVANTAGE_QUESTION } from "../../../../lib/advantage-question";
 
 function authorized(request: Request) {
   const supplied = request.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
@@ -82,15 +82,17 @@ export async function GET(request: Request) {
     rules: {
       scheduleSource: "Verify CBS, Paramount, or Paramount Press Express first",
       lock: "One hour before airtime",
-      reveal: "9:00 AM America/Detroit the next morning",
+      reveal: "6:30 AM America/Detroit on the Monday after the local episode air date; Monday episodes reveal the next Monday",
       phaseValues: ["tribe", "individual"],
       phaseRule: individualGameRecorded
         ? "The individual game has been confirmed; schedule individual immunity picks."
         : "Keep tribe immunity unless the individual game was confirmed in an aired episode. Do not guess the transition.",
-      advantageQuestion: "Play Your Advantage: choose a different, objectively answerable question from the official pre-episode previews each week. Watching the previews should offer an edge. Avoid leaks, unaired outcomes, and near-duplicates in recent history. If no suitable preview is available, use the default question.",
+      advantageQuestion: "For a new episode, choose an objectively answerable Play Your Advantage question from official pre-episode previews. Watching previews should offer an edge. Clear scoring takes priority over novelty. Avoid leaks, unaired outcomes, and near-duplicates; use the exact default question and options when no suitable precise question is available.",
+      questionChecklist: ADVANTAGE_QUESTION_CHECKLIST,
+      existingQuestion: "For an existing target episode, preserve its stored question and choices. Do not rewrite already scheduled questions to apply the new wording standard.",
       defaultBonusQuestion: DEFAULT_ADVANTAGE_QUESTION,
       defaultBonusOptions: DEFAULT_ADVANTAGE_OPTIONS,
-      bonusOptions: "Two to four short, mutually exclusive choices",
+      bonusOptions: "Two to four short, mutually exclusive choices covering all outcomes; aired evidence must support exactly one answer",
       freeze: "Do not change phase, Play Your Advantage question, or choices after any player picks exist",
     },
   });

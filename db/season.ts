@@ -25,7 +25,7 @@ export async function loadSeasonDashboard(viewerId: string) {
       .select("user_id,episode_id,favorite_id,immunity_pick,boot_pick,bonus_pick,double_down,carried_from_episode_id,favorite_point,immunity_point,boot_point,bonus_point,underdog_point,streak_point,double_point")
       .in("episode_id", ids).order("episode_id").order("user_id").range(from, to)),
     readAllRows<SeasonResult>((from, to) => db.from("episode_results")
-      .select("episode_id,departures,immunity_void,finale_winner,finalists")
+      .select("episode_id,departures,immunity_void,bonus_answer,finale_winner,finalists")
       .in("episode_id", ids).order("episode_id").range(from, to)),
   ]) : [[], []];
   return buildSeasonDashboard({ viewerId, profiles, episodes, picks, results, now,
