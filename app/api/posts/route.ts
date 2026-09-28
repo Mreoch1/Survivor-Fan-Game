@@ -83,7 +83,7 @@ export async function POST(request: Request) {
   const locked = await spoilerWindow();
   if (locked) {
     return Response.json(
-      { error: "Campfire posting reopens after the 9:00 AM spoiler reveal", revealAt: locked.reveal_at },
+      { error: "Campfire posting reopens after the Monday 6:30 AM ET spoiler reveal", revealAt: locked.reveal_at },
       { status: 409 },
     );
   }
@@ -128,7 +128,7 @@ export async function PUT(request: Request) {
   const locked = await spoilerWindow();
   if (locked) {
     return Response.json(
-      { error: "Campfire voting reopens after the 9:00 AM spoiler reveal", revealAt: locked.reveal_at },
+      { error: "Campfire voting reopens after the Monday 6:30 AM ET spoiler reveal", revealAt: locked.reveal_at },
       { status: 409 },
     );
   }

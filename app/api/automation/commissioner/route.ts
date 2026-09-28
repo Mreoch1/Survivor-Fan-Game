@@ -82,7 +82,7 @@ export async function GET(request: Request) {
     rules: {
       scheduleSource: "Verify CBS, Paramount, or Paramount Press Express first",
       lock: "One hour before airtime",
-      reveal: "9:00 AM America/Detroit the next morning",
+      reveal: "6:30 AM America/Detroit on the Monday after the local episode air date; Monday episodes reveal the next Monday",
       phaseValues: ["tribe", "individual"],
       phaseRule: individualGameRecorded
         ? "The individual game has been confirmed; schedule individual immunity picks."

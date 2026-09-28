@@ -53,6 +53,18 @@ type Row = Record<string, unknown>;
 const playEpisodes: Row[] = [...episodes, { ...episodes[3], id: 5, title: "Preview predictions", individual_game_started: false, results_posted: false, results_published: false, lock_at: "2999-01-01T23:00:00Z", air_at: "2999-01-02T00:00:00Z", reveal_at: "2999-01-02T13:00:00Z", bonus_question: "Will an idol be found?" }];
 const playPicks: Row[] = structuredClone(picks);
 const queries: string[] = [];
+let resultTables: Record<string, Row[]> | null = null;
+let resultWriteFailure: { table: string; id?: string } | null = null;
+function freshResultTables(): Record<string, Row[]> {
+  const members = ["a", "b", "skipped"];
+  return {
+    profiles: members.map((id, index) => ({ ...profiles[index % profiles.length], id, total_points: 0, immunity_streak: 0, longest_streak: 0 })),
+    episodes: [{ ...episodes[0], id: 8, results_posted: false, results_published: false }],
+    picks: members.map((id, index) => ({ ...picks[0], id: `result-${id}`, user_id: id, episode_id: 8, bonus_pick: ["Yes", "No", ""][index], double_down: index < 2 ? "bonus" : "", favorite_point: 0, immunity_point: 0, boot_point: 0 })),
+    episode_results: [],
+    cast_status: [],
+  };
+}
 
 const fixtureSigningKey = randomBytes(32);
 function sessionFor(id: string) {
@@ -72,14 +84,15 @@ const server = createServer(async (request, response) => {
   }
   if (url.pathname === "/auth/v1/user") {
     const auth = request.headers.authorization?.replace("Bearer ", "");
-    const id = ["a", "outsider"].find(candidate => sessionFor(candidate).access_token === auth);
+    const id = ["a", "b", "outsider"].find(candidate => sessionFor(candidate).access_token === auth);
     if (!id) { response.statusCode = 401; return response.end(JSON.stringify({ message: "Invalid fixture token" })); }
     return response.end(JSON.stringify({ id, email: `${id}@example.test`, user_metadata: { display_name: "Smoke Player" } }));
   }
   if (!url.pathname.startsWith("/rest/v1/")) { response.statusCode = 404; return response.end("{}"); }
   const table = url.pathname.split("/").at(-1)!;
   const writing = request.method !== "GET" && request.method !== "HEAD";
-  if (writing && (!playMode || !["picks", "profiles", "episodes"].includes(table))) {
+  const writable = resultTables ? ["picks", "profiles", "episodes", "episode_results", "cast_status"].includes(table) : playMode && ["picks", "profiles", "episodes"].includes(table);
+  if (writing && !writable) {
     response.statusCode = 405;
     return response.end(JSON.stringify({ message: "Smoke database is read-only" }));
   }
@@ -98,6 +111,7 @@ const server = createServer(async (request, response) => {
   const departedEpisodes = [...playEpisodes, { ...hidden, id: 98 }, { ...hidden, results_published: true }];
   const departedResults = [...results.map(result => result.episode_id === 1 ? { ...result, departures: revealedDepartures } : result), ...castReviewResults.slice(1)];
   const tables: Record<string, unknown[]> = { league_update_acknowledgements: serve ? profiles.flatMap(profile => publishedUpdates().map(update => ({ user_id: profile.id, update_id: update.id }))) : [], profiles, cast_status: eliminatedStatusMode ? departedStatuses : serveDepartedCard ? [{ castaway_id: departureCast.voted.id, status: "eliminated" }] : [], episodes: castReviewMode ? castReviewEpisodes : eliminatedStatusMode ? departedEpisodes : emptySeason ? [] : playMode ? playEpisodes : [...episodes, hidden], picks: playMode ? playPicks : [...scoredPicks, { ...picks[0], episode_id: 99, favorite_id: "SECRET_FUTURE_PICK", favorite_point: 99 }], episode_results: castReviewMode ? castReviewResults : eliminatedStatusMode ? departedResults : playMode ? results : [...scoredResults, { ...results[0], episode_id: 99, finale_winner: "SECRET_FUTURE_WINNER" }], private_messages: [] };
+  Object.assign(tables, resultTables);
   let rows = (tables[table] || []) as Row[];
   for (const [field, filter] of url.searchParams) {
     if (["select", "order", "limit", "offset", "on_conflict"].includes(field)) continue;
@@ -119,7 +133,24 @@ const server = createServer(async (request, response) => {
     let raw = "";
     for await (const chunk of request) raw += chunk;
     const body = JSON.parse(raw) as Row;
-    if (request.method === "PATCH" && table === "profiles") {
+    if (resultTables) {
+      if (resultWriteFailure?.table === table && (!resultWriteFailure.id || rows.some(row => row.id === resultWriteFailure?.id))) {
+        response.statusCode = 503;
+        return response.end(JSON.stringify({ message: "Simulated results write failure" }));
+      }
+      if (request.method === "PATCH" && ["picks", "profiles", "episodes"].includes(table)) {
+        rows.forEach(row => Object.assign(row, body));
+      } else if (request.method === "POST" && ["episode_results", "cast_status"].includes(table)) {
+        const key = table === "episode_results" ? "episode_id" : "castaway_id";
+        const existing = resultTables[table].find(row => row[key] === body[key]);
+        if (existing) Object.assign(existing, body);
+        else resultTables[table].push(body);
+        rows = [existing || body];
+      } else {
+        response.statusCode = 405;
+        return response.end(JSON.stringify({ message: "Unexpected result fixture write" }));
+      }
+    } else if (request.method === "PATCH" && table === "profiles") {
       const key = (value: unknown) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
       if (body.team_name && profiles.some(profile => !rows.includes(profile) && key(profile.team_name) === key(body.team_name))) {
         response.statusCode = 409;
@@ -159,7 +190,7 @@ const server = createServer(async (request, response) => {
 server.listen(fixturePort, "127.0.0.1");
 await once(server, "listening");
 const app = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(appPort)], {
-  env: { ...process.env, NEXT_PUBLIC_SUPABASE_URL: fixtureUrl, NEXT_PUBLIC_SUPABASE_ANON_KEY: "fixture-anon", SUPABASE_SERVICE_ROLE_KEY: "fixture-service", NEXT_PUBLIC_SITE_URL: appUrl, AUTO_RESULTS_SECRET: "fixture-automation", LEAGUE_INVITE_CODE: "fixture-invite" },
+  env: { ...process.env, NEXT_PUBLIC_SUPABASE_URL: fixtureUrl, NEXT_PUBLIC_SUPABASE_ANON_KEY: "fixture-anon", SUPABASE_SERVICE_ROLE_KEY: "fixture-service", NEXT_PUBLIC_SITE_URL: appUrl, AUTO_RESULTS_SECRET: "fixture-automation", LEAGUE_INVITE_CODE: "fixture-invite", COMMISSIONER_EMAILS: "a@example.test" },
   stdio: ["ignore", "pipe", "pipe"],
 });
 let logs = "";
@@ -288,6 +319,8 @@ try {
   assert.equal(defaultEpisode.bonusQuestion, DEFAULT_ADVANTAGE_QUESTION);
   assert.ok(defaultEpisode.bonusQuestion.length <= 140, "The complete default must fit without dropping its scoring conditions");
   assert.deepEqual(defaultEpisode.bonusOptions, ["Yes", "No"]);
+  const releaseTime = Object.fromEntries(new Intl.DateTimeFormat("en-US", { timeZone: "America/Detroit", weekday: "long", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(defaultEpisode.revealAt)).map(part => [part.type, part.value]));
+  assert.deepEqual([releaseTime.weekday, releaseTime.hour, releaseTime.minute], ["Monday", "06", "30"], "New episodes release results Monday at 6:30 AM Eastern");
   const previewEpisode = await schedule({ episodeId: 7, title: "A new preview", airAt: "2999-01-16T00:00:00Z", phase: "individual", bonusQuestion: "Will an idol be found?", bonusOptions: ["Yes", "No"] });
   assert.equal(previewEpisode.status, 200);
   assert.equal((await previewEpisode.json()).bonusQuestion, "Will an idol be found?", "A preview question overrides the default");
@@ -296,6 +329,11 @@ try {
   const frozen = await schedule({ episodeId: 5, title: "Preview predictions", airAt: "2999-01-02T00:00:00Z", phase: "individual", bonusQuestion: "Will an idol be played?", bonusOptions: ["Yes", "No"] });
   assert.equal(frozen.status, 409, "Question wording cannot change after picks exist");
   assert.equal((await league()).episode.bonusQuestion, "Will an idol be found?");
+  const publishedReveal = episodes[0].reveal_at;
+  const savedPublished = await schedule({ episodeId: 1, title: episodes[0].title, airAt: episodes[0].air_at, phase: episodes[0].phase, bonusQuestion: episodes[0].bonus_question, bonusOptions: ["Yes", "No"] });
+  assert.equal(savedPublished.status, 200);
+  assert.equal((await savedPublished.json()).revealAt, publishedReveal, "Saving published episode metadata preserves its historical reveal time");
+  assert.equal(playEpisodes[0].reveal_at, publishedReveal);
   castReviewMode = true;
   const castQueryStart = queries.length;
   const castResponse = await fetch(`${appUrl}/cast`);
@@ -374,7 +412,73 @@ try {
   }
   assert.equal(JSON.stringify(playPicks), picksBeforeRejectedDepartures, "Rejected eliminated picks preserve the existing saved selections");
   eliminatedStatusMode = false;
-  console.log("Season and weekly-pick smoke passed: auth, current home status, scores, member breakdowns, private selections, spoilers, negative totals, revealed cast markers, disabled Favorite card data, eliminated-pick rejection, required Vote-Out, optional advantage save/skip, fresh carryover, unique names, default question, and frozen saved questions.");
+
+  resultTables = freshResultTables();
+  const adminResult = { action: "results", episodeId: 8, booted: castIds.boot, immunityWinner: "Savu" };
+  const submitResult = (body: object, cookie = cookieFor("a")) => fetch(`${appUrl}/api/admin`, {
+    method: "POST", headers: { "content-type": "application/json", ...(cookie ? { cookie } : {}) }, body: JSON.stringify(body),
+  });
+  const unchangedResultState = JSON.stringify(resultTables);
+  for (const cookie of ["", cookieFor("b")]) {
+    assert.equal((await submitResult({ ...adminResult, voidBonusQuestion: "on" }, cookie)).status, 403, "Only a commissioner can void a question");
+  }
+  for (const extra of [{}, { bonusAnswer: "" }, { voidBonusQuestion: true }, { voidBonusQuestion: "true" }, { voidBonusQuestion: "on", bonusAnswer: "Yes" }]) {
+    assert.equal((await submitResult({ ...adminResult, ...extra })).status, 400, "Voiding requires the exact explicit checkbox and no conflicting answer");
+  }
+  const automationResult = { episodeId: 8, departures: [{ castawayId: castIds.boot, type: "vote" }], immunityWinners: ["Savu"] };
+  for (const extra of [{}, { bonusAnswer: "" }, { voidBonusQuestion: true }, { bonusAnswer: "", voidBonusQuestion: "on" }]) {
+    const rejected = await fetch(`${appUrl}/api/automation/results`, {
+      method: "POST", headers: { authorization: "Bearer fixture-automation", "content-type": "application/json" }, body: JSON.stringify({ ...automationResult, ...extra }),
+    });
+    assert.equal(rejected.status, 400, "Automation cannot bypass a required answer with an unrecognized void flag");
+  }
+  assert.equal(JSON.stringify(resultTables), unchangedResultState, "Rejected void requests never modify results, picks, or totals");
+
+  const normalResult = await submitResult({ ...adminResult, bonusAnswer: "Yes" });
+  assert.equal(normalResult.status, 200);
+  assert.equal((await normalResult.json()).published, true);
+  assert.equal(resultTables.episode_results[0].bonus_answer, "Yes");
+  assert.deepEqual(resultTables.picks.map(pick => [pick.bonus_point, pick.double_point]), [[1, 1], [-1, 0], [0, 0]]);
+  assert.deepEqual(resultTables.profiles.map(profile => profile.total_points), [8, 5, 6]);
+  const otherComponents = (tables: Record<string, Row[]>) => tables.picks.map(pick => [pick.favorite_point, pick.immunity_point, pick.boot_point, pick.underdog_point, pick.streak_point]);
+  const normalComponents = otherComponents(resultTables);
+  const assertVoidedResult = () => {
+    assert.ok(resultTables);
+    assert.equal(resultTables.episode_results[0].bonus_answer, "");
+    assert.equal(resultTables.episodes[0].results_posted, true);
+    assert.equal(resultTables.episodes[0].results_published, true);
+    assert.deepEqual(resultTables.picks.map(pick => [pick.bonus_pick, pick.double_down, pick.bonus_point, pick.double_point]), [["Yes", "bonus", 0, 0], ["No", "bonus", 0, 0], ["", "", 0, 0]], "Voiding preserves submitted choices and awards no advantage or bonus-targeted Shot points");
+    assert.deepEqual(otherComponents(resultTables), normalComponents, "Voiding does not alter favorite, immunity, vote-out, underdog, or streak points");
+    assert.deepEqual(resultTables.profiles.map(profile => profile.total_points), [6, 6, 6], "Published totals include the zeroed question consistently");
+    assert.equal(resultTables.episodes[0].bonus_question, episodes[0].bonus_question, "Voiding preserves the historical question");
+  };
+  resultTables = freshResultTables();
+  const voided = await submitResult({ ...adminResult, voidBonusQuestion: "on" });
+  assert.equal(voided.status, 200);
+  assert.equal((await voided.json()).published, true);
+  assertVoidedResult();
+  const voidedSeason = await fetch(`${appUrl}/season`, { headers });
+  assert.equal(voidedSeason.status, 200);
+  assert.match(await voidedSeason.text(), /Question voided — no points awarded/);
+  const alreadyPublished = JSON.stringify(resultTables);
+  assert.equal((await submitResult({ ...adminResult, voidBonusQuestion: "on" })).status, 409, "A published episode cannot be silently rescored through results entry");
+  assert.equal(JSON.stringify(resultTables), alreadyPublished);
+
+  for (const failure of [{ table: "picks", id: "result-b" }, { table: "episode_results" }, { table: "episodes" }]) {
+    resultTables = freshResultTables();
+    resultWriteFailure = failure;
+    const profilesBeforeFailure = JSON.stringify(resultTables.profiles);
+    const failed = await submitResult({ ...adminResult, voidBonusQuestion: "on" });
+    assert.equal(failed.status, 500, `Failed ${failure.table} write is not reported as a successful void`);
+    assert.equal(resultTables.episodes[0].results_posted, false, "Incomplete result writes cannot be marked posted");
+    assert.equal(resultTables.episodes[0].results_published, false, "Incomplete result writes cannot be revealed");
+    assert.equal(JSON.stringify(resultTables.profiles), profilesBeforeFailure, "Failed scoring cannot update published profile totals");
+    resultWriteFailure = null;
+    assert.equal((await submitResult({ ...adminResult, voidBonusQuestion: "on" })).status, 200, "A commissioner can retry after a prepublication write failure");
+    assertVoidedResult();
+  }
+  resultTables = null;
+  console.log("Season and weekly-pick smoke passed: auth, current home status, scores, member breakdowns, private selections, spoilers, negative totals, revealed cast markers, disabled Favorite card data, eliminated-pick rejection, required Vote-Out, optional advantage save/skip, fresh carryover, unique names, default question, frozen saved questions, commissioner-only explicit voids, strict automation answers, and failed result writes staying unpublished.");
   if (serve) {
     // Keep one real fixture departure visible for browser review without changing ordinary smoke cases.
     serveDepartedCard = true;

@@ -3,8 +3,14 @@ import { createAdminClient } from "../lib/supabase/admin";
 import { applyImmunityStreak, scoreSeasonPick } from "../lib/scoring";
 
 function localParts(date:Date){const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Detroit",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).formatToParts(date);return Object.fromEntries(parts.map(p=>[p.type,p.value])) as Record<string,string>}
-function detroitTimeToUtc(year:number,month:number,day:number,hour:number){const target=Date.UTC(year,month-1,day,hour);let guess=target;for(let i=0;i<3;i++){const p=localParts(new Date(guess));const shown=Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day),Number(p.hour),Number(p.minute),Number(p.second));guess+=target-shown}return new Date(guess)}
-export function revealAtForAirTime(airAt:Date){const p=localParts(airAt),next=new Date(Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day)+1,9));return detroitTimeToUtc(next.getUTCFullYear(),next.getUTCMonth()+1,next.getUTCDate(),9).toISOString()}
+function detroitTimeToUtc(year:number,month:number,day:number,hour:number,minute=0){const target=Date.UTC(year,month-1,day,hour,minute);let guess=target;for(let i=0;i<3;i++){const p=localParts(new Date(guess));const shown=Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day),Number(p.hour),Number(p.minute),Number(p.second));guess+=target-shown}return new Date(guess)}
+export function revealAtForAirTime(airAt:Date){
+ const p=localParts(airAt),airDate=new Date(Date.UTC(Number(p.year),Number(p.month)-1,Number(p.day)));
+ // Use the local air date; a Monday episode reveals the following Monday.
+ const daysUntilMonday=(8-airDate.getUTCDay())%7||7;
+ airDate.setUTCDate(airDate.getUTCDate()+daysUntilMonday);
+ return detroitTimeToUtc(airDate.getUTCFullYear(),airDate.getUTCMonth()+1,airDate.getUTCDate(),6,30).toISOString();
+}
 export function isCastaway(id:string){return castaways.some(c=>c.id===id)}
 export function isCommissioner(email:string){return (process.env.COMMISSIONER_EMAILS||"").toLowerCase().split(",").map(x=>x.trim()).includes(email.toLowerCase())}
 export async function ensureDatabase(){const {error}=await createAdminClient().from("episodes").select("id").limit(1);if(error)throw error}
