@@ -1,62 +1,15 @@
 import { AppShell } from "./components/AppShell";
-import { Countdown } from "./components/Countdown";
-import Image from "next/image";
+import { HomeView } from "./components/HomeView";
+import { getChatGPTUser } from "./chatgpt-auth";
+import { loadHomeSummary } from "../db/home";
+import "./home.css";
 
-export default function Home() {
-  return (
-    <AppShell>
-      <main>
-        <section className="hero wrap island-hero">
-          <div className="hero-copy">
-            <p className="eyebrow">Season 51 · The Open Era</p>
-            <h1>Outpick. Outlast.<br/><em>Outscore.</em></h1>
-            <p className="lede">Back a castaway, call immunity and the vote-out, play your Shot in the Dark, and climb the family leaderboard every Wednesday night.</p>
-            <div className="hero-actions">
-              <a className="button button-primary" href="/play">Join the league <span>→</span></a>
-              <a className="text-link" href="/rules">See how scoring works</a>
-            </div>
-          </div>
-          <aside className="torch-card" aria-label="Next episode countdown">
-            <div className="moon"><span>51</span></div>
-            <div className="torch-content">
-              <p className="card-label">Next challenge · Episode 1</p>
-              <h2>Your picks lock in</h2>
-              <Countdown target="2026-09-23T19:00:00-04:00" />
-              <p className="time-note">Wed, Sep 23 · 7:00 PM ET<br/>One hour before the episode</p>
-            </div>
-          </aside>
-        </section>
+export const dynamic = "force-dynamic";
 
-        <section className="open-era-feature wrap">
-          <div className="open-era-photo"><Image src="/season-51-cast.jpg" alt="The 21 officially revealed Survivor Season 51 castaways" fill priority sizes="(max-width: 800px) 100vw, 58vw"/></div>
-          <div className="open-era-copy"><p className="eyebrow">Official cast revealed</p><span className="whale-mark" aria-hidden="true">🐋</span><h2>Twenty-one players. No fixed playbook.</h2><p>Season 51 opens a new phase where any twist or advantage from the show’s history can surface without warning. Meet the confirmed cast before making your first picks.</p><a className="button button-primary" href="/cast">Meet the official cast →</a></div>
-        </section>
-
-        <section className="steps-section">
-          <div className="wrap">
-            <div className="section-heading split-heading">
-              <div><p className="eyebrow">Your weekly ritual</p><h2>Make the read.</h2></div>
-              <p>Make three required picks, then choose whether to risk a point with Play Your Advantage. Change anything before the deadline.</p>
-            </div>
-            <div className="steps-grid">
-              <article className="step-card"><span className="step-number">01</span><div className="step-icon">♟</div><h3>Sign in and join</h3><p>Create your private league account, enter the invite code from Mike, and choose a team name.</p></article>
-              <article className="step-card"><span className="step-number">02</span><div className="step-icon">◈</div><h3>Name every pick</h3><p>Choose your Weekly Favorite, Immunity, and Vote-Out Picks. Play Your Advantage is optional: +1 correct, −1 wrong, or 0 if skipped.</p></article>
-              <article className="step-card"><span className="step-number">03</span><div className="step-icon">↗</div><h3>Outlast the tribes</h3><p>Pick someone to reach the individual game, build streaks, and play your one Shot in the Dark at the right moment.</p></article>
-            </div>
-          </div>
-        </section>
-
-        <section className="leader-preview wrap">
-          <div>
-            <p className="eyebrow">The fire is waiting</p>
-            <h2>Everybody starts at zero.</h2>
-            <p>Invite the family, make your opening picks, and see who reads the island best.</p>
-          </div>
-          <div className="scoreboard">
-            {["You", "Camp Chaos", "Blindside Club"].map((name, i) => <div className="score-row" key={name}><span className="rank">0{i+1}</span><span className="avatar small">{name[0]}</span><strong>{name}</strong><span className="score">0 <small>PTS</small></span></div>)}
-          </div>
-        </section>
-      </main>
-    </AppShell>
-  );
+export default async function Home() {
+  const user = await getChatGPTUser();
+  let data = null;
+  try { data = await loadHomeSummary(user?.userId || null); }
+  catch { console.error("Home dashboard unavailable"); }
+  return <AppShell><HomeView data={data} signedIn={Boolean(user)} now={data?.loadedAt || 0}/></AppShell>;
 }

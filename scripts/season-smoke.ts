@@ -8,6 +8,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { input } from "../tests/fixtures/season";
 import { castaways } from "../app/data";
+import { publishedUpdates } from "../lib/league-updates";
 
 const serve = process.argv.includes("--serve");
 const appPort = Number(process.env.SMOKE_APP_PORT || 3107);
@@ -60,9 +61,12 @@ const server = createServer(async (request, response) => {
     return response.end(JSON.stringify({ message: "Smoke database is read-only" }));
   }
   queries.push(url.pathname + url.search);
-  const scoredPicks = negativeRound ? picks.map(pick => pick.user_id === "a" && pick.episode_id === 4 ? { ...pick, favorite_point: 0, immunity_point: 0, bonus_point: -1 } : pick) : picks;
+  const scoredPicks = picks.map(pick => pick.user_id === "b" ? {
+    ...pick, favorite_id: "PRIVATE_OTHER_FAVORITE", immunity_pick: "PRIVATE_OTHER_IMMUNITY",
+    boot_pick: "PRIVATE_OTHER_VOTE", bonus_pick: "PRIVATE_OTHER_ANSWER", double_down: "boot",
+  } : negativeRound && pick.episode_id === 4 ? { ...pick, favorite_point: 0, immunity_point: 0, bonus_point: -1 } : pick);
   const scoredResults = negativeRound ? results.map(result => ({ ...result, finale_winner: null, finalists: [] })) : results;
-  const tables: Record<string, unknown[]> = { profiles, episodes: emptySeason ? [] : playMode ? playEpisodes : [...episodes, hidden], picks: playMode ? playPicks : [...scoredPicks, { ...picks[0], episode_id: 99, favorite_id: "SECRET_FUTURE_PICK", favorite_point: 99 }], episode_results: playMode ? results : [...scoredResults, { ...results[0], episode_id: 99, finale_winner: "SECRET_FUTURE_WINNER" }], private_messages: [] };
+  const tables: Record<string, unknown[]> = { league_update_acknowledgements: serve ? profiles.flatMap(profile => publishedUpdates().map(update => ({ user_id: profile.id, update_id: update.id }))) : [], profiles, episodes: emptySeason ? [] : playMode ? playEpisodes : [...episodes, hidden], picks: playMode ? playPicks : [...scoredPicks, { ...picks[0], episode_id: 99, favorite_id: "SECRET_FUTURE_PICK", favorite_point: 99 }], episode_results: playMode ? results : [...scoredResults, { ...results[0], episode_id: 99, finale_winner: "SECRET_FUTURE_WINNER" }], private_messages: [] };
   let rows = (tables[table] || []) as Row[];
   for (const [field, filter] of url.searchParams) {
     if (["select", "order", "limit", "offset", "on_conflict"].includes(field)) continue;
@@ -155,6 +159,11 @@ try {
   assert.match(html, /Your season scorecard/);
   assert.match(html, /21\.5/);
   assert.match(html, /Leaderboard/);
+  assert.match(html, /points by episode/);
+  assert.match(html, /Season points/);
+  assert.match(html, /Rank change/);
+  assert.match(html, /switched pick earns half points/);
+  assert.doesNotMatch(html, /PRIVATE_OTHER_/);
   assert.doesNotMatch(html, /Post-merge championship|Your second chance|POST-MERGE/);
   assert.match(html, /Final Torch Pick/);
   assert.match(html, /1\.5/);
@@ -181,11 +190,33 @@ try {
   };
   const carried = await league();
   assert.equal(carried.episode.id, 5);
+  assert.deepEqual(carried.leaderboard.map((row: { id: string; points: number; rank: number }) => [row.id, row.points, row.rank]), [["a", 21.5, 1], ["b", 20, 2]], "Play uses the same published totals/ranks as My Season, not stale profile totals");
+  assert.ok(profiles.every(profile => profile.total_points === 0), "Reading the leaderboard does not repair or mutate stored scores");
+  assert.ok(carried.leaderboard.every((row: Record<string, unknown>) => !("episodes" in row) && !("rows" in row) && !("history" in row)), "Play receives only leaderboard summaries");
+  assert.doesNotMatch(JSON.stringify(carried.leaderboard), /favorite_id|immunity_pick|boot_pick|bonus_pick|selection|PRIVATE_OTHER_|SECRET_FUTURE/);
   assert.equal(carried.episode.bonusQuestion, "Will an idol be found?");
   assert.equal(carried.pick.bootPick, castIds.boot);
   assert.equal(carried.pick.carriedFromEpisodeId, 4);
   assert.equal(carried.pick.bonusPick, "", "An old Yes answer never risks a point in a new episode");
   assert.equal(carried.pick.shotInTheDark, "");
+  const publicHomeResponse = await fetch(appUrl);
+  assert.equal(publicHomeResponse.status, 200);
+  const publicHome = (await publicHomeResponse.text()).replaceAll("<!-- -->", "");
+  assert.match(publicHome, /Episode 5 · Preview predictions/);
+  assert.match(publicHome, /Sign in to make picks/);
+  assert.doesNotMatch(publicHome, /Camp Alpha|Camp Bravo|PRIVATE_OTHER_|SECRET_FUTURE|Camp Chaos|Blindside Club/);
+  assert.doesNotMatch(publicHome, new RegExp(`${castIds.safe}|${castIds.boot}`), "Anonymous home does not serialize pick values");
+  const carriedHomeResponse = await fetch(appUrl, { headers });
+  assert.equal(carriedHomeResponse.status, 200);
+  const carriedHome = (await carriedHomeResponse.text()).replaceAll("<!-- -->", "");
+  assert.match(carriedHome, /Episode 5 · Preview predictions/);
+  assert.match(carriedHome, /Picks carried forward/);
+  assert.match(carriedHome, /Carried from Episode 4/);
+  assert.match(carriedHome, /3 of 3 required picks on file/);
+  assert.match(carriedHome, /Scores through Episode 4/);
+  assert.match(carriedHome, /class="home-score"><strong>21\.5<\/strong>/, "Home uses canonical published scores instead of cached zero profile totals");
+  assert.match(carriedHome, /Camp Alpha/);
+  assert.doesNotMatch(carriedHome, /PRIVATE_OTHER_|SECRET_FUTURE|Camp Chaos|Blindside Club/);
   await league();
   assert.equal(playPicks.filter(pick => pick.episode_id === 5).length, 2, "Repeated reads do not duplicate carried picks");
   const core = { episodeId: 5, favoriteId: castIds.safe, immunityPick: castIds.winner, bootPick: castIds.boot, bonusPick: "" };
@@ -196,6 +227,10 @@ try {
   assert.equal((await league()).pick.carriedFromEpisodeId, 4, "Rejected save leaves existing picks untouched");
   assert.equal((await savePick(core)).status, 200, "All three required picks can be saved while skipping the optional risk");
   assert.equal((await league()).pick.bonusPick, "");
+  const savedHome = (await (await fetch(appUrl, { headers })).text()).replaceAll("<!-- -->", "");
+  assert.match(savedHome, /Your picks are saved/);
+  assert.match(savedHome, /3 of 3 required picks on file/);
+  assert.doesNotMatch(savedHome, /Picks carried forward|Carried from Episode 4/);
   assert.equal((await savePick({ ...core, bonusPick: "Yes" })).status, 200);
   assert.equal((await league()).pick.bonusPick, "Yes");
   assert.equal((await savePick(core)).status, 200);
@@ -225,7 +260,7 @@ try {
   const frozen = await schedule({ episodeId: 5, title: "Preview predictions", airAt: "2999-01-02T00:00:00Z", phase: "individual", bonusQuestion: "Will an idol be played?", bonusOptions: ["Yes", "No"] });
   assert.equal(frozen.status, 409, "Question wording cannot change after picks exist");
   assert.equal((await league()).episode.bonusQuestion, "Will an idol be found?");
-  console.log("Season and weekly-pick smoke passed: auth, scores, spoilers, negative totals, required Vote-Out, optional advantage save/skip, fresh carryover, unique names, default question, and frozen saved questions.");
+  console.log("Season and weekly-pick smoke passed: auth, current home status, scores, member breakdowns, private selections, spoilers, negative totals, required Vote-Out, optional advantage save/skip, fresh carryover, unique names, default question, and frozen saved questions.");
   if (serve) {
     console.log(`Visual review: ${fixtureUrl}/sign-in`);
     await new Promise(() => {});

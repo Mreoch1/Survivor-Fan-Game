@@ -3,10 +3,11 @@ import { castaways } from "../../data";
 import { createAdminClient } from "../../../lib/supabase/admin";
 import { ensureDatabase, publishDueResults } from "../../../db/runtime";
 import { carryForwardPicks } from "../../../db/pick-carryover";
+import { loadSeasonDashboard } from "../../../db/season";
 
 import { isTeamNameConflict, normalizeTeamName, TEAM_NAME_TAKEN } from "../../../lib/team-name";
 
-type Standing={id:string;name:string;teamName:string;avatarKey:string;points:number;immunityStreak:number;longestStreak:number;shotUsed:number};
+type Standing={id:string;name:string;teamName:string;avatarKey:string;immunityStreak:number;longestStreak:number;shotUsed:number};
 
 export async function GET(){
  const user=await getChatGPTUser();
@@ -25,17 +26,29 @@ export async function GET(){
  const {data:first}=await db.from("episodes").select("lock_at").eq("id",1).maybeSingle();
  const preseasonLocked=!!first&&Date.now()>=new Date(first.lock_at).getTime();
  const {data:pick}=await db.from("picks").select("favorite_id,immunity_pick,boot_pick,bonus_pick,double_down,carried_from_episode_id,updated_at").eq("user_id",user.userId).eq("episode_id",episode.id).maybeSingle();
- const [{data:statuses},{data:profiles},{data:allPicks},{data:pendingReveal},{data:individualEvent}]=await Promise.all([
+ const [{data:statuses},{data:profiles},{data:allPicks},{data:pendingReveal},{data:individualEvent},season]=await Promise.all([
   db.from("cast_status").select("castaway_id,status"),
-  db.from("profiles").select("id,display_name,team_name,avatar_key,total_points,immunity_streak,longest_streak,created_at").not("league_joined_at","is",null).order("total_points",{ascending:false}).order("created_at"),
+  db.from("profiles").select("id,display_name,team_name,avatar_key,immunity_streak,longest_streak,created_at").not("league_joined_at","is",null).order("created_at"),
   db.from("picks").select("user_id,episode_id,favorite_id,immunity_pick,boot_pick,double_down"),
   db.from("episodes").select("id,title,reveal_at").eq("results_posted",true).eq("results_published",false).order("id",{ascending:false}).limit(1).maybeSingle(),
   db.from("episodes").select("id,reveal_at,results_published").eq("individual_game_started",true).limit(1).maybeSingle(),
+  loadSeasonDashboard(user.userId),
  ]);
+ if(!season)return Response.json({joined:false});
 
- const standings:Standing[]=(profiles||[]).map(p=>{const userPicks=(allPicks||[]).filter(k=>k.user_id===p.id);return{id:p.id,name:p.display_name,teamName:p.team_name,avatarKey:p.avatar_key,points:Number(p.total_points),immunityStreak:p.immunity_streak,longestStreak:p.longest_streak,shotUsed:userPicks.filter(k=>k.double_down).length}});
- let rank=0,last:number|null=null;
- const leaderboard=standings.map((row,index)=>{if(last!==row.points)rank=index+1;last=row.points;const badges=[];if(rank===1&&row.points>0)badges.push("Torch Leader");if(row.longestStreak>=3)badges.push("Challenge Reader");if(row.points>=20)badges.push("Strategist");return{...row,rank,badges}});
+ const standings:Standing[]=(profiles||[]).map(p=>{const userPicks=(allPicks||[]).filter(k=>k.user_id===p.id);return{id:p.id,name:p.display_name,teamName:p.team_name,avatarKey:p.avatar_key,immunityStreak:p.immunity_streak,longestStreak:p.longest_streak,shotUsed:userPicks.filter(k=>k.double_down).length}});
+ // Use the same revealed-episode totals and ranks as Home and My Season.
+ // Only the summary is returned: never serialize season histories or selection values here.
+ const standingsById=new Map(standings.map(row=>[row.id,row]));
+ const leaderboard=season.overall.flatMap(score=>{
+  const row=standingsById.get(score.id);
+  if(!row)return[];
+  const badges=[];
+  if(score.rank===1&&score.points>0)badges.push("Torch Leader");
+  if(row.longestStreak>=3)badges.push("Challenge Reader");
+  if(score.points>=20)badges.push("Strategist");
+  return[{...row,points:score.points,rank:score.rank,badges}];
+ });
  let pickPercentages:null|Record<string,{value:string;count:number;percent:number}[]>=null;
  if(locked){pickPercentages={};for(const field of ["favorite_id","immunity_pick","boot_pick"] as const){const counts=new Map<string,number>();for(const row of (allPicks||[]).filter(k=>k.episode_id===episode.id)){const value=row[field];if(value)counts.set(value,(counts.get(value)||0)+1)}const total=[...counts.values()].reduce((a,b)=>a+b,0);pickPercentages[field]=[...counts].map(([value,count])=>({value,count,percent:total?Math.round(count*100/total):0}))}}
 
