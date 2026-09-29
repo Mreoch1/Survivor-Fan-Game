@@ -19,18 +19,9 @@ const json = (body: unknown, status = 200) => Response.json(body, {
   status, headers: { "cache-control": "no-store" },
 });
 
-// Owner-authorized recovery for the Monday, September 28 delivery failure.
-// Keep the edition identity anchored to Monday so the normal recipient ledger
-// remains authoritative, and expire the exception at the end of Tuesday.
-function effectiveMailTime(now: Date) {
-  const start = new Date("2026-09-29T04:00:00Z");
-  const end = new Date("2026-09-30T04:00:00Z");
-  return now >= start && now < end ? new Date("2026-09-28T14:00:00Z") : now;
-}
-
 export async function GET(request: Request) {
   if (!authorized(request)) return json({ error: "Automation access required" }, 401);
-  const now = effectiveMailTime(new Date());
+  const now = new Date();
   if (!mondayMailWindow(now).open) {
     return json({ pending: false, message: "Tree Mail opens Mondays at 10 AM America/Detroit" });
   }
