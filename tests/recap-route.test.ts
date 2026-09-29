@@ -56,7 +56,13 @@ test("recap route preserves scorecard totals and strips all spoiler fields", asy
   assert.equal(pre.kind, "preseason");
   assert.equal(pre.players[0].overallRank, null);
   assert.equal(pre.players[0].overallPoints, 0);
+  preseason = false;
+  hiddenWeek = false;
   t.mock.timers.setTime(new Date("2026-09-29T14:00:00Z").getTime());
+  const makeup = await (await GET(request())).json();
+  assert.equal(makeup.pending, true);
+  assert.equal(makeup.editionId, "s51-week-2026-09-28");
+  t.mock.timers.setTime(new Date("2026-09-30T14:00:00Z").getTime());
   const count = queries.length;
   assert.equal((await (await GET(request())).json()).pending, false);
   assert.equal(queries.length, count, "Outside Monday no database or recipient lookup occurs");
