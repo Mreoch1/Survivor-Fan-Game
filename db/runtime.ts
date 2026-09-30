@@ -17,7 +17,7 @@ export function isCastaway(id:string){return castaways.some(c=>c.id===id)}
 export function isCommissioner(email:string){return (process.env.COMMISSIONER_EMAILS||"").toLowerCase().split(",").map(x=>x.trim()).includes(email.toLowerCase())}
 export async function ensureDatabase(){const {error}=await createAdminClient().from("episodes").select("id").limit(1);if(error)throw error}
 
-async function recomputePublishedScores(now = new Date()) {
+async function recomputePublishedScores(now = new Date(), retry = true): Promise<void> {
  const db = createAdminClient();
  const [{ data: profiles, error: profileError }, { data: episodes, error: episodeError }, { data: picks, error: pickError }, { data: results, error: resultError }] = await Promise.all([
   db.from("profiles").select("id,individual_game_pick,endgame_pick,endgame_pick_switched,total_points,preseason_points,individual_game_points,endgame_points,immunity_streak,longest_streak").not("league_joined_at", "is", null),
@@ -40,29 +40,35 @@ async function recomputePublishedScores(now = new Date()) {
   }
  }
  const finale = (results || []).filter(result => result.finale_winner && published.has(result.episode_id)).sort((a, b) => b.episode_id - a.episode_id)[0];
+ const profileScores = [], streakScores = [];
  for (const profile of profiles || []) {
   let weeklyTotal = 0, streak = 0, longest = 0;
-  const updatePromises = [];
   const userPicks = (picks || []).filter(pick => pick.user_id === profile.id && published.has(pick.episode_id));
   for (const pick of userPicks) {
    const next = applyImmunityStreak(streak, pick.immunity_point, Boolean(resultByEpisode.get(pick.episode_id)?.immunity_void));
    streak = next.streak;
    longest = Math.max(longest, streak);
-   if (pick.streak_point !== next.bonus) updatePromises.push(db.from("picks").update({ streak_point: next.bonus }).eq("id", pick.id));
+   streakScores.push({ id: pick.id, streak_point: next.bonus });
    weeklyTotal += pick.favorite_point + pick.immunity_point + pick.boot_point + pick.bonus_point + pick.underdog_point + next.bonus + pick.double_point;
   }
   const original = profile.individual_game_pick || "";
   const reached = Boolean(individualEpisode && original && !departedBeforeIndividual.has(original));
   const endgame = profile.endgame_pick || (reached ? original : "");
   const season = scoreSeasonPick({ individualGamePick: original, endgamePick: endgame, endgamePickSwitched: Boolean(profile.endgame_pick_switched), departedBeforeIndividual, individualGameStarted: Boolean(individualEpisode), finaleWinner: String(finale?.finale_winner || ""), finalists: Array.isArray(finale?.finalists) ? finale.finalists.map(String) : [] });
-  const streakUpdates = await Promise.all(updatePromises);
-  for (const update of streakUpdates) if (update.error) throw update.error;
-  const scoreFields = { total_points: weeklyTotal + season.total + popupPointsAt(popupLedger, profile.id, now), preseason_points: season.total, individual_game_points: season.individualGamePoints, endgame_points: season.endgamePoints, immunity_streak: streak, longest_streak: longest };
-  // Popup reveals can refresh without a new episode; repeated reads must not churn profile timestamps.
-  if (Object.entries(scoreFields).every(([key, value]) => Number(profile[key as keyof typeof scoreFields] || 0) === value)) continue;
-  const { error } = await db.from("profiles").update({ ...scoreFields, updated_at: now.toISOString() }).eq("id", profile.id);
-  if (error) throw error;
+  profileScores.push({ id: profile.id, individual_game_pick: profile.individual_game_pick, endgame_pick: profile.endgame_pick, endgame_pick_switched: profile.endgame_pick_switched, total_points: weeklyTotal + season.total + popupPointsAt(popupLedger, profile.id, now), preseason_points: season.total, individual_game_points: season.individualGamePoints, endgame_points: season.endgamePoints, immunity_streak: streak, longest_streak: longest });
  }
+ // Publish the exact scored snapshot and its receipts in one transaction. An older
+ // overlapping snapshot cannot overwrite a popup award already applied by another request.
+ const { data: applied, error: publicationError } = await db.rpc("apply_published_scores", {
+  p_profile_scores: profileScores, p_streak_scores: streakScores,
+  p_question_ids: popupQuestions.map(question => question.id),
+  p_episode_ids: (episodes || []).map(episode => episode.id), p_scored_at: now.toISOString(),
+ });
+ if (applied === false || publicationError?.code === "40001") {
+  if (retry) return recomputePublishedScores(new Date(Math.max(now.getTime(), Date.now())), false);
+  throw publicationError || new Error("Scores changed during publication. Please retry.");
+ }
+ if (publicationError) throw publicationError;
 }
 
 async function initializeEndgamePicks(episodeId:number){
@@ -73,7 +79,7 @@ async function initializeEndgamePicks(episodeId:number){
 export async function publishDueResults(now=new Date()){
  const db=createAdminClient();const {data:due,error}=await db.from("episodes").select("id,individual_game_started").eq("results_posted",true).eq("results_published",false).lte("reveal_at",now.toISOString()).order("id");if(error)throw error;
  if(!due?.length){
-  const {data:popup,error:popupError}=await db.from("popup_questions").select("id").in("status",["resolved","void"]).not("resolution_episode_id","is",null).lte("reveal_at",now.toISOString()).limit(1).maybeSingle();
+  const {data:popup,error:popupError}=await db.from("pending_popup_score_publications").select("question_id").lte("available_at",now.toISOString()).limit(1).maybeSingle();
   if(popupError)throw popupError;
   if(popup)await recomputePublishedScores(now);
   return 0;

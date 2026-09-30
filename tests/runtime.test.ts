@@ -35,7 +35,7 @@ test("schedule saves preserve published reveal dates and calculate Monday only f
   const url = new URL(request instanceof Request ? request.url : String(request));
   const method = init?.method || "GET";
   if (url.pathname.endsWith("/picks") && method === "HEAD") return new Response(null, { headers: { "content-range": "0-0/1" } });
-  if (url.pathname.endsWith("/popup_questions")) return Response.json(null);
+  if (url.pathname.endsWith("/pending_popup_score_publications")) return Response.json(null);
   assert.ok(url.pathname.endsWith("/episodes"));
   if (method === "POST") {
    saved.push(JSON.parse(String(init?.body)));
