@@ -30,11 +30,13 @@ const signingKey = randomBytes(32);
 const acknowledgements: Row[] = [];
 const questionId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const hiddenId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const upcomingId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const stamp = (delta: number) => new Date(Date.now() + delta).toISOString();
 const popupQuestions: Row[] = [
   { id: questionId, question: "From Episode 3 through the Season 51 finale, will at least one contestant be permanently removed from the game by the medical team because of an injury?", details: "Official medical evacuations due to injury only. Illness, temporary treatment, voluntary quits, and Episodes 1–2 do not count.", credit_name: "Prost Tosties", opens_at: stamp(-86400000), closes_at: stamp(86400000), points: 3, status: "open", correct_answer: null, resolution_episode_id: null, reveal_at: null, created_at: stamp(-86400000), created_by: a },
   { id: hiddenId, question: "Closed fixture question?", details: "A hidden result.", credit_name: "", opens_at: stamp(-172800000), closes_at: stamp(-86400000), points: 3, status: "resolved", correct_answer: "No", resolution_episode_id: 1, reveal_at: stamp(86400000), created_at: stamp(-172800000), created_by: a },
 ];
+popupQuestions.push({ ...popupQuestions[0], id: upcomingId, question: "FUTURE_POPUP_QUESTION_SENTINEL", details: "FUTURE_POPUP_DETAILS_SENTINEL", opens_at: stamp(172800000), closes_at: stamp(259200000) });
 const popupVotes: Row[] = [{ question_id: hiddenId, user_id: b, answer: "No", voted_at: stamp(-100000000) }];
 let popupFailure = false;
 let acknowledgementFailure = false;
@@ -264,7 +266,10 @@ try {
   profiles[2].league_joined_at = unjoined;
   const initialPopup = await fetch(`${appUrl}/api/popup-questions`, { headers });
   assert.match(initialPopup.headers.get("cache-control") || "", /private, no-store/);
-  const initialQuestions = (await initialPopup.json()).questions;
+  const initialPopupBody = await initialPopup.json();
+  assert.equal(initialPopupBody.nextOpensAt, popupQuestions.find(question => question.id === upcomingId)!.opens_at, "The client receives a safe timestamp for its next scheduled refresh");
+  assert.doesNotMatch(JSON.stringify(initialPopupBody), /FUTURE_POPUP_|dddddddd-dddd-4ddd-8ddd-dddddddddddd/, "Future question wording, details, and IDs remain hidden before opening");
+  const initialQuestions = initialPopupBody.questions;
   const hiddenQuestion = initialQuestions.find((question: Row) => question.id === hiddenId);
   assert.equal(hiddenQuestion.correctAnswer, null);
   assert.equal(hiddenQuestion.status, "closed");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { schedulePopupQuestionRefresh } from "../../lib/popup-question-refresh";
 
 type Answer = "Yes" | "No" | "Skip";
 type Vote = { answer: Answer; votedAt: string };
@@ -35,27 +36,35 @@ export function PopupQuestions({ enabled = true, mode = "popup" }: { enabled?: b
   const [receipt, setReceipt] = useState("");
   const [dismissed, setDismissed] = useState<string[]>([]);
   const [now, setNow] = useState(0);
+  const [nextOpensAt, setNextOpensAt] = useState<string | null>(null);
   const requests = useRef({ value: 0 });
   const clockOffset = useRef(0);
   const dialog = useRef<HTMLDialogElement>(null);
   const submitting = useRef(false);
 
   const load = useCallback(async () => {
-    if (submitting.current || document.visibilityState !== "visible") return;
+    if (submitting.current || document.visibilityState !== "visible") return false;
     const request = ++requests.current.value;
     try {
       const response = await fetch("/api/popup-questions", { cache: "no-store" });
+      if (request !== requests.current.value) return false;
+      if (response.status === 401 || response.status === 403) {
+        setQuestions([]); setError(""); setNextOpensAt(null);
+        return true;
+      }
       const data = await response.json();
-      if (request !== requests.current.value) return;
-      if (response.status === 401 || response.status === 403) { setQuestions([]); setError(""); return; }
+      if (request !== requests.current.value) return false;
       if (!response.ok || !Array.isArray(data.questions)) throw new Error(data.error || "Bonus questions could not load.");
       const serverTime = new Date(data.serverNow).getTime();
       clockOffset.current = Number.isFinite(serverTime) ? serverTime - Date.now() : 0;
       setNow(Date.now() + clockOffset.current);
       setQuestions(data.questions);
+      setNextOpensAt(typeof data.nextOpensAt === "string" ? data.nextOpensAt : null);
       setError("");
+      return true;
     } catch {
       if (request === requests.current.value) setError("Bonus questions could not load. Please try again.");
+      return false;
     }
   }, []);
 
@@ -74,6 +83,8 @@ export function PopupQuestions({ enabled = true, mode = "popup" }: { enabled?: b
       window.clearInterval(timer);
     };
   }, [load]);
+
+  useEffect(() => schedulePopupQuestionRefresh(nextOpensAt, () => Date.now() + clockOffset.current, load), [nextOpensAt, load]);
 
   const available = (questions || []).filter(question => canAnswer(question, now));
   const active = available.find(question => !dismissed.includes(question.id));

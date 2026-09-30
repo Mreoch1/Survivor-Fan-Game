@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { Countdown } from "../components/Countdown";
 import { profileIcon } from "../profile-icons";
 import { buildWeeklyPickPayload, getPickCompletion, getPickSaveState, isPickDirty, savePickRequest, type WeeklyPickDraft } from "../../lib/pick-form";
@@ -208,13 +209,14 @@ function SeasonPickPanel({data,openingPick,setOpeningPick,endgamePick,setEndgame
 function OptionHiddenWarning({name}:{name:string}){return <p className="pick-warning">{name} is no longer in the game. Choose a remaining castaway for your Final Torch Pick.</p>}
 function PickReceipt({label,value}:{label:string;value:string}){return <p className="pick-receipt"><span>{label}</span><strong>{value}</strong></p>}
 function CastSelect({id,label,value,setValue,cast,disabled}:{id:string;label:string;value:string;setValue:(value:string)=>void;cast:Castaway[];disabled:boolean}){return <select className="cast-select" id={id} aria-label={label} value={value} onChange={event=>setValue(event.target.value)} disabled={disabled}><option value="">Choose a castaway…</option>{cast.map(c=><option value={c.id} key={c.id}>{c.name} · {c.tribe==="Unassigned"?"Tribe TBA":c.tribe}</option>)}</select>}
-function JoinForm({onJoined}:{onJoined:()=>Promise<void>}){const[name,setName]=useState(""),[team,setTeam]=useState(""),[inviteCode,setInviteCode]=useState(""),[busy,setBusy]=useState(false),[joinError,setJoinError]=useState("");async function join(event:React.FormEvent){
+function JoinForm({onJoined}:{onJoined:()=>Promise<void>}){const router=useRouter();const[name,setName]=useState(""),[team,setTeam]=useState(""),[inviteCode,setInviteCode]=useState(""),[busy,setBusy]=useState(false),[joinError,setJoinError]=useState("");async function join(event:React.FormEvent){
  event.preventDefault();setBusy(true);setJoinError("");
  try {
   const response=await fetch("/api/league",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({displayName:name,teamName:team,inviteCode})});
   const body=await response.json().catch(()=>null) as {ok?:boolean;error?:string}|null;
   if(!response.ok||!body?.ok){setJoinError(body?.error||"The league could not be joined. Try again.");return}
   await onJoined();
+  router.refresh();
  } catch {setJoinError("Couldn’t connect. Your details are still here; try again.")}
  finally {setBusy(false)}
 }return <form className="join-card" onSubmit={join}><p className="eyebrow">One last step</p><h2>Join the tribe</h2><p>Use the account you just created and the league code Mike shared. Your picks stay private until the episode locks. Joining also signs you up for one spoiler-free pick reminder before each new episode.</p>{joinError&&<div className="notice">{joinError}</div>}<label htmlFor="name">Your name</label><input id="name" required maxLength={40} value={name} onChange={event=>setName(event.target.value)} placeholder="Mike"/><label htmlFor="team">Team name <small>(optional · must be unique)</small></label><input id="team" maxLength={50} value={team} onChange={event=>setTeam(event.target.value)} placeholder="The Torch Snuffers"/><label htmlFor="invite-code">League code</label><input id="invite-code" required maxLength={40} autoCapitalize="characters" value={inviteCode} onChange={event=>setInviteCode(event.target.value)} placeholder="Enter league code"/><button className="button button-primary" disabled={busy}>{busy?"Joining…":"Join the tribe →"}</button></form>}
