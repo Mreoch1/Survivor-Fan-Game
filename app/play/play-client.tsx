@@ -4,11 +4,11 @@ import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
 import { Countdown } from "../components/Countdown";
 import { profileIcon } from "../profile-icons";
-import { getPickCompletion, getPickSaveState, isPickDirty, savePickRequest, type WeeklyPickDraft } from "../../lib/pick-form";
+import { buildWeeklyPickPayload, getPickCompletion, getPickSaveState, isPickDirty, savePickRequest, type WeeklyPickDraft } from "../../lib/pick-form";
 
 type Castaway={id:string;name:string;tribe:string;image:string;status:string;departureLabel?:"Voted out"|"Left the game"};
 type Percent={value:string;count:number;percent:number};
-type SeasonPick={stage:"opening"|"waiting"|"repick"|"locked";originalId:string;originalName:string|null;endgameId:string;endgameName:string|null;switched:boolean;individualGamePoints:number;endgamePoints:number;repickClosesAt:string|null;updatedAt:string|null};
+type SeasonPick={openingGrace?:boolean;openingClosesAt?:string|null;stage:"opening"|"waiting"|"repick"|"locked";originalId:string;originalName:string|null;endgameId:string;endgameName:string|null;switched:boolean;individualGamePoints:number;endgamePoints:number;repickClosesAt:string|null;updatedAt:string|null};
 type LeagueData={joined:boolean;profile?:{displayName:string;teamName:string;immunityStreak:number};episode:{id:number;title:string;airAt:string;lockAt:string;phase:string;bonusQuestion:string;bonusOptions:string[]};castaways:Castaway[];departedCastaways?:Castaway[];pick?:{favoriteId:string;immunityPick:string;bootPick:string;bonusPick:string;shotInTheDark:string;carriedFromEpisodeId:number|null;updatedAt:string};seasonPick:SeasonPick;leaderboard:{id:string;rank:number;name:string;teamName:string;avatarKey:string;points:number;badges:string[]}[];locked:boolean;preseasonLocked:boolean;pickPercentages:null|Record<string,Percent[]>;pendingReveal?:{id:number;title:string;revealAt:string};shotInTheDarkAvailable:boolean};
 
 export function PlayClient() {
@@ -32,6 +32,7 @@ export function PlayClient() {
     const next = await response.json() as LeagueData;
     setError("");
     setData(next);
+    setNow(Date.now());
     setFavorite(next.pick?.favoriteId || "");
     setImmunity(next.pick?.immunityPick || "");
     setBoot(next.pick?.bootPick || "");
@@ -54,14 +55,19 @@ export function PlayClient() {
   if (!data.joined) return <JoinForm onJoined={load}/>;
 
   const draft: WeeklyPickDraft = { favoriteId: favorite, immunityPick: immunity, bootPick: boot, bonusPick: bonus, shotInTheDark: shot, individualGamePick: openingPick };
-  const completion = getPickCompletion(draft, !data.preseasonLocked);
-  const dirty = isPickDirty(draft, data.pick, data.seasonPick.originalId, !data.preseasonLocked);
-  const saveState = getPickSaveState(draft, data.pick, data.seasonPick.originalId, !data.preseasonLocked);
   const deadlinePassed = data.locked || now >= Date.parse(data.episode.lockAt);
   const waitingForReveal = Boolean(data.pendingReveal);
   const revealReady = Boolean(data.pendingReveal && now >= Date.parse(data.pendingReveal.revealAt));
   const shotAvailable = data.shotInTheDarkAvailable || Boolean(data.pick?.shotInTheDark);
   const locked = deadlinePassed || waitingForReveal;
+  const openingGrace = Boolean(data.seasonPick.openingGrace);
+  const openingDeadline = Date.parse(data.seasonPick.openingClosesAt || "");
+  const openingGraceExpired = openingGrace && (!Number.isFinite(openingDeadline) || now >= openingDeadline);
+  const openingEditable = !data.preseasonLocked && !locked && !openingGraceExpired && (data.episode.id === 1 || openingGrace);
+  const openingRequired = data.episode.id === 1 && !data.preseasonLocked;
+  const completion = getPickCompletion(draft, openingRequired);
+  const dirty = isPickDirty(draft, data.pick, data.seasonPick.originalId, openingRequired || openingEditable);
+  const saveState = getPickSaveState(draft, data.pick, data.seasonPick.originalId, openingRequired, openingRequired || openingEditable);
   const endgameDirty = endgamePick !== data.seasonPick.endgameId;
   const endgameLocked = Boolean(data.seasonPick.repickClosesAt && now >= Date.parse(data.seasonPick.repickClosesAt));
   const favoriteCastaways = [...data.castaways, ...(data.departedCastaways || [])].sort((a, b) => a.name.localeCompare(b.name));
@@ -76,7 +82,7 @@ export function PlayClient() {
 
   async function save() {
     if (!data || saving || locked || !completion.complete) return;
-    const submitted = { ...draft, episodeId: data.episode.id };
+    const submitted = buildWeeklyPickPayload(draft, data.episode.id, openingEditable, openingGrace);
     setSaving(true);
     setError("");
     try {
@@ -85,11 +91,27 @@ export function PlayClient() {
       setData(current => current && current.episode.id === submitted.episodeId ? {
         ...current,
         shotInTheDarkAvailable: current.shotInTheDarkAvailable || Boolean(current.pick?.shotInTheDark),
+        preseasonLocked: openingGrace && Boolean(submitted.individualGamePick) ? true : current.preseasonLocked,
         pick: { favoriteId: submitted.favoriteId, immunityPick: submitted.immunityPick, bootPick: submitted.bootPick, bonusPick: submitted.bonusPick, shotInTheDark: submitted.shotInTheDark, carriedFromEpisodeId: null, updatedAt: receipt.updatedAt },
-        seasonPick: { ...current.seasonPick, originalId: submitted.individualGamePick, originalName: current.castaways.find(c => c.id === submitted.individualGamePick)?.name || current.seasonPick.originalName },
+        seasonPick: submitted.individualGamePick === undefined ? current.seasonPick : { ...current.seasonPick, originalId: submitted.individualGamePick, originalName: current.castaways.find(c => c.id === submitted.individualGamePick)?.name || current.seasonPick.originalName, ...(openingGrace && submitted.individualGamePick ? { openingGrace: false, openingClosesAt: null, stage: "waiting" as const } : {}) },
       } : current);
+      if (openingGrace && submitted.individualGamePick) setOpeningPick(submitted.individualGamePick);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Picks were not saved. Please try again.");
+      if (openingGrace && submitted.individualGamePick) {
+        // A one-time opening choice may have saved before a weekly/network failure.
+        // Reconcile only that account state; keep all unsaved weekly selections.
+        try {
+          const response = await fetch("/api/league", { cache: "no-store" });
+          if (response.ok) {
+            const latest = await response.json() as LeagueData;
+            if (latest.joined && latest.episode.id === submitted.episodeId && latest.seasonPick) {
+              setData(current => current && current.episode.id === submitted.episodeId ? { ...current, preseasonLocked: latest.preseasonLocked, seasonPick: latest.seasonPick } : current);
+              if (latest.seasonPick.originalId) setOpeningPick(latest.seasonPick.originalId);
+            }
+          }
+        } catch { /* The original save error remains visible for a safe retry. */ }
+      }
     } finally {
       setSaving(false);
     }
@@ -113,7 +135,7 @@ export function PlayClient() {
     }
   }
 
-  const seasonPanel = <SeasonPickPanel data={data} openingPick={openingPick} setOpeningPick={setOpeningPick} endgamePick={endgamePick} setEndgamePick={setEndgamePick} saveEndgame={saveEndgame} saving={endgameSaving} dirty={endgameDirty} message={endgameMessage} error={endgameError} locked={endgameLocked} openingLocked={locked}/>;
+  const seasonPanel = <SeasonPickPanel data={data} openingPick={openingPick} setOpeningPick={setOpeningPick} endgamePick={endgamePick} setEndgamePick={setEndgamePick} saveEndgame={saveEndgame} saving={endgameSaving} dirty={endgameDirty} message={endgameMessage} error={endgameError} locked={endgameLocked} openingLocked={!openingEditable || (openingGrace && saving)} openingWindowClosed={locked || openingGraceExpired}/>;
 
   return <>
     <section className="pick-round-header" aria-labelledby="pick-round-title">
@@ -175,9 +197,9 @@ function formatPickTime(value: string) {
   return new Date(value).toLocaleString("en-US", { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZone: "America/Detroit" });
 }
 
-function SeasonPickPanel({data,openingPick,setOpeningPick,endgamePick,setEndgamePick,saveEndgame,saving,dirty,message,error,locked,openingLocked}:{data:LeagueData;openingPick:string;setOpeningPick:(value:string)=>void;endgamePick:string;setEndgamePick:(value:string)=>void;saveEndgame:()=>Promise<void>;saving:boolean;dirty:boolean;message:string;error:boolean;locked:boolean;openingLocked:boolean}){
+function SeasonPickPanel({data,openingPick,setOpeningPick,endgamePick,setEndgamePick,saveEndgame,saving,dirty,message,error,locked,openingLocked,openingWindowClosed}:{data:LeagueData;openingPick:string;setOpeningPick:(value:string)=>void;endgamePick:string;setEndgamePick:(value:string)=>void;saveEndgame:()=>Promise<void>;saving:boolean;dirty:boolean;message:string;error:boolean;locked:boolean;openingLocked:boolean;openingWindowClosed:boolean}){
  const season=data.seasonPick;
- if(season.stage==="opening")return <section className="panel season-picks" id="opening-outlast-pick" tabIndex={-1}><div><p className="eyebrow">Required opening pick · 10 points</p><h2>Outlast Pick: Reach the Individual Game</h2><p>Choose one castaway before Episode 1 locks. You earn 10 points if your pick is still in the game when Jeff announces there are no more tribes and the game is individual—even if that castaway is voted out later in the same episode.</p></div><div><CastSelect id="opening-outlast" label="Opening Outlast Pick" value={openingPick} setValue={setOpeningPick} cast={data.castaways} disabled={data.preseasonLocked||openingLocked}/><PickReceipt label="Opening Outlast Pick" value={openingPick?data.castaways.find(c=>c.id===openingPick)?.name||openingPick:"No pick yet"}/></div></section>;
+ if(season.stage==="opening")return <section className="panel season-picks" id="opening-outlast-pick" tabIndex={-1}><div><p className="eyebrow">{season.openingGrace?"One-time opening pick · 10 points":"Required opening pick · 10 points"}</p><h2>Outlast Pick: Reach the Individual Game</h2>{season.openingGrace?<><p>You can choose your missing opening pick once. It becomes final when you tap Save picks and cannot be changed afterward. You can still save your weekly picks without making this choice.</p>{season.openingClosesAt&&<p className="repick-deadline">This one-time option closes {formatPickTime(season.openingClosesAt)} ET.</p>}{openingWindowClosed&&<p className="pick-warning">The opening-pick window is closed.</p>}</>:<p>Choose one castaway before Episode 1 locks.</p>}<p>You earn 10 points if your pick is still in the game when Jeff announces there are no more tribes and the game is individual—even if that castaway is voted out later in the same episode.</p></div><div><CastSelect id="opening-outlast" label="Opening Outlast Pick" value={openingPick} setValue={setOpeningPick} cast={data.castaways} disabled={data.preseasonLocked||openingLocked}/><PickReceipt label="Opening Outlast Pick" value={openingPick?data.castaways.find(c=>c.id===openingPick)?.name||openingPick:"No pick yet"}/></div></section>;
  if(season.stage==="waiting")return <section className="panel season-picks season-pick-status"><div><p className="eyebrow">Opening pick locked</p><h2>Outlast Pick: Reach the Individual Game</h2><p>Your pick stays in place until Jeff officially announces there are no more tribes and the game is individual. The one-time Final Torch decision opens after that episode’s spoiler-safe results reveal.</p></div><PickReceipt label="Locked Outlast Pick" value={season.originalName||"No opening pick was submitted"}/></section>;
  if(season.stage==="repick"){const active=data.castaways.some(c=>c.id===endgamePick),selectedName=data.castaways.find(c=>c.id===endgamePick)?.name||season.endgameName||endgamePick||"No pick yet";return <section className="panel season-picks season-pick-repick"><div><p className="eyebrow">One-time decision · Final Torch Pick</p><h2>Keep your pick or switch?</h2><p>Your opening pick: <strong>{season.originalName||"No pick submitted"}</strong> · <strong>{season.individualGamePoints} of 10 points earned</strong>.</p><p>Keep your original active castaway for the full endgame award: 10 points to win or 3 points to reach the finale. Switch to any remaining castaway for half: 5 points to win or 1.5 points to reach the finale. Your earned individual-game points do not change.</p>{season.repickClosesAt&&<p className="repick-deadline">Decision locks {new Date(season.repickClosesAt).toLocaleString("en-US",{weekday:"long",month:"long",day:"numeric",hour:"numeric",minute:"2-digit",timeZone:"America/Detroit"})} ET.</p>}</div><div>{endgamePick&&!active&&<OptionHiddenWarning name={selectedName}/>}<CastSelect id="final-torch" label="Final Torch Pick" value={active?endgamePick:""} setValue={setEndgamePick} cast={data.castaways} disabled={locked}/><PickReceipt label="Final Torch Pick" value={selectedName}/><p className="pick-value-note">{!endgamePick?"Choose a remaining castaway · half points":endgamePick===season.originalId&&active?"Keeping original · full points":"Switching castaways · half points"}</p>{(message||dirty)&&<p className={error?"pick-save-error":"save-success"} role="status">{dirty&&!error?"Unsaved Final Torch change. Use the button below to save it.":message}</p>}<button type="button" className="button button-primary endgame-save" onClick={saveEndgame} disabled={saving||locked||!endgamePick||!active||!dirty}>{saving?"Saving…":locked?"Final Torch decision locked":dirty?"Save Final Torch Pick":"Final Torch Pick saved"}</button></div></section>}
  return <section className="panel season-picks season-pick-status"><div><p className="eyebrow">Final Torch decision locked</p><h2>Your Endgame Pick</h2><p>{season.switched?"You switched castaways, so this pick earns 5 points to win or 1.5 points to reach the finale.":"You kept your original castaway, so this pick earns 10 points to win or 3 points to reach the finale."}</p></div><div><PickReceipt label="Opening Outlast Pick" value={season.originalName||"No opening pick"}/><PickReceipt label="Final Torch Pick" value={season.endgameName||"No Final Torch pick"}/></div></section>;
