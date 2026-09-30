@@ -1,9 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getPickCompletion, getPickSaveState, isPickDirty, savePickRequest, type SavedWeeklyPick, type WeeklyPickDraft } from "../lib/pick-form";
+import { buildWeeklyPickPayload, getPickCompletion, getPickSaveState, isPickDirty, savePickRequest, type SavedWeeklyPick, type WeeklyPickDraft } from "../lib/pick-form";
 
 const draft: WeeklyPickDraft = { favoriteId: "favorite", immunityPick: "Savu", bootPick: "boot", bonusPick: "", shotInTheDark: "", individualGamePick: "opening" };
 const saved: SavedWeeklyPick = { favoriteId: "favorite", immunityPick: "Savu", bootPick: "boot", bonusPick: "", shotInTheDark: "", carriedFromEpisodeId: null, updatedAt: "2026-09-28T12:00:00Z" };
+
+test("weekly saves omit locked opening picks, including an empty opening pick in Episode 2", () => {
+  for (const individualGamePick of ["", "opening"]) {
+    const payload = buildWeeklyPickPayload({ ...draft, individualGamePick }, 2, false);
+    assert.equal(Object.hasOwn(payload, "individualGamePick"), false);
+    assert.equal(payload.episodeId, 2);
+    assert.equal(payload.favoriteId, draft.favoriteId);
+  }
+  assert.equal(Object.hasOwn(buildWeeklyPickPayload(draft, 1, false), "individualGamePick"), false);
+  assert.equal(Object.hasOwn(buildWeeklyPickPayload(draft, 2, true), "individualGamePick"), false);
+  assert.equal(buildWeeklyPickPayload(draft, 1, true).individualGamePick, "opening", "An unlocked Episode 1 submission retains the required opening selection");
+});
 
 test("completion requires the three weekly picks and only requires the opening pick before its deadline", () => {
   assert.equal(getPickCompletion(draft).complete, true);
@@ -68,4 +80,20 @@ test("Final Torch uses the same reliable save contract without changing weekly s
   const result = await savePickRequest("/api/endgame-pick", { castawayId: "finalist" }, async () => Response.json({ ok: true, castawayId: "finalist", switched: true, updatedAt: saved.updatedAt }));
   assert.equal(result.castawayId, "finalist");
   assert.equal(result.switched, true);
+});
+
+
+test("one-time Episode 2 opening grace sends only a selected opening pick while it is unlocked", () => {
+  assert.equal(buildWeeklyPickPayload(draft, 2, true, true).individualGamePick, "opening");
+  assert.equal(Object.hasOwn(buildWeeklyPickPayload({ ...draft, individualGamePick: "" }, 2, true, true), "individualGamePick"), false, "Weekly picks can save without using the one-time opening choice");
+  assert.equal(Object.hasOwn(buildWeeklyPickPayload(draft, 2, false, true), "individualGamePick"), false, "An expired grace window cannot send an opening change");
+  assert.equal(Object.hasOwn(buildWeeklyPickPayload(draft, 3, true, true), "individualGamePick"), false, "Grace cannot carry into a later episode");
+});
+
+test("an optional grace opening selection becomes unsaved without adding a required weekly pick", () => {
+  const emptyOpening = { ...draft, individualGamePick: "" };
+  assert.equal(getPickCompletion(emptyOpening, false).complete, true);
+  assert.equal(getPickSaveState(emptyOpening, saved, "", false, true), "saved");
+  assert.equal(getPickSaveState(draft, saved, "", false, true), "unsaved");
+  assert.equal(getPickSaveState(draft, saved, "opening", false, false), "saved", "The confirmed one-time choice is locked");
 });

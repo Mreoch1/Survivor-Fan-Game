@@ -19,6 +19,12 @@ export type SavedWeeklyPick = Omit<WeeklyPickDraft, "individualGamePick"> & {
   updatedAt: string;
 };
 
+export function buildWeeklyPickPayload(draft: WeeklyPickDraft, episodeId: number, openingUnlocked: boolean, openingGrace = false) {
+  const { individualGamePick, ...weekly } = draft;
+  const includeOpening = openingUnlocked && (episodeId === 1 || (episodeId === 2 && openingGrace && Boolean(individualGamePick)));
+  return { ...weekly, episodeId, ...(includeOpening ? { individualGamePick } : {}) };
+}
+
 export function getPickCompletion(pick: PickChoices, openingRequired = false) {
   const items = [
     { id: "weekly-favorite", label: "Weekly Favorite", selected: Boolean(pick.favoriteId) },
@@ -30,15 +36,15 @@ export function getPickCompletion(pick: PickChoices, openingRequired = false) {
   return { items, missing, selectedCount: items.length - missing.length, total: items.length, complete: missing.length === 0 };
 }
 
-export function isPickDirty(draft: WeeklyPickDraft, saved: SavedWeeklyPick | null | undefined, openingPick: string, openingRequired: boolean) {
+export function isPickDirty(draft: WeeklyPickDraft, saved: SavedWeeklyPick | null | undefined, openingPick: string, openingEditable: boolean) {
   return !saved || draft.favoriteId !== saved.favoriteId || draft.immunityPick !== saved.immunityPick ||
     draft.bootPick !== saved.bootPick || draft.bonusPick !== saved.bonusPick || draft.shotInTheDark !== saved.shotInTheDark ||
-    (openingRequired && draft.individualGamePick !== openingPick);
+    (openingEditable && draft.individualGamePick !== openingPick);
 }
 
-export function getPickSaveState(draft: WeeklyPickDraft, saved: SavedWeeklyPick | null | undefined, openingPick: string, openingRequired: boolean) {
+export function getPickSaveState(draft: WeeklyPickDraft, saved: SavedWeeklyPick | null | undefined, openingPick: string, openingRequired: boolean, openingEditable = openingRequired) {
   if (!getPickCompletion(draft, openingRequired).complete) return "missing";
-  if (isPickDirty(draft, saved, openingPick, openingRequired)) return "unsaved";
+  if (isPickDirty(draft, saved, openingPick, openingEditable)) return "unsaved";
   return saved?.carriedFromEpisodeId ? "carried" : "saved";
 }
 

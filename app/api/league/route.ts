@@ -5,6 +5,7 @@ import { ensureDatabase, publishDueResults } from "../../../db/runtime";
 import { carryForwardPicks } from "../../../db/pick-carryover";
 import { loadSeasonDashboard } from "../../../db/season";
 import { loadCastDepartures } from "../../../db/cast-status";
+import { getOpeningPickGrace } from "../../../db/opening-pick-grace";
 
 import { isTeamNameConflict, normalizeTeamName, TEAM_NAME_TAKEN } from "../../../lib/team-name";
 
@@ -18,14 +19,15 @@ export async function GET(){
  const {data:profile}=await db.from("profiles").select("id,display_name,team_name,avatar_key,individual_game_pick,endgame_pick,endgame_pick_switched,individual_game_points,endgame_points,endgame_pick_updated_at,immunity_streak,longest_streak,league_joined_at").eq("id",user.userId).maybeSingle();
  if(!profile?.league_joined_at)return Response.json({joined:false});
 
- let {data:episode}=await db.from("episodes").select("id,title,air_at,lock_at,reveal_at,phase,bonus_question,bonus_options").eq("results_posted",false).order("id").limit(1).maybeSingle();
- if(!episode){const latest=await db.from("episodes").select("id,title,air_at,lock_at,reveal_at,phase,bonus_question,bonus_options").order("id",{ascending:false}).limit(1).maybeSingle();episode=latest.data}
+ let {data:episode}=await db.from("episodes").select("id,title,air_at,lock_at,reveal_at,phase,bonus_question,bonus_options,results_posted").eq("results_posted",false).order("id").limit(1).maybeSingle();
+ if(!episode){const latest=await db.from("episodes").select("id,title,air_at,lock_at,reveal_at,phase,bonus_question,bonus_options,results_posted").order("id",{ascending:false}).limit(1).maybeSingle();episode=latest.data}
  if(!episode)return Response.json({error:"No scheduled episode"},{status:404});
 
  await carryForwardPicks(episode.id);
  const locked=Date.now()>=new Date(episode.lock_at).getTime();
  const {data:first}=await db.from("episodes").select("lock_at").eq("id",1).maybeSingle();
- const preseasonLocked=!!first&&Date.now()>=new Date(first.lock_at).getTime();
+ const openingGrace=getOpeningPickGrace(user.userId,profile.individual_game_pick,episode);
+ const preseasonLocked=!!first&&Date.now()>=new Date(first.lock_at).getTime()&&!openingGrace;
  const {data:pick}=await db.from("picks").select("favorite_id,immunity_pick,boot_pick,bonus_pick,double_down,carried_from_episode_id,updated_at").eq("user_id",user.userId).eq("episode_id",episode.id).maybeSingle();
  const [{data:statuses},{data:profiles},{data:allPicks},{data:pendingReveal},{data:individualEvent},season]=await Promise.all([
   db.from("cast_status").select("castaway_id,status"),
@@ -79,7 +81,7 @@ export async function GET(){
   castaways:activeCastaways.map(c=>({...c,status:"active"})),
   departedCastaways,
   pick:pick?{favoriteId:pick.favorite_id,immunityPick:pick.immunity_pick,bootPick:pick.boot_pick,bonusPick:pick.bonus_pick,shotInTheDark:pick.double_down,carriedFromEpisodeId:pick.carried_from_episode_id,updatedAt:pick.updated_at}:null,
-  seasonPick:{stage:seasonPickStage,originalId:profile.individual_game_pick||"",originalName:castawayName(profile.individual_game_pick),endgameId:profile.endgame_pick||"",endgameName:castawayName(profile.endgame_pick),switched:Boolean(profile.endgame_pick_switched),individualGamePoints:Number(profile.individual_game_points||0),endgamePoints:Number(profile.endgame_points||0),repickClosesAt,updatedAt:profile.endgame_pick_updated_at},
+  seasonPick:{stage:seasonPickStage,originalId:profile.individual_game_pick||"",originalName:castawayName(profile.individual_game_pick),openingGrace:Boolean(openingGrace),openingClosesAt:openingGrace?.closesAt||first?.lock_at||null,endgameId:profile.endgame_pick||"",endgameName:castawayName(profile.endgame_pick),switched:Boolean(profile.endgame_pick_switched),individualGamePoints:Number(profile.individual_game_points||0),endgamePoints:Number(profile.endgame_points||0),repickClosesAt,updatedAt:profile.endgame_pick_updated_at},
   leaderboard,locked,preseasonLocked,pickPercentages,
   pendingReveal:pendingReveal?{id:pendingReveal.id,title:pendingReveal.title,revealAt:pendingReveal.reveal_at}:null,
   shotInTheDarkAvailable:profile?!currentStanding?.shotUsed:false,

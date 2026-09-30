@@ -17,6 +17,7 @@ const fixturePort = Number(process.env.SMOKE_FIXTURE_PORT || 4357);
 const appUrl = `http://127.0.0.1:${appPort}`;
 const fixtureUrl = `http://127.0.0.1:${fixturePort}`;
 const fixture = input();
+const gracePlayerIds = ["26cc4460-c662-4aaa-84f4-9116c0afaba1", "26598461-d2d2-4ee8-9fef-194f0042d5d0"];
 const castIds: Record<string, string> = { safe: castaways[0].id, boot: castaways[1].id, finalist: castaways[2].id, winner: castaways[3].id, other: castaways[4].id };
 const replaceIds = (value: unknown): unknown => Array.isArray(value) ? value.map(replaceIds) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key, replaceIds(item)])) : typeof value === "string" ? castIds[value] || value : value;
 const profiles = fixture.profiles.map(profile => ({ ...replaceIds(profile) as typeof profile, total_points: 0, immunity_streak: 0, longest_streak: 0, league_joined_at: "2025-09-01T00:00:00Z", created_at: "2025-09-01T00:00:00Z" }));
@@ -79,12 +80,16 @@ const server = createServer(async (request, response) => {
   const url = new URL(request.url || "/", fixtureUrl);
   response.setHeader("content-type", "application/json");
   if (url.pathname === "/sign-in") {
-    response.writeHead(302, { "set-cookie": `${cookieFor("a")}; Path=/; HttpOnly; SameSite=Lax`, location: `${appUrl}/season` });
+    const requested = url.searchParams.get("user") || "a";
+    const account = serve && ["a", "b", ...gracePlayerIds].includes(requested) ? requested : "a";
+    // localhost gives the manual review its own cookie jar, separate from other 127.0.0.1 fixtures.
+    const reviewUrl = request.headers.host?.startsWith("localhost:") ? `http://localhost:${appPort}` : appUrl;
+    response.writeHead(302, { "set-cookie": `${cookieFor(account)}; Path=/; HttpOnly; SameSite=Lax`, location: `${reviewUrl}/${serve ? "play" : "season"}` });
     return response.end();
   }
   if (url.pathname === "/auth/v1/user") {
     const auth = request.headers.authorization?.replace("Bearer ", "");
-    const id = ["a", "b", "outsider"].find(candidate => sessionFor(candidate).access_token === auth);
+    const id = ["a", "b", "outsider", ...gracePlayerIds].find(candidate => sessionFor(candidate).access_token === auth);
     if (!id) { response.statusCode = 401; return response.end(JSON.stringify({ message: "Invalid fixture token" })); }
     return response.end(JSON.stringify({ id, email: `${id}@example.test`, user_metadata: { display_name: "Smoke Player" } }));
   }
@@ -151,6 +156,8 @@ const server = createServer(async (request, response) => {
         return response.end(JSON.stringify({ message: "Unexpected result fixture write" }));
       }
     } else if (request.method === "PATCH" && table === "profiles") {
+      // Evaluate the conditional claim against current state, as PostgreSQL does atomically.
+      if (url.searchParams.get("individual_game_pick") === "is.null") rows = rows.filter(row => row.individual_game_pick === null);
       const key = (value: unknown) => String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
       if (body.team_name && profiles.some(profile => !rows.includes(profile) && key(profile.team_name) === key(body.team_name))) {
         response.statusCode = 409;
@@ -189,7 +196,9 @@ const server = createServer(async (request, response) => {
 });
 server.listen(fixturePort, "127.0.0.1");
 await once(server, "listening");
-const app = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(appPort)], {
+// Freeze only this fixture process's child server so the one-time grace is testable after expiry.
+const fixedClock = `const OriginalDate=Date;globalThis.Date=class extends OriginalDate{constructor(...args){super(...(args.length?args:[${Date.parse("2026-09-30T17:00:00Z")}]));}static now(){return ${Date.parse("2026-09-30T17:00:00Z")};}static parse(value){return OriginalDate.parse(value);}static UTC(...args){return OriginalDate.UTC(...args);}};`;
+const app = spawn(process.execPath, ["--import", `data:text/javascript,${encodeURIComponent(fixedClock)}`, "node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(appPort)], {
   env: { ...process.env, NEXT_PUBLIC_SUPABASE_URL: fixtureUrl, NEXT_PUBLIC_SUPABASE_ANON_KEY: "fixture-anon", SUPABASE_SERVICE_ROLE_KEY: "fixture-service", NEXT_PUBLIC_SITE_URL: appUrl, AUTO_RESULTS_SECRET: "fixture-automation", LEAGUE_INVITE_CODE: "fixture-invite", COMMISSIONER_EMAILS: "a@example.test" },
   stdio: ["ignore", "pipe", "pipe"],
 });
@@ -300,6 +309,21 @@ try {
   assert.equal((await league()).pick.bonusPick, "", "Skip explicitly clears a previously saved answer");
   assert.equal((await savePick({ ...core, bonusPick: "Maybe" })).status, 400);
   assert.equal((await savePick({ ...core, shotInTheDark: "bonus" })).status, 400);
+  const originalOpeningPick = profiles[0].individual_game_pick;
+  profiles[0].individual_game_pick = null;
+  assert.equal((await savePick({ ...core, individualGamePick: "" })).status, 200, "An empty client field and missing database opening pick do not block weekly saves");
+  assert.equal((await savePick(core)).status, 200, "Omitting the locked opening field also permits a weekly save");
+  const missingOpeningLateChange = await savePick({ ...core, individualGamePick: castIds.safe });
+  assert.equal(missingOpeningLateChange.status, 409, "Missing an opening pick does not permit submitting one late");
+  assert.match((await missingOpeningLateChange.json()).error, /opening Outlast Pick is locked/);
+  assert.equal(profiles[0].individual_game_pick, null, "Weekly saves never backfill a missed opening selection");
+  profiles[0].individual_game_pick = originalOpeningPick;
+  const picksBeforeOpeningChange = JSON.stringify(playPicks);
+  for (const individualGamePick of ["", castIds.other]) {
+    assert.equal((await savePick({ ...core, individualGamePick })).status, 409, "An existing locked opening pick cannot be cleared or replaced");
+    assert.equal(profiles[0].individual_game_pick, originalOpeningPick);
+    assert.equal(JSON.stringify(playPicks), picksBeforeOpeningChange, "Rejected opening changes leave weekly picks untouched");
+  }
   const profileBody = { displayName: "Alex", avatarKey: "torch", teamName: "  cAmP   bRaVo " };
   const duplicate = await fetch(`${appUrl}/api/profile`, { method: "PUT", headers, body: JSON.stringify(profileBody) });
   assert.equal(duplicate.status, 409);
@@ -413,6 +437,49 @@ try {
   assert.equal(JSON.stringify(playPicks), picksBeforeRejectedDepartures, "Rejected eliminated picks preserve the existing saved selections");
   eliminatedStatusMode = false;
 
+  const beforeGraceProfiles = structuredClone(profiles), beforeGraceEpisodes = structuredClone(playEpisodes), beforeGracePicks = structuredClone(playPicks);
+  profiles.push(...gracePlayerIds.map(id => ({ ...profiles[0], id, individual_game_pick: null })));
+  profiles[0].individual_game_pick = null;
+  playEpisodes.splice(0, playEpisodes.length, { ...episodes[0] }, { ...episodes[0], id: 2, title: "Episode 2 grace fixture", results_posted: false, results_published: false, lock_at: "2026-09-30T23:00:00Z", air_at: "2026-10-01T00:00:00Z", reveal_at: "2026-10-05T10:30:00Z" });
+  playPicks.splice(0, playPicks.length);
+  const graceHeaders = (id: string) => ({ "content-type": "application/json", cookie: cookieFor(id) });
+  const graceLeague = async (id: string) => {
+    const response = await fetch(`${appUrl}/api/league`, { headers: graceHeaders(id) });
+    assert.equal(response.status, 200);
+    return response.json();
+  };
+  const graceCore = { episodeId: 2, favoriteId: castIds.safe, immunityPick: "Savu", bootPick: castIds.boot, bonusPick: "" };
+  const saveGrace = (id: string, individualGamePick?: string) => fetch(`${appUrl}/api/picks`, { method: "PUT", headers: graceHeaders(id), body: JSON.stringify({ ...graceCore, ...(individualGamePick === undefined ? {} : { individualGamePick }) }) });
+  for (const id of gracePlayerIds) {
+    const available = await graceLeague(id);
+    assert.equal(available.seasonPick.openingGrace, true);
+    assert.equal(available.seasonPick.stage, "opening");
+    assert.equal(available.seasonPick.openingClosesAt, "2026-09-30T23:00:00.000Z");
+    assert.equal(available.preseasonLocked, false);
+  }
+  assert.equal((await graceLeague("a")).seasonPick.openingGrace, false, "Other members do not receive the targeted exception");
+  assert.equal((await saveGrace("a", castIds.safe)).status, 409);
+  assert.equal((await saveGrace("a", "")).status, 200, "Episode 2 weekly picks save even when no opening pick exists");
+  assert.equal((await saveGrace(gracePlayerIds[0])).status, 200, "Grace remains optional for weekly saves");
+  assert.equal((await graceLeague(gracePlayerIds[0])).seasonPick.openingGrace, true);
+  assert.equal((await saveGrace(gracePlayerIds[0], castIds.safe)).status, 200);
+  const afterGrace = await graceLeague(gracePlayerIds[0]);
+  assert.equal(afterGrace.seasonPick.originalId, castIds.safe);
+  assert.equal(afterGrace.seasonPick.openingGrace, false);
+  assert.equal(afterGrace.preseasonLocked, true);
+  assert.equal((await saveGrace(gracePlayerIds[0], castIds.other)).status, 409, "First grace submission locks immediately");
+  assert.equal((await saveGrace(gracePlayerIds[0], castIds.safe)).status, 200, "A lost-response retry preserves the same opening selection");
+  const competing = await Promise.all([saveGrace(gracePlayerIds[1], castIds.safe), saveGrace(gracePlayerIds[1], castIds.other)]);
+  assert.deepEqual(competing.map(response => response.status).sort(), [200, 409], "Concurrent grace requests cannot replace the first claimed opening pick");
+  assert.ok(queries.some(query => query.includes("individual_game_pick=is.null")), "The one-time claim is enforced by a database condition");
+  profiles.find(profile => profile.id === gracePlayerIds[0])!.individual_game_pick = null;
+  playEpisodes[1].lock_at = "2026-09-30T16:59:59Z";
+  assert.equal((await graceLeague(gracePlayerIds[0])).seasonPick.openingGrace, false);
+  assert.equal((await saveGrace(gracePlayerIds[0], castIds.safe)).status, 409, "Grace closes with an earlier Episode 2 deadline");
+  profiles.splice(0, profiles.length, ...beforeGraceProfiles);
+  playEpisodes.splice(0, playEpisodes.length, ...beforeGraceEpisodes);
+  playPicks.splice(0, playPicks.length, ...beforeGracePicks);
+
   resultTables = freshResultTables();
   const adminResult = { action: "results", episodeId: 8, booted: castIds.boot, immunityWinner: "Savu" };
   const submitResult = (body: object, cookie = cookieFor("a")) => fetch(`${appUrl}/api/admin`, {
@@ -480,10 +547,16 @@ try {
   resultTables = null;
   console.log("Season and weekly-pick smoke passed: auth, current home status, scores, member breakdowns, private selections, spoilers, negative totals, revealed cast markers, disabled Favorite card data, eliminated-pick rejection, required Vote-Out, optional advantage save/skip, fresh carryover, unique names, default question, frozen saved questions, commissioner-only explicit voids, strict automation answers, and failed result writes staying unpublished.");
   if (serve) {
-    // Keep one real fixture departure visible for browser review without changing ordinary smoke cases.
-    serveDepartedCard = true;
-    for (const pick of playPicks.filter(pick => pick.episode_id === 5)) pick.boot_pick = castIds.other;
-    console.log(`Visual review: ${fixtureUrl}/sign-in`);
+    // Manual hotfix review uses only these in-memory accounts and an open Episode 2.
+    playMode = true;
+    serveDepartedCard = false;
+    profiles[0].individual_game_pick = null;
+    profiles.push(...gracePlayerIds.map((id, index) => ({ ...profiles[0], id, display_name: index === 0 ? "Chris Fixture" : "Tristin Fixture", individual_game_pick: null })));
+    playEpisodes.splice(0, playEpisodes.length, { ...episodes[0] }, { ...episodes[0], id: 2, title: "Episode 2 grace fixture", results_posted: false, results_published: false, lock_at: "2026-09-30T23:00:00Z", air_at: "2026-10-01T00:00:00Z", reveal_at: "2026-10-05T10:30:00Z" });
+    playPicks.splice(0, playPicks.length, ...["a", "b", ...gracePlayerIds].map((id, index) => ({ ...picks[0], id: `grace-review-${index}`, user_id: id, episode_id: 2, favorite_id: castIds.safe, immunity_pick: "Savu", boot_pick: castIds.boot, bonus_pick: "", double_down: "", carried_from_episode_id: null, updated_at: "2026-09-30T17:00:00Z" })));
+    console.log(`Visual review: http://localhost:${fixturePort}/sign-in?user=${gracePlayerIds[0]}`);
+    console.log(`Second eligible account: http://localhost:${fixturePort}/sign-in?user=${gracePlayerIds[1]}`);
+    console.log(`Unchanged regular account: http://localhost:${fixturePort}/sign-in?user=a`);
     await new Promise(() => {});
   }
 } catch (error) {
