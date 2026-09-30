@@ -1,6 +1,8 @@
 import { buildPointBreakdown, type PointRow, type RecapPick } from "./recap-email";
 import { playerLabel } from "./player-label";
 import { scoreSeasonPick } from "./scoring";
+import type { PopupQuestion, PopupVote } from "./popup-questions";
+import { buildPopupScoreLedger, popupPointsAt } from "./popup-score-ledger";
 
 export type SeasonProfile = {
   id: string;
@@ -85,12 +87,14 @@ function rankScores(rows: { id: string; points: number }[]) {
   });
 }
 
-export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, results, castawayName, now = new Date() }: {
+export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, results, popupQuestions = [], popupVotes = [], castawayName, now = new Date() }: {
   viewerId: string;
   profiles: SeasonProfile[];
   episodes: SeasonEpisode[];
   picks: SeasonPick[];
   results: SeasonResult[];
+  popupQuestions?: PopupQuestion[];
+  popupVotes?: PopupVote[];
   castawayName: (id: string | null | undefined) => string | null;
   now?: Date;
 }) {
@@ -99,6 +103,7 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
   // Both gates are deliberate: never derive a score, phase change, or highlight from hidden results.
   const published = episodes.filter(episode => episode.results_published &&
     new Date(episode.reveal_at).getTime() <= now.getTime()).sort((a, b) => a.id - b.id);
+  const popupLedger = buildPopupScoreLedger(popupQuestions, popupVotes, published, now);
   const resultByEpisode = new Map(results.map(result => [result.episode_id, result]));
   const pickByPlayerEpisode = new Map(picks.map(pick => [`${pick.user_id}:${pick.episode_id}`, pick]));
   const individualEpisode = published.find(episode => episode.individual_game_started);
@@ -154,7 +159,7 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
       };
     });
     const roundRanks = rankScores(rounds);
-    const overallRanks = rankScores(eligible.map(profile => ({ id: profile.id, points: totals.get(profile.id) || 0 })));
+    const overallRanks = rankScores(eligible.map(profile => ({ id: profile.id, points: (totals.get(profile.id) || 0) + popupPointsAt(popupLedger, profile.id, new Date(episode.reveal_at)) })));
     for (const round of rounds) {
       const overall = overallRanks.find(row => row.id === round.id)!;
       // Explicit allowlist: never serialize another member's pick values, even inside collapsed UI.
@@ -190,19 +195,39 @@ export function buildSeasonDashboard({ viewerId, profiles, episodes, picks, resu
     };
     previousRanks = new Map(overallRanks.map(row => [row.id, row.rank]));
   }
-  const publicBoard = (scores: Map<string, number>) => rankScores(profiles.map(profile => ({ id: profile.id, points: scores.get(profile.id) || 0 })))
+  const popupHistoryFor = (profile: SeasonProfile) => popupLedger
+    .filter(entry => entry.votes.has(profile.id) || new Date(profile.league_joined_at) <= new Date(entry.question.closes_at))
+    .map(entry => {
+      const vote = entry.votes.get(profile.id), points = entry.pointsByUser.get(profile.id) || 0;
+      return { questionId: entry.question.id, question: entry.question.question, revealAt: entry.revealAt,
+        points, outcome: entry.question.status === "void" ? "Question voided — no points awarded" : points > 0 ? "Correct prediction" : "No points awarded",
+        selection: vote?.answer === "Skip" ? "Skipped" : vote?.answer || "No vote on file" };
+    }).reverse();
+  const latestPublishedEpisode = published.at(-1);
+  const popupAfterLatestEpisode = Boolean(latestPublishedEpisode && popupLedger.some(entry => new Date(entry.revealAt) > new Date(latestPublishedEpisode.reveal_at)));
+  const publicBoard = (scores: Map<string, number>) => rankScores(profiles.map(profile => ({ id: profile.id, points: (scores.get(profile.id) || 0) + popupPointsAt(popupLedger, profile.id, now) })))
     .map(row => {
       const episodes = [...memberHistory.get(row.id)!].reverse();
       const latest = episodes[0];
+      const profile = profiles.find(profile => profile.id === row.id)!;
       return { id: row.id, name: name(row.id), points: row.points, rank: row.rank,
         avatarKey: profiles.find(profile => profile.id === row.id)!.avatar_key, isYou: row.id === viewerId,
         latestPoints: latest?.points ?? null, latestEpisodeId: latest?.episodeId ?? null,
-        movement: latest?.movement ?? null, episodes };
+        movement: popupAfterLatestEpisode ? (previousRanks.has(row.id) ? previousRanks.get(row.id)! - row.rank : null) : latest?.movement ?? null,
+        movementLabel: popupAfterLatestEpisode ? `Since Episode ${latestPublishedEpisode!.id}` : "Rank change",
+        popupPoints: popupPointsAt(popupLedger, row.id, now),
+        // Keep vote answers out of every member projection, including the viewer's public row.
+        popups: popupHistoryFor(profile).map(({ questionId, question, revealAt, points, outcome }) => ({ questionId, question, revealAt, points, outcome })),
+        episodes };
     });
   const overall = publicBoard(totals);
   return {
     playerName: playerLabel(viewer.team_name, viewer.display_name),
-    totalPoints: totals.get(viewerId) || 0,
+    totalPoints: (totals.get(viewerId) || 0) + popupPointsAt(popupLedger, viewerId, now),
+    popupPoints: popupPointsAt(popupLedger, viewerId, now),
+    popupHistory: popupHistoryFor(viewer),
+    overallMovement: overall.find(row => row.isYou)!.movement,
+    movementLabel: overall.find(row => row.isYou)!.movementLabel,
     overallRank: published.length ? overall.find(row => row.isYou)!.rank : null,
     history: history.reverse(), overall, spotlight,
     latestPublishedEpisodeId: published.at(-1)?.id ?? null,

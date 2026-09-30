@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { LeagueUpdate } from "../../lib/league-updates";
 import { UpdateSections } from "./UpdateSections";
 
-export function LeagueUpdates() {
+export function LeagueUpdates({ onReadyChange }: { onReadyChange?: (ready: boolean) => void }) {
   const [updates, setUpdates] = useState<LeagueUpdate[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -18,16 +18,20 @@ export function LeagueUpdates() {
     try {
       const response = await fetch("/api/updates", { cache: "no-store" });
       if (request !== requestNumber.current.value) return;
-      if (response.status === 401) { setUpdates([]); setError(""); return; }
+      if (response.status === 401) { setUpdates([]); setError(""); onReadyChange?.(false); return; }
       if (!response.ok) throw new Error("Updates could not load");
       const data = await response.json();
       if (request !== requestNumber.current.value) return;
       setUpdates(data.updates);
+      onReadyChange?.(data.updates.length === 0);
       setError("");
     } catch {
-      if (request === requestNumber.current.value) setError("We couldn't load the latest updates. Please try again.");
+      if (request === requestNumber.current.value) {
+        setError("We couldn't load the latest updates. Please try again.");
+        onReadyChange?.(false);
+      }
     }
-  }, []);
+  }, [onReadyChange]);
 
   useEffect(() => {
     const requests = requestNumber.current;
@@ -72,6 +76,7 @@ export function LeagueUpdates() {
       });
       if (!response.ok) throw new Error("Confirmation was not saved");
       setUpdates([]);
+      onReadyChange?.(true);
     } catch {
       setError("Your confirmation wasn't saved. Please tap the button to try again.");
     } finally {

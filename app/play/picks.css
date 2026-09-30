@@ -105,3 +105,7 @@
   .pick-page .pick-save-bar .button { font-size: .72rem; padding: 13px 14px; }
   .pick-page .pick-form-sections > section[id] { scroll-margin-top: 205px; }
 }
+
+.pick-page .leaderboard .score { text-align: right; }
+.pick-page .leaderboard .score strong { display: block; font: inherit; }
+.pick-page .leaderboard .score small { display: block; margin-top: 4px; font-size: .62rem; line-height: 1.35; white-space: nowrap; }

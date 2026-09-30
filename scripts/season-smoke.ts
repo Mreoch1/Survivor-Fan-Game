@@ -95,6 +95,33 @@ const server = createServer(async (request, response) => {
   }
   if (!url.pathname.startsWith("/rest/v1/")) { response.statusCode = 404; return response.end("{}"); }
   const table = url.pathname.split("/").at(-1)!;
+  if (table === "apply_published_scores") {
+    assert.equal(request.method, "POST");
+    let raw = "";
+    for await (const chunk of request) raw += chunk;
+    const snapshot = JSON.parse(raw) as { p_question_ids: string[]; p_profile_scores: Row[]; p_streak_scores: Row[] };
+    assert.deepEqual(snapshot.p_question_ids, [], "This season fixture has no popup awards");
+    queries.push(url.pathname);
+    // The SQL suite verifies the real transaction, gates, and overlap protection.
+    // Here the compiled app must send all score writes through that single commit.
+    const destinationProfiles: Row[] = resultTables?.profiles || profiles;
+    const destinationPicks: Row[] = resultTables?.picks || playPicks;
+    if (resultWriteFailure && ["profiles", "picks"].includes(resultWriteFailure.table)) {
+      response.statusCode = 503;
+      return response.end(JSON.stringify({ message: "Simulated score publication failure" }));
+    }
+    for (const score of snapshot.p_streak_scores) {
+      const pick = destinationPicks.find(pick => pick.id === score.id);
+      assert.ok(pick, "Calculated streak belongs to an existing fixture pick");
+      pick.streak_point = score.streak_point;
+    }
+    for (const score of snapshot.p_profile_scores) {
+      const profile = destinationProfiles.find(profile => profile.id === score.id);
+      assert.ok(profile, "Calculated total belongs to an existing fixture member");
+      for (const field of ["total_points", "preseason_points", "individual_game_points", "endgame_points", "immunity_streak", "longest_streak"]) profile[field] = score[field];
+    }
+    return response.end("true");
+  }
   const writing = request.method !== "GET" && request.method !== "HEAD";
   const writable = resultTables ? ["picks", "profiles", "episodes", "episode_results", "cast_status"].includes(table) : playMode && ["picks", "profiles", "episodes"].includes(table);
   if (writing && !writable) {
