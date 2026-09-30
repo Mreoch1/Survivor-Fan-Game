@@ -256,6 +256,12 @@ try {
   const adminPopup = (body: unknown, requestHeaders = headers) => fetch(`${appUrl}/api/admin/popup-questions`, { method: "POST", headers: requestHeaders, body: JSON.stringify(body) });
   assert.equal((await fetch(`${appUrl}/api/popup-questions`)).status, 401);
   assert.equal((await fetch(`${appUrl}/api/admin/popup-questions`, { headers: otherHeaders })).status, 403);
+  const unjoined = profiles[2].league_joined_at;
+  profiles[2].league_joined_at = null;
+  const unjoinedHeaders = { ...headers, cookie: cookie(false, c) };
+  assert.equal((await fetch(`${appUrl}/api/popup-questions`, { headers: unjoinedHeaders })).status, 403);
+  assert.equal((await popup({ questionId, answer: "Yes" }, unjoinedHeaders)).status, 403);
+  profiles[2].league_joined_at = unjoined;
   const initialPopup = await fetch(`${appUrl}/api/popup-questions`, { headers });
   assert.match(initialPopup.headers.get("cache-control") || "", /private, no-store/);
   const initialQuestions = (await initialPopup.json()).questions;

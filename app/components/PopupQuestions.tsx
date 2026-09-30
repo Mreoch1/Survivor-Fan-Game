@@ -47,6 +47,7 @@ export function PopupQuestions({ enabled = true, mode = "popup" }: { enabled?: b
       const response = await fetch("/api/popup-questions", { cache: "no-store" });
       const data = await response.json();
       if (request !== requests.current.value) return;
+      if (response.status === 401 || response.status === 403) { setQuestions([]); setError(""); return; }
       if (!response.ok || !Array.isArray(data.questions)) throw new Error(data.error || "Bonus questions could not load.");
       const serverTime = new Date(data.serverNow).getTime();
       clockOffset.current = Number.isFinite(serverTime) ? serverTime - Date.now() : 0;
@@ -60,7 +61,8 @@ export function PopupQuestions({ enabled = true, mode = "popup" }: { enabled?: b
 
   useEffect(() => {
     const counter = requests.current;
-    // The async server read is the source of this account's question and vote state.
+    // State changes only after the awaited server response.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
     window.addEventListener("focus", load);
     document.addEventListener("visibilitychange", load);
