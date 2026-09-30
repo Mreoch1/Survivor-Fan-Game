@@ -7,8 +7,10 @@ import { once } from "node:events";
 import { REMEMBER_MAX_AGE } from "../lib/supabase/session-cookies";
 import { publishedUpdates } from "../lib/league-updates";
 
-const appUrl = "http://127.0.0.1:3108";
-const fixtureUrl = "http://127.0.0.1:4357";
+const appPort = Number(process.env.AUTH_SMOKE_PORT || 3108);
+const fixturePort = Number(process.env.AUTH_FIXTURE_PORT || 4357);
+const appUrl = `http://127.0.0.1:${appPort}`;
+const fixtureUrl = `http://127.0.0.1:${fixturePort}`;
 const a = "11111111-1111-4111-8111-111111111111";
 const b = "22222222-2222-4222-8222-222222222222";
 const c = "33333333-3333-4333-8333-333333333333";
@@ -26,6 +28,15 @@ const messages: Row[] = [
 ];
 const signingKey = randomBytes(32);
 const acknowledgements: Row[] = [];
+const questionId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const hiddenId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+const stamp = (delta: number) => new Date(Date.now() + delta).toISOString();
+const popupQuestions: Row[] = [
+  { id: questionId, question: "From Episode 3 through the Season 51 finale, will at least one contestant be permanently removed from the game by the medical team because of an injury?", details: "Official medical evacuations due to injury only. Illness, temporary treatment, voluntary quits, and Episodes 1–2 do not count.", credit_name: "Prost Tosties", opens_at: stamp(-86400000), closes_at: stamp(86400000), points: 3, status: "open", correct_answer: null, resolution_episode_id: null, reveal_at: null, created_at: stamp(-86400000), created_by: a },
+  { id: hiddenId, question: "Closed fixture question?", details: "A hidden result.", credit_name: "", opens_at: stamp(-172800000), closes_at: stamp(-86400000), points: 3, status: "resolved", correct_answer: "No", resolution_episode_id: 1, reveal_at: stamp(86400000), created_at: stamp(-172800000), created_by: a },
+];
+const popupVotes: Row[] = [{ question_id: hiddenId, user_id: b, answer: "No", voted_at: stamp(-100000000) }];
+let popupFailure = false;
 let acknowledgementFailure = false;
 let usedRefresh = false;
 let logoutScope = "";
@@ -94,6 +105,24 @@ const server = createServer(async (request, response) => {
   if (url.pathname === "/sign-in") { response.writeHead(302, { "set-cookie": `${cookie(false, url.searchParams.get("player") === "b" ? b : a)}; Path=/; SameSite=Lax`, location: `${appUrl}/rules` }); return response.end(); }
   if (!url.pathname.startsWith("/rest/v1/")) { response.statusCode = 404; return response.end("{}"); }
   const table = url.pathname.split("/").at(-1)!;
+  if (["popup_questions", "popup_votes", "submit_popup_vote", "resolve_popup_question"].includes(table)) {
+    assert.equal(request.headers.apikey, "fixture-service");
+    if (popupFailure) { response.statusCode = 503; return response.end(JSON.stringify({ message: "Fixture unavailable" })); }
+    if (table === "submit_popup_vote") {
+      const existing = popupVotes.find(vote => vote.question_id === body.p_question_id && vote.user_id === body.p_user_id);
+      const receipt = (vote: Row) => ({ questionId: vote.question_id, answer: vote.answer, votedAt: vote.voted_at });
+      if (existing) return response.end(JSON.stringify(existing.answer === body.p_answer ? { ok: true, alreadySubmitted: true, vote: receipt(existing) } : { ok: false, status: 409, error: "Your first answer is already locked in", vote: receipt(existing) }));
+      const question = popupQuestions.find(question => question.id === body.p_question_id);
+      if (!question || question.status !== "open" || Date.now() >= Date.parse(String(question.closes_at))) return response.end(JSON.stringify({ ok: false, status: 409, error: "Voting is not open" }));
+      const vote = { question_id: body.p_question_id, user_id: body.p_user_id, answer: body.p_answer, voted_at: stamp(0) };
+      popupVotes.push(vote);
+      return response.end(JSON.stringify({ ok: true, alreadySubmitted: false, vote: receipt(vote) }));
+    }
+    if (table === "popup_questions" && request.method === "POST") {
+      if (!popupQuestions.some(question => question.id === body.id)) popupQuestions.push({ ...body, status: "open", correct_answer: null, resolution_episode_id: null, reveal_at: null, created_at: stamp(0) });
+      response.statusCode = 201; return response.end();
+    }
+  }
   if (table === "league_update_acknowledgements") {
     assert.equal(request.headers.apikey, "fixture-service", "Receipts use the server credential");
     if (acknowledgementFailure) { response.statusCode = 503; return response.end(JSON.stringify({ message: "Fixture unavailable" })); }
@@ -107,7 +136,7 @@ const server = createServer(async (request, response) => {
       response.statusCode = 201; return response.end();
     }
   }
-  let rows = ({ profiles, posts, private_messages: messages, league_update_acknowledgements: acknowledgements } as Record<string, Row[]>)[table] || [];
+  let rows = ({ profiles, posts, private_messages: messages, league_update_acknowledgements: acknowledgements, popup_questions: popupQuestions, popup_votes: popupVotes } as Record<string, Row[]>)[table] || [];
   for (const [field, filter] of url.searchParams) {
     if (!["select", "order", "limit", "offset"].includes(field)) rows = rows.filter(row => matches(row, field, filter));
   }
@@ -120,9 +149,9 @@ const server = createServer(async (request, response) => {
   if (request.method === "HEAD") return response.end();
   response.end(JSON.stringify(request.headers.accept?.includes("vnd.pgrst.object+json") ? rows[0] || null : rows));
 });
-server.listen(4357, "127.0.0.1");
+server.listen(fixturePort, "127.0.0.1");
 await once(server, "listening");
-const app = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", "3108"], {
+const app = spawn(process.execPath, ["node_modules/next/dist/bin/next", "start", "--hostname", "127.0.0.1", "--port", String(appPort)], {
   env: { ...process.env, NEXT_PUBLIC_SUPABASE_URL: fixtureUrl, NEXT_PUBLIC_SUPABASE_ANON_KEY: "fixture-anon", SUPABASE_SERVICE_ROLE_KEY: "fixture-service", COMMISSIONER_EMAILS: "alex@example.test" }, stdio: ["ignore", "pipe", "pipe"],
 });
 let logs = "";
@@ -223,10 +252,54 @@ try {
   assert.deepEqual(acknowledgements, firstReceipts, "An outage cannot mark a notice confirmed");
   acknowledgementFailure = false;
   assert.equal((await acknowledge({ updateIds }, otherHeaders)).status, 200, "Confirmation can retry after recovery");
+  const popup = (body: unknown, requestHeaders = headers) => fetch(`${appUrl}/api/popup-questions`, { method: "POST", headers: requestHeaders, body: JSON.stringify(body) });
+  const adminPopup = (body: unknown, requestHeaders = headers) => fetch(`${appUrl}/api/admin/popup-questions`, { method: "POST", headers: requestHeaders, body: JSON.stringify(body) });
+  assert.equal((await fetch(`${appUrl}/api/popup-questions`)).status, 401);
+  assert.equal((await fetch(`${appUrl}/api/admin/popup-questions`, { headers: otherHeaders })).status, 403);
+  const initialPopup = await fetch(`${appUrl}/api/popup-questions`, { headers });
+  assert.match(initialPopup.headers.get("cache-control") || "", /private, no-store/);
+  const initialQuestions = (await initialPopup.json()).questions;
+  const hiddenQuestion = initialQuestions.find((question: Row) => question.id === hiddenId);
+  assert.equal(hiddenQuestion.correctAnswer, null);
+  assert.equal(hiddenQuestion.status, "closed");
+  assert.equal(hiddenQuestion.revealAt, null);
+  assert.equal(hiddenQuestion.vote, null, "Another player's answer never leaks");
+  assert.equal((await popup({ questionId, answer: "Yes" }, { ...headers, "sec-fetch-site": "cross-site" } as typeof headers)).status, 403);
+  assert.equal((await popup({ questionId, answer: "Yes" }, { ...headers, origin: "https://evil.example" } as typeof headers)).status, 403);
+  assert.equal((await popup({ questionId, answer: "Maybe" })).status, 400);
+  const firstVoteResponse = await popup({ questionId, answer: "Yes", userId: b, points: 999, votedAt: "2000-01-01" }, { ...headers, origin: appUrl } as typeof headers);
+  assert.equal(firstVoteResponse.status, 200);
+  const firstVote = await firstVoteResponse.json();
+  assert.equal(popupVotes.find(vote => vote.question_id === questionId)?.user_id, a);
+  assert.deepEqual((await (await popup({ questionId, answer: "Yes" })).json()).vote, firstVote.vote);
+  const conflict = await popup({ questionId, answer: "No" });
+  assert.equal(conflict.status, 409);
+  assert.equal((await conflict.json()).vote.answer, "Yes");
+  assert.equal((await popup({ questionId: hiddenId, answer: "Yes" })).status, 409);
+  const restored = (await (await fetch(`${appUrl}/api/popup-questions`, { headers: { cookie: cookie() } })).json()).questions;
+  assert.equal(restored.find((question: Row) => question.id === questionId).vote.answer, "Yes", "Fresh login retains original vote");
+  assert.equal((await popup({ questionId, answer: "Skip" }, otherHeaders)).status, 200);
+  const draft = { action: "create", id: "cccccccc-cccc-4ccc-8ccc-cccccccccccc", question: "During Episode 4, will a fixture event happen?", details: "Count the official episode result only.", creditName: "Fixture", opensAt: stamp(-1000), closesAt: stamp(86400000) };
+  assert.equal((await adminPopup(draft, otherHeaders)).status, 403);
+  assert.equal((await adminPopup(draft)).status, 200);
+  assert.equal((await adminPopup(draft)).status, 200);
+  assert.equal(popupQuestions.filter(question => question.id === draft.id).length, 1);
+  assert.equal((await adminPopup({ ...draft, question: "Changed wording" })).status, 409);
+  assert.equal(popupQuestions.find(question => question.id === draft.id)?.question, draft.question);
+  const controls = await (await fetch(`${appUrl}/api/admin/popup-questions`, { headers })).json();
+  assert.equal(controls.questions.find((question: Row) => question.id === questionId).votesCount, 2);
+  popupFailure = true;
+  assert.equal((await fetch(`${appUrl}/api/popup-questions`, { headers })).status, 503);
+  assert.equal((await popup({ questionId, answer: "Yes" })).status, 503);
+  popupFailure = false;
+  assert.equal((await popup({ questionId, answer: "Yes" })).status, 200);
+  console.log("Popup API smoke passed: verified member identity, one final vote, retries, closed-window rejection, hidden result privacy, commissioner access, idempotent publish, and outage recovery.");
   console.log("Auth/community smoke passed: session refresh, both persistence modes, local sign-out, exact unread counts, access control, read races, and monotonic Campfire cursors.");
   console.log("Update smoke passed: verified account isolation, persistent and idempotent receipts, invalid submissions, commissioner-only tracking, history, and outage recovery.");
   if (process.argv.includes("--serve")) {
     acknowledgements.length = 0;
+    popupVotes.length = 0;
+    popupQuestions.splice(1);
     profiles[0].campfire_read_at = null;
     messages.forEach(message => { message.read_at = null; });
     console.log(`Visual fixture: ${appUrl}/login (alex@example.test / any fixture password)`);

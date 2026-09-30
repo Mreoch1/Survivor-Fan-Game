@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildSeasonDashboard } from "../lib/season-dashboard";
+import type { PopupQuestion, PopupVote } from "../lib/popup-questions";
 import { readAllRows } from "../lib/read-all-rows";
 
 import { profiles, episode, pick, input } from "./fixtures/season";
@@ -237,4 +238,88 @@ test("leaderboard movement follows shared ranks and late members get no invented
   assert.equal(newcomer.latestPoints, null);
   assert.equal(newcomer.latestEpisodeId, null);
   assert.equal(newcomer.movement, null);
+});
+
+
+const popupQuestion = (id: string, extra: Partial<PopupQuestion> = {}): PopupQuestion => ({ id, question: `Popup ${id}?`, details: "One exact event in the named episode.", credit_name: "", points: 3, status: "resolved", correct_answer: "Yes", resolution_episode_id: 1, opens_at: "2026-09-20T12:00:00Z", closes_at: "2026-09-21T12:00:00Z", reveal_at: "2026-09-22T13:00:00Z", ...extra });
+const popupVote = (questionId: string, userId: string, answer: PopupVote["answer"]): PopupVote => ({ question_id: questionId, user_id: userId, answer, voted_at: "2026-09-20T13:00:00Z" });
+
+test("popup awards add to season totals and ranks without changing episode scores or late-award history", () => {
+ const base = buildSeasonDashboard(input());
+ const dashboard = buildSeasonDashboard({ ...input(), popupQuestions: [popupQuestion("first"), popupQuestion("later", { resolution_episode_id: 4, reveal_at: "2026-09-28T10:30:00Z" }), popupQuestion("another", { resolution_episode_id: 4, reveal_at: "2026-09-28T10:30:00Z" })], popupVotes: [popupVote("first", "a", "Yes"), popupVote("first", "b", "No"), popupVote("later", "a", "Skip"), popupVote("later", "b", "Yes"), popupVote("another", "b", "Yes")] });
+ assert.equal(dashboard.popupPoints, 3);
+ assert.equal(dashboard.totalPoints, 24.5);
+ assert.equal(dashboard.history.reduce((sum, round) => sum + round.points, 0) + dashboard.popupPoints, dashboard.totalPoints);
+ assert.deepEqual(dashboard.overall.map(row => [row.id, row.points, row.popupPoints, row.rank]), [["b", 26, 6, 1], ["a", 24.5, 3, 2]]);
+ assert.deepEqual(dashboard.history.map(row => row.points), base.history.map(row => row.points));
+ assert.deepEqual(dashboard.history.map(row => row.totalPoints), [24.5, 20, 19, 6]);
+ assert.deepEqual(dashboard.overall[0].episodes.map(round => round.totalPoints), base.overall.find(row => row.id === "b")!.episodes.map(round => round.totalPoints), "Later popup awards must not rewrite earlier episode totals");
+ assert.deepEqual(dashboard.spotlight, base.spotlight, "Later popup results cannot rewrite the latest episode's winners or movement");
+ assert.equal(dashboard.overallMovement, -1);
+ assert.equal(dashboard.movementLabel, "Since Episode 4");
+ assert.equal(dashboard.popupHistory.find(row => row.questionId === "later")?.selection, "Skipped");
+ assert.doesNotMatch(JSON.stringify(dashboard.overall), /"selection"|"answer"|"correct_answer"|"voted_at"/);
+ assert.deepEqual(Object.keys(dashboard.overall[0].popups[0]).sort(), ["outcome", "points", "question", "questionId", "revealAt"]);
+});
+
+test("popup results require their own reveal and a published revealed resolution episode", () => {
+ const args = input();
+ const questions = [
+  popupQuestion("open", { question: "SECRET_OPEN_POPUP", status: "open" }),
+  popupQuestion("future", { question: "SECRET_FUTURE_POPUP", reveal_at: "2999-01-01T10:30:00Z" }),
+  popupQuestion("unpublished", { question: "SECRET_UNPUBLISHED_POPUP", resolution_episode_id: 5 }),
+  popupQuestion("early-episode", { question: "SECRET_EARLY_POPUP", resolution_episode_id: 6 }),
+  popupQuestion("missing", { question: "SECRET_MISSING_EPISODE", resolution_episode_id: 999 }),
+  popupQuestion("unlinked", { question: "SECRET_UNLINKED_POPUP", resolution_episode_id: null }),
+ ];
+ args.episodes.push(episode(5, { results_published: false }), episode(6, { reveal_at: "2999-01-01T10:30:00Z" }));
+ const dashboard = buildSeasonDashboard({ ...args, popupQuestions: questions, popupVotes: questions.map(question => popupVote(question.id, "a", "Yes")) });
+ assert.equal(dashboard.popupPoints, 0);
+ assert.equal(dashboard.totalPoints, 21.5);
+ assert.deepEqual(dashboard.popupHistory, []);
+ assert.doesNotMatch(JSON.stringify(dashboard), /SECRET_/);
+});
+
+test("popup scoring includes valid late joiners without inventing weekly picks and preserves void zeros", () => {
+ const args = input();
+ args.profiles = [...args.profiles, { ...profiles[0], id: "late", league_joined_at: "2026-09-26T12:00:00Z", individual_game_pick: null, endgame_pick: null }];
+ const question = popupQuestion("late", { opens_at: "2026-09-26T00:00:00Z", closes_at: "2026-09-27T00:00:00Z", resolution_episode_id: 4, reveal_at: "2026-09-28T10:30:00Z" });
+ const dashboard = buildSeasonDashboard({ ...args, viewerId: "late", popupQuestions: [question, { ...question, id: "void", status: "void", correct_answer: null }], popupVotes: [popupVote("late", "late", "Yes"), popupVote("void", "late", "Yes")] });
+ assert.equal(dashboard.totalPoints, 3);
+ assert.equal(dashboard.popupPoints, 3);
+ assert.deepEqual(dashboard.history, []);
+ assert.equal(dashboard.overall.find(row => row.isYou)?.episodes.length, 0);
+ assert.equal(dashboard.popupHistory.find(row => row.questionId === "void")?.points, 0);
+ assert.match(dashboard.popupHistory.find(row => row.questionId === "void")!.outcome, /voided/);
+ assert.equal(dashboard.overallRank, 3);
+});
+
+test("popup reveal timing is inclusive and empty episode history cannot expose an unlinked award", () => {
+ const question = popupQuestion("boundary", { reveal_at: "2026-09-28T10:30:00Z" });
+ const args = { ...input(), popupQuestions: [question], popupVotes: [popupVote("boundary", "a", "Yes")] };
+ assert.equal(buildSeasonDashboard({ ...args, now: new Date("2026-09-28T10:29:59.999Z") }).popupPoints, 0);
+ assert.equal(buildSeasonDashboard({ ...args, now: new Date("2026-09-28T10:30:00Z") }).popupPoints, 3);
+ const empty = buildSeasonDashboard({ ...args, episodes: [] });
+ assert.equal(empty.totalPoints, 0);
+ assert.equal(empty.overallRank, null);
+ assert.deepEqual(empty.popupHistory, []);
+});
+
+
+test("a Monday afternoon popup resolution never rewrites that morning's episode snapshot", () => {
+ const args = input();
+ args.episodes = args.episodes.map(row => row.id === 4 ? { ...row, reveal_at: "2026-09-28T10:30:00Z" } : row);
+ const question = popupQuestion("afternoon", { resolution_episode_id: 4, reveal_at: "2026-09-28T10:30:00Z", resolved_at: "2026-09-28T17:00:00Z" });
+ const popupVotes = [popupVote("afternoon", "b", "Yes")];
+ const before = buildSeasonDashboard({ ...args, popupQuestions: [question], popupVotes, now: new Date("2026-09-28T16:59:59Z") });
+ assert.equal(before.overall.find(row => row.id === "b")?.points, 20);
+ assert.deepEqual(before.overall.find(row => row.id === "b")?.popups, []);
+ const after = buildSeasonDashboard({ ...args, popupQuestions: [question], popupVotes, now: new Date("2026-09-28T17:00:00Z") });
+ const player = after.overall.find(row => row.id === "b")!;
+ assert.equal(player.points, 23);
+ assert.equal(player.popupPoints, 3);
+ assert.equal(player.episodes[0].totalPoints, 20, "Morning history keeps the score that was available at the episode reveal");
+ assert.equal(player.popups[0].revealAt, "2026-09-28T17:00:00.000Z");
+ assert.equal(player.movement, 1);
+ assert.equal(player.movementLabel, "Since Episode 4");
 });

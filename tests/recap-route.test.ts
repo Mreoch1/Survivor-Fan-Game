@@ -32,6 +32,11 @@ test("recap route preserves scorecard totals and strips all spoiler fields", asy
     const table = url.pathname.split("/").at(-1);
     if (table === "episodes") return Response.json(episodes);
     if (table === "profiles") return Response.json(fixture.profiles);
+    if (table === "popup_questions") return Response.json([{ id: "popup", question: "SECRET_POPUP_QUESTION", details: "SECRET_POPUP_SCOPE", credit_name: "SECRET_CREDIT", opens_at: "2026-09-20T00:00:00Z", closes_at: "2026-09-21T00:00:00Z", points: 3, status: "resolved", correct_answer: "Yes", resolution_episode_id: 1, reveal_at: "2026-09-28T10:30:00Z" }]);
+    if (table === "popup_votes") {
+      assert.equal(url.searchParams.get("question_id"), "in.(popup)");
+      return Response.json([{ question_id: "popup", user_id: "a", answer: "Yes", voted_at: "2026-09-20T12:00:00Z" }]);
+    }
     const ids = url.searchParams.get("episode_id")?.slice(4, -1).split(",").map(Number);
     assert.deepEqual(ids, [1, 2, 3, 4], "Only published episode IDs reach scoring queries");
     if (table === "picks") return Response.json(fixture.picks);
@@ -45,7 +50,8 @@ test("recap route preserves scorecard totals and strips all spoiler fields", asy
   assert.equal(response.headers.get("cache-control"), "no-store");
   assert.equal(report.pending, true);
   assert.equal(report.kind, "scores");
-  assert.equal(report.players[0].overallPoints, 21.5);
+  assert.equal(report.players[0].overallPoints, 24.5);
+  assert.deepEqual(report.players[0].rounds.map((round: { points: number }) => round.points), [3, 13, 1, 4.5], "Popup points do not change episode round scores");
   assert.equal(report.players[0].rounds.length, 4);
   assert.doesNotMatch(JSON.stringify(report), /SECRET_|favorite_id|Vote-Out|bonus_question|finale_winner|departures|Opening Outlast|Final Torch|Savu|safe|finalist/);
   assert.ok(queries.some(url => url.pathname.endsWith("episodes") && url.searchParams.get("season") === "eq.51"));

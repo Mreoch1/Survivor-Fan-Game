@@ -2,9 +2,10 @@ import { getChatGPTUser, chatGPTSignInPath, chatGPTSignOutPath } from "../chatgp
 import { profileIcon } from "../profile-icons";
 import { createAdminClient } from "../../lib/supabase/admin";
 import { CommunityNotifications } from "./CommunityNotifications";
-import { LeagueUpdates } from "./LeagueUpdates";
+import { PlayerPrompts } from "./PlayerPrompts";
+import "../popup-questions.css";
 
-export async function AppShell({ children }: { children: React.ReactNode }) {
+export async function AppShell({ children, showBonusPrompt = true }: { children: React.ReactNode; showBonusPrompt?: boolean }) {
   const user = await getChatGPTUser();
   let profile: { display_name: string; avatar_key: string } | null = null;
   if (user) {
@@ -22,7 +23,7 @@ export async function AppShell({ children }: { children: React.ReactNode }) {
       </div>
     </header>
     <div className="league-help-bar"><div className="wrap"><a href="/save">Save to my phone</a><a href="/updates">What&apos;s new</a></div></div>
-    {user && <LeagueUpdates/>}
+    {user && <PlayerPrompts showBonus={showBonusPrompt}/>}
     {children}
     <footer><div className="wrap footer-inner"><div className="brand"><span className="brand-mark">51</span><span>OUTLAST<br/><small>FANTASY LEAGUE</small></span></div><p>Made for family, friends, and bragging rights.<br/>Unofficial fan league. Not affiliated with CBS or Paramount.</p><div><a href="/messages">Private Messages</a><a href="/rules">Rules</a><a href="/commissioner">Commissioner</a></div></div></footer>
   </>;

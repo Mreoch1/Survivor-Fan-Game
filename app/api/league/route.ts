@@ -50,7 +50,7 @@ export async function GET(){
   if(score.rank===1&&score.points>0)badges.push("Torch Leader");
   if(row.longestStreak>=3)badges.push("Challenge Reader");
   if(score.points>=20)badges.push("Strategist");
-  return[{...row,points:score.points,rank:score.rank,badges}];
+  return[{...row,points:score.points,popupPoints:score.popupPoints,rank:score.rank,badges}];
  });
  let pickPercentages:null|Record<string,{value:string;count:number;percent:number}[]>=null;
  if(locked){pickPercentages={};for(const field of ["favorite_id","immunity_pick","boot_pick"] as const){const counts=new Map<string,number>();for(const row of (allPicks||[]).filter(k=>k.episode_id===episode.id)){const value=row[field];if(value)counts.set(value,(counts.get(value)||0)+1)}const total=[...counts.values()].reduce((a,b)=>a+b,0);pickPercentages[field]=[...counts].map(([value,count])=>({value,count,percent:total?Math.round(count*100/total):0}))}}

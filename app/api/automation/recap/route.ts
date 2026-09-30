@@ -2,6 +2,7 @@ import { buildResultsRecapEmail } from "../../../../lib/recap-email";
 import { buildSeasonDashboard, type SeasonEpisode, type SeasonPick, type SeasonProfile, type SeasonResult } from "../../../../lib/season-dashboard";
 import { readAllRows } from "../../../../lib/read-all-rows";
 import { mondayMailWindow, selectWeeklyEdition, type MailEpisode } from "../../../../lib/weekly-edition";
+import { loadPopupScores } from "../../../../db/popup-scores";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
@@ -42,14 +43,14 @@ export async function GET(request: Request) {
   const published = episodes.filter(episode => episode.results_published &&
     new Date(episode.reveal_at) <= now && new Date(episode.air_at) <= now);
   const ids = published.map(episode => episode.id);
-  const [picks, results] = ids.length ? await Promise.all([
+  const [popupScores, [picks, results]] = await Promise.all([loadPopupScores(published, now, db), ids.length ? Promise.all([
     readAllRows<SeasonPick>((from, to) => db.from("picks")
       .select("user_id,episode_id,favorite_id,immunity_pick,boot_pick,bonus_pick,double_down,carried_from_episode_id,favorite_point,immunity_point,boot_point,bonus_point,underdog_point,streak_point,double_point")
       .in("episode_id", ids).order("episode_id").order("user_id").range(from, to)),
     readAllRows<SeasonResult>((from, to) => db.from("episode_results")
       .select("episode_id,departures,immunity_void,bonus_answer,finale_winner,finalists")
       .in("episode_id", ids).order("episode_id").range(from, to)),
-  ]) : [[], []];
+  ]) : [[], []]]);
   const emails = new Map<string, string>();
   for (let page = 1; ; page++) {
     const { data, error } = await db.auth.admin.listUsers({ page, perPage: 500 });
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
     if (recipients.has(key)) throw new Error("Multiple joined profiles share a recipient; resolve before mailing");
     recipients.add(key);
     const dashboard = buildSeasonDashboard({ viewerId: profile.id, profiles, episodes: published,
-      picks, results, now, castawayName: () => null });
+      picks, results, ...popupScores, now, castawayName: () => null });
     const rounds = dashboard.history.filter(round => edition.episodeIds.includes(round.episodeId))
       .reverse().map(round => ({ episodeId: round.episodeId, points: round.points, rank: round.roundRank }));
     const overallLeaders = dashboard.overall.filter(row => row.rank <= 3)
