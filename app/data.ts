@@ -34,13 +34,39 @@ const officialCast = [
   ["sharonda-renee", "Sharonda Cox", 34, "OB-GYN resident", "Richmond, KY", "A charismatic and resilient physician experienced with consequential decisions."],
 ] as const;
 
+// Confirmed through aired Episode 2, including Lewis joining Toka.
+// https://www.paramountplus.com/sneak-peak/survivor-season-51-episode-2-recap/
+const castawayTribes = {
+  "aaliyah-puglia": "Toka",
+  "alexis-levine": "Savu",
+  "thien-an-nguyen": "Toka",
+  "ana-sani": "Savu",
+  "angelica-loblack": "Toka",
+  "brady-booker": "Toka",
+  "carter-krull": "Savu",
+  "cristian-chavez": "Savu",
+  "daniel-kilby": "Toka",
+  "devin-way": "Toka",
+  "eric-macksoud": "Savu",
+  "jenna-greenawalt": "Toka",
+  "kristin-flickinger": "Savu",
+  "lewis-kelly": "Toka",
+  "linnea-capobianco": "Savu",
+  "maggie-nestor": "Toka",
+  "michael-pinsky": "Toka",
+  "ori-jean-charles": "Savu",
+  "patt-cannaday": "Toka",
+  "rob-antonson": "Savu",
+  "sharonda-renee": "Savu",
+} satisfies Record<(typeof officialCast)[number][0], "Savu" | "Toka">;
+
 export const castaways: Castaway[] = officialCast.map(([id, name, age, job, hometown, bio]) => ({
   id,
   name,
   age,
   job,
   hometown,
-  tribe: "Unassigned",
+  tribe: castawayTribes[id],
   bio,
   image: `/cast/${id}.jpg`,
 }));
