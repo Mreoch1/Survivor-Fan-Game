@@ -1,3 +1,5 @@
+.cast-status-page .official-cast.savu .tribe-dot { background: var(--purple); }
+.cast-status-page .official-cast.toka .tribe-dot { background: #dabd24; }
 .cast-status-page .cast-departed { border-color: #a52020; }
 .cast-status-page .cast-departed .portrait img { filter: saturate(.25) brightness(.85); }
 .cast-status-page .portrait > .cast-departure-x { position: absolute; inset: 8%; z-index: 3; display: grid; place-items: center; pointer-events: none; }
