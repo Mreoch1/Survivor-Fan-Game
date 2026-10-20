@@ -1,5 +1,7 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
-import { castaways } from "../../data";
+import { castaways as originalCastaways } from "../../data";
+import { loadTribeState, loadTribeOutcomeState } from "../../../db/tribes";
+import { applyTribeState } from "../../../lib/tribes";
 import { createAdminClient } from "../../../lib/supabase/admin";
 import { ensureDatabase, publishDueResults } from "../../../db/runtime";
 import { carryForwardPicks } from "../../../db/pick-carryover";
@@ -19,10 +21,12 @@ export async function GET(){
  const {data:profile}=await db.from("profiles").select("id,display_name,team_name,avatar_key,individual_game_pick,endgame_pick,endgame_pick_switched,individual_game_points,endgame_points,endgame_pick_updated_at,immunity_streak,longest_streak,league_joined_at").eq("id",user.userId).maybeSingle();
  if(!profile?.league_joined_at)return Response.json({joined:false});
 
- let {data:episode}=await db.from("episodes").select("id,title,air_at,lock_at,reveal_at,phase,bonus_question,bonus_options,results_posted").eq("results_posted",false).order("id").limit(1).maybeSingle();
- if(!episode){const latest=await db.from("episodes").select("id,title,air_at,lock_at,reveal_at,phase,bonus_question,bonus_options,results_posted").order("id",{ascending:false}).limit(1).maybeSingle();episode=latest.data}
+ let {data:episode}=await db.from("episodes").select("id,title,air_at,lock_at,reveal_at,phase,bonus_question,bonus_options,results_posted,results_published").eq("results_posted",false).order("id").limit(1).maybeSingle();
+ if(!episode){const latest=await db.from("episodes").select("id,title,air_at,lock_at,reveal_at,phase,bonus_question,bonus_options,results_posted,results_published").order("id",{ascending:false}).limit(1).maybeSingle();episode=latest.data}
  if(!episode)return Response.json({error:"No scheduled episode"},{status:404});
 
+ const tribeState=episode.results_published?await loadTribeOutcomeState(episode.id):await loadTribeState(episode.id);
+ const castaways=applyTribeState(originalCastaways,tribeState);
  await carryForwardPicks(episode.id);
  const locked=Date.now()>=new Date(episode.lock_at).getTime();
  const {data:first}=await db.from("episodes").select("lock_at").eq("id",1).maybeSingle();
@@ -80,6 +84,7 @@ export async function GET(){
   episode:{id:episode.id,title:episode.title,airAt:episode.air_at,lockAt:episode.lock_at,revealAt:episode.reveal_at,phase:episode.phase,bonusQuestion:episode.bonus_question,bonusOptions:episode.bonus_options},
   castaways:activeCastaways.map(c=>({...c,status:"active"})),
   departedCastaways,
+  tribeState,tribeOptions:tribeState.tribes,
   pick:pick?{favoriteId:pick.favorite_id,immunityPick:pick.immunity_pick,bootPick:pick.boot_pick,bonusPick:pick.bonus_pick,shotInTheDark:pick.double_down,carriedFromEpisodeId:pick.carried_from_episode_id,updatedAt:pick.updated_at}:null,
   seasonPick:{stage:seasonPickStage,originalId:profile.individual_game_pick||"",originalName:castawayName(profile.individual_game_pick),openingGrace:Boolean(openingGrace),openingClosesAt:openingGrace?.closesAt||first?.lock_at||null,endgameId:profile.endgame_pick||"",endgameName:castawayName(profile.endgame_pick),switched:Boolean(profile.endgame_pick_switched),individualGamePoints:Number(profile.individual_game_points||0),endgamePoints:Number(profile.endgame_points||0),repickClosesAt,updatedAt:profile.endgame_pick_updated_at},
   leaderboard,locked,preseasonLocked,pickPercentages,

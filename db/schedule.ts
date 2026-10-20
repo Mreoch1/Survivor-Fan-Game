@@ -1,3 +1,4 @@
+import { loadTribeState } from "./tribes";
 import { carryForwardPicks } from "./pick-carryover";
 import { createAdminClient } from "../lib/supabase/admin";
 import { ensureDatabase, publishDueResults, revealAtForAirTime } from "./runtime";
@@ -10,5 +11,10 @@ export async function scheduleEpisode(input:EpisodeScheduleInput){
  if(question.length>140)return{ok:false as const,status:400,error:"Keep the complete Play Your Advantage question within 140 characters. Simplify its scope without dropping scoring conditions."};
  if(!id||id<1||!title||Number.isNaN(airAt.getTime())||!bonusQuestion||bonusOptions.length<2||bonusOptions.length>4)return{ok:false as const,status:400,error:"Complete the schedule and provide two to four Play Your Advantage choices"};
  await ensureDatabase();const db=createAdminClient();const {data:existing}=await db.from("episodes").select("phase,bonus_question,bonus_options,results_posted,results_published,reveal_at").eq("id",id).maybeSingle();const {count}=existing?await db.from("picks").select("id",{count:"exact",head:true}).eq("episode_id",id):{count:0};const choicesChanged=existing&&(existing.phase!==phase||existing.bonus_question!==bonusQuestion||JSON.stringify(existing.bonus_options)!==JSON.stringify(bonusOptions));if(existing?.results_posted&&choicesChanged)return{ok:false as const,status:409,error:"That episode already has results, so its scoring fields are frozen"};if((count||0)>0&&choicesChanged)return{ok:false as const,status:409,error:"Picks already exist, so the immunity format and Play Your Advantage question are frozen"};
+ if(!existing&&id>4){
+  const {data:prior,error:priorError}=await db.from("episodes").select("id,results_published").lt("id",id).eq("results_posted",true).order("id",{ascending:false}).limit(1).maybeSingle();
+  if(priorError)throw priorError;
+  if(prior){const tribes=await loadTribeState(id);if(!prior.results_published||tribes.afterEpisodeId!==prior.id)return{ok:false as const,status:409,error:"Verify and save the previous episode tribe roster before opening new picks"};if(tribes.phase!==phase)return{ok:false as const,status:409,error:"The episode format must match the verified aired game phase"}}
+ }
  const lockAt=new Date(airAt.getTime()-3600000).toISOString(),revealAt=existing?.results_published?existing.reveal_at:revealAtForAirTime(airAt);const {error}=await db.from("episodes").upsert({id,season:51,title,air_at:airAt.toISOString(),lock_at:lockAt,reveal_at:revealAt,phase,bonus_question:bonusQuestion,bonus_options:bonusOptions,results_posted:existing?.results_posted||false,results_published:existing?.results_published||false,updated_at:new Date().toISOString()});if(error)throw error;await publishDueResults();const carried=await carryForwardPicks(id);return{ok:true as const,episodeId:id,title,airAt:airAt.toISOString(),lockAt,revealAt,phase,bonusQuestion,bonusOptions,carried};
 }

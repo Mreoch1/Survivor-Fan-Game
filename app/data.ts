@@ -4,7 +4,8 @@ export type Castaway = {
   age: number;
   job: string;
   hometown: string;
-  tribe: "Savu" | "Toka" | "Unassigned";
+  tribe: string;
+  tribeHex?: string;
   bio: string;
   image: string;
   status?: string;
@@ -34,6 +35,8 @@ const officialCast = [
   ["sharonda-renee", "Sharonda Cox", 34, "OB-GYN resident", "Richmond, KY", "A charismatic and resilient physician experienced with consequential decisions."],
 ] as const;
 
+// Historical fallback before per-episode tribe snapshots were introduced.
+// Live rosters and choices come from db/tribes, never from this static baseline.
 // Confirmed through aired Episode 2, including Lewis joining Toka.
 // https://www.paramountplus.com/sneak-peak/survivor-season-51-episode-2-recap/
 const castawayTribes = {

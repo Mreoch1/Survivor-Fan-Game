@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type CSSProperties } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Countdown } from "../components/Countdown";
@@ -8,9 +8,10 @@ import { profileIcon } from "../profile-icons";
 import { buildWeeklyPickPayload, getPickCompletion, getPickSaveState, isPickDirty, savePickRequest, type WeeklyPickDraft } from "../../lib/pick-form";
 
 type Castaway={id:string;name:string;tribe:string;image:string;status:string;departureLabel?:"Voted out"|"Left the game"};
+type TribeOption={name:string;color:string;hex:string};
 type Percent={value:string;count:number;percent:number};
 type SeasonPick={openingGrace?:boolean;openingClosesAt?:string|null;stage:"opening"|"waiting"|"repick"|"locked";originalId:string;originalName:string|null;endgameId:string;endgameName:string|null;switched:boolean;individualGamePoints:number;endgamePoints:number;repickClosesAt:string|null;updatedAt:string|null};
-type LeagueData={joined:boolean;profile?:{displayName:string;teamName:string;immunityStreak:number};episode:{id:number;title:string;airAt:string;lockAt:string;phase:string;bonusQuestion:string;bonusOptions:string[]};castaways:Castaway[];departedCastaways?:Castaway[];pick?:{favoriteId:string;immunityPick:string;bootPick:string;bonusPick:string;shotInTheDark:string;carriedFromEpisodeId:number|null;updatedAt:string};seasonPick:SeasonPick;leaderboard:{id:string;rank:number;name:string;teamName:string;avatarKey:string;points:number;popupPoints:number;badges:string[]}[];locked:boolean;preseasonLocked:boolean;pickPercentages:null|Record<string,Percent[]>;pendingReveal?:{id:number;title:string;revealAt:string};shotInTheDarkAvailable:boolean};
+type LeagueData={joined:boolean;profile?:{displayName:string;teamName:string;immunityStreak:number};episode:{id:number;title:string;airAt:string;lockAt:string;phase:string;bonusQuestion:string;bonusOptions:string[]};castaways:Castaway[];departedCastaways?:Castaway[];tribeOptions:TribeOption[];tribeState?:{afterEpisodeId:number};pick?:{favoriteId:string;immunityPick:string;bootPick:string;bonusPick:string;shotInTheDark:string;carriedFromEpisodeId:number|null;updatedAt:string};seasonPick:SeasonPick;leaderboard:{id:string;rank:number;name:string;teamName:string;avatarKey:string;points:number;popupPoints:number;badges:string[]}[];locked:boolean;preseasonLocked:boolean;pickPercentages:null|Record<string,Percent[]>;pendingReveal?:{id:number;title:string;revealAt:string};shotInTheDarkAvailable:boolean};
 
 export function PlayClient() {
   const [data, setData] = useState<LeagueData | null>(null);
@@ -167,7 +168,10 @@ export function PlayClient() {
       <section className="panel prediction-panel" id="weekly-immunity" tabIndex={-1} aria-labelledby="immunity-heading">
         <div className="panel-title"><div><p className="eyebrow">Required · 2 points</p><h2 id="immunity-heading">2. Immunity</h2></div><span className="status-pill">{immunity ? "Selected" : "Needed"}</span></div>
         <p className="pick-help">Who will win {data.episode.phase === "individual" ? "individual" : "tribal"} immunity this episode?</p>
-        {data.episode.phase === "individual" ? <CastSelect id="immunity" label="Immunity Pick" value={immunity} setValue={setImmunity} cast={data.castaways} disabled={locked}/> : <div className="tribe-picks">{["Savu", "Toka"].map(tribe => <div className={`tribe-choice ${tribe.toLowerCase()}`} key={tribe}><input aria-label={`Choose ${tribe} as your Immunity Pick`} disabled={locked} checked={immunity === tribe} onChange={() => setImmunity(tribe)} id={`tribe-${tribe}`} name="immunity" type="radio"/><label htmlFor={`tribe-${tribe}`}><small>TRIBE</small><h3>{tribe}</h3></label></div>)}</div>}
+        {data.episode.phase === "individual" ? <CastSelect id="immunity" label="Immunity Pick" value={immunity} setValue={setImmunity} cast={data.castaways} disabled={locked}/> : <>
+          <p className="pick-help">Choose one tribe. If multiple tribes win immunity, a pick for any winning tribe scores.{data.tribeState && data.tribeState.afterEpisodeId > 0 ? ` Tribes verified through Episode ${data.tribeState.afterEpisodeId}.` : ""}</p>
+          <div className="tribe-picks" role="group" aria-label="Choose one tribe for immunity">{(data.tribeOptions || []).map((tribe, index) => <div className="tribe-choice" key={tribe.name} style={{ "--tribe-color": tribe.hex } as CSSProperties}><input aria-label={`Choose ${tribe.name} as your Immunity Pick`} disabled={locked} checked={immunity === tribe.name} onChange={() => setImmunity(tribe.name)} id={`tribe-${index}`} name="immunity" type="radio"/><label htmlFor={`tribe-${index}`}><small>{tribe.color}</small><h3>{tribe.name}</h3><span className="tribe-member-count">{data.castaways.filter(castaway => castaway.tribe === tribe.name).length} remaining</span><span className="tribe-selection-state">{immunity === tribe.name ? "✓ Selected" : "Choose tribe"}</span></label></div>)}</div>
+        </>}
         <PickReceipt label="Immunity" value={immunityChoice}/>
       </section>
       <section className="panel prediction-panel" id="weekly-vote-out" tabIndex={-1} aria-labelledby="boot-heading">
