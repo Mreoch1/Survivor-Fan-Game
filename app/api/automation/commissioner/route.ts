@@ -1,3 +1,4 @@
+import { loadTribeState } from "../../../../db/tribes";
 import { createAdminClient } from "../../../../lib/supabase/admin";
 import { ensureDatabase, publishDueResults } from "../../../../db/runtime";
 import { scheduleEpisode } from "../../../../db/schedule";
@@ -55,7 +56,11 @@ export async function GET(request: Request) {
     : { count: 0, error: null };
   if (pickCountError) return Response.json({ error: "Could not verify whether the episode question is frozen" }, { status: 500 });
 
+  const tribeState=await loadTribeState(open?.id);
+  const lastPublished=(latest||[]).filter(row=>row.results_posted).reduce((id,row)=>Math.max(id,row.id),0);
   return Response.json({
+    tribeState,
+    tribeReviewRequired: lastPublished>=4&&tribeState.afterEpisodeId<lastPublished,
     target: open
       ? {
           id: open.id,
@@ -80,6 +85,7 @@ export async function GET(request: Request) {
       individualGameStarted: row.individual_game_started,
     })),
     rules: {
+      tribes: "After every published episode, verify and save its full roster with /api/automation/tribes before scheduling. A saved upcoming episode does not skip this check. Preserve historical rosters and player selections.",
       scheduleSource: "Verify CBS, Paramount, or Paramount Press Express first",
       lock: "One hour before airtime",
       reveal: "6:30 AM America/Detroit on the Monday after the local episode air date; Monday episodes reveal the next Monday",

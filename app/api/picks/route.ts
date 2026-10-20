@@ -1,6 +1,7 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { createAdminClient } from "../../../lib/supabase/admin";
 import { ensureDatabase, isCastaway, publishDueResults } from "../../../db/runtime";
+import { loadTribeState } from "../../../db/tribes";
 import { getOpeningPickGrace } from "../../../db/opening-pick-grace";
 
 export async function PUT(request:Request){
@@ -11,7 +12,8 @@ export async function PUT(request:Request){
  await ensureDatabase();await publishDueResults();const db=createAdminClient();
  const {data:pendingPrior}=await db.from("episodes").select("reveal_at").lt("id",body.episodeId).eq("results_posted",true).eq("results_published",false).order("id",{ascending:false}).limit(1).maybeSingle();if(pendingPrior)return Response.json({error:"Next-episode picks open after the Monday 6:30 AM ET spoiler reveal"},{status:409});
  const {data:episode}=await db.from("episodes").select("id,lock_at,phase,bonus_options,results_posted").eq("id",body.episodeId).eq("results_posted",false).maybeSingle();if(!episode||Date.now()>=new Date(episode.lock_at).getTime())return Response.json({error:"Picks are locked for this episode"},{status:409});
- const options=Array.isArray(episode.bonus_options)?episode.bonus_options.map(String):[],immunityValid=episode.phase==="individual"?isCastaway(body.immunityPick):["Savu","Toka"].includes(body.immunityPick),bonusValid=!body.bonusPick||options.includes(body.bonusPick);if(!immunityValid||!bonusValid)return Response.json({error:"One of those predictions is not available"},{status:400});
+ const tribeState=await loadTribeState(episode.id);
+ const options=Array.isArray(episode.bonus_options)?episode.bonus_options.map(String):[],immunityValid=episode.phase==="individual"?isCastaway(body.immunityPick):tribeState.tribes.some(tribe=>tribe.name===body.immunityPick),bonusValid=!body.bonusPick||options.includes(body.bonusPick);if(!immunityValid||!bonusValid)return Response.json({error:"One of those predictions is not available"},{status:400});
  const castawayPicks=[body.favoriteId,body.bootPick,episode.phase==="individual"?body.immunityPick:""] .filter(Boolean) as string[];if(castawayPicks.length){const {data:eliminated}=await db.from("cast_status").select("castaway_id").eq("status","eliminated").in("castaway_id",castawayPicks).limit(1);if(eliminated?.length)return Response.json({error:"That castaway has already left the game"},{status:400})}
  const {data:profile}=await db.from("profiles").select("individual_game_pick,league_joined_at").eq("id",user.userId).maybeSingle();if(!profile?.league_joined_at)return Response.json({error:"Join the league first"},{status:400});
  if(body.individualGamePick&&!isCastaway(body.individualGamePick))return Response.json({error:"Choose a valid opening Outlast Pick"},{status:400});

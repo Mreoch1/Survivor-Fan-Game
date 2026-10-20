@@ -1,5 +1,16 @@
-.cast-status-page .official-cast.savu .tribe-dot { background: var(--purple); }
-.cast-status-page .official-cast.toka .tribe-dot { background: #dabd24; }
+.cast-status-page .tribe-dot { background: var(--tribe-color, #65776d); }
+.cast-status-page .cast-current-status { flex-wrap: wrap; gap: 8px 20px; }
+.cast-status-page .cast-tribe-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin: 0 0 34px; padding: 0; border: 0; }
+.cast-status-page .cast-tribe-summary a { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; padding: 16px; background: #fff8e6; border: 1px solid #b8aa8e; border-top: 5px solid var(--tribe-color, #a52020); font-size: .85rem; }
+.cast-status-page .cast-tribe-summary a > span:last-child { flex-basis: 100%; color: #52685d; font-size: .76rem; }
+.cast-status-page .cast-tribe-summary a:focus-visible { outline: 3px solid #2c69b8; outline-offset: 3px; }
+.cast-status-page .cast-tribe-section { margin-bottom: 44px; scroll-margin-top: 170px; }
+.cast-status-page .cast-group-heading { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-bottom: 4px solid var(--tribe-color, #a52020); margin-bottom: 20px; padding-bottom: 14px; }
+.cast-status-page .cast-group-heading .eyebrow { margin: 0 0 6px; }
+.cast-status-page .cast-group-heading h2 { font: 400 2.2rem Georgia, serif; margin: 0; }
+.cast-status-page .cast-group-heading > span { color: #52685d; font-size: .82rem; white-space: nowrap; }
+.cast-status-page .cast-copy h3 { font: 400 1.65rem Georgia, serif; margin: 10px 0 7px; }
+.cast-status-page .cast-evidence { text-align: left; }
 .cast-status-page .cast-departed { border-color: #a52020; }
 .cast-status-page .cast-departed .portrait img { filter: saturate(.25) brightness(.85); }
 .cast-status-page .portrait > .cast-departure-x { position: absolute; inset: 8%; z-index: 3; display: grid; place-items: center; pointer-events: none; }

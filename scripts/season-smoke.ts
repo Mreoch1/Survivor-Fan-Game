@@ -10,6 +10,7 @@ import { input } from "../tests/fixtures/season";
 import { castaways } from "../app/data";
 import { publishedUpdates } from "../lib/league-updates";
 import { DEFAULT_ADVANTAGE_QUESTION } from "../lib/advantage-question";
+import { BASELINE_TRIBE_STATE, type TribeState } from "../lib/tribes";
 
 const serve = process.argv.includes("--serve");
 const appPort = Number(process.env.SMOKE_APP_PORT || 3107);
@@ -21,7 +22,7 @@ const gracePlayerIds = ["26cc4460-c662-4aaa-84f4-9116c0afaba1", "26598461-d2d2-4
 const castIds: Record<string, string> = { safe: castaways[0].id, boot: castaways[1].id, finalist: castaways[2].id, winner: castaways[3].id, other: castaways[4].id };
 const replaceIds = (value: unknown): unknown => Array.isArray(value) ? value.map(replaceIds) : value && typeof value === "object" ? Object.fromEntries(Object.entries(value).map(([key, item]) => [key, replaceIds(item)])) : typeof value === "string" ? castIds[value] || value : value;
 const profiles = fixture.profiles.map(profile => ({ ...replaceIds(profile) as typeof profile, total_points: 0, immunity_streak: 0, longest_streak: 0, league_joined_at: "2025-09-01T00:00:00Z", created_at: "2025-09-01T00:00:00Z" }));
-const episodes = fixture.episodes.map(episode => ({ ...episode, air_at: episode.lock_at.replace("2026", "2025"), lock_at: episode.lock_at.replace("2026", "2025"), reveal_at: episode.reveal_at.replace("2026", "2025"), bonus_options: ["Yes", "No"], results_posted: true }));
+const episodes = fixture.episodes.map(episode => ({ ...episode, season: 51, air_at: episode.lock_at.replace("2026", "2025"), lock_at: episode.lock_at.replace("2026", "2025"), reveal_at: episode.reveal_at.replace("2026", "2025"), bonus_options: ["Yes", "No"], results_posted: true }));
 const picks = (replaceIds(fixture.picks) as typeof fixture.picks).map(pick => ({ ...pick, immunity_pick: pick.episode_id > 2 ? castaways[3].id : pick.immunity_pick }));
 const results = replaceIds(fixture.results) as typeof fixture.results;
 const hidden = { ...episodes[0], id: 99, title: "HIDDEN_FUTURE_EPISODE", individual_game_started: true, results_published: false, reveal_at: "2999-01-01T13:00:00Z" };
@@ -51,6 +52,10 @@ const castReviewResults = [
   { ...results[0], episode_id: 99, departures: [{ castawayId: departureCast.early.id, type: "vote" }] },
 ];
 type Row = Record<string, unknown>;
+const tribeSources = ["https://www.paramountplus.com/sneak-peak/survivor-season-51-episode-4-recap/", "https://survivingtribal.com/survivor-51-episode-4-recap-who-was-voted-out"];
+const snapshotRow = (state: TribeState): Row => ({ after_episode_id: state.afterEpisodeId, phase: state.phase, tribes: state.tribes, assignments: state.assignments, sources: state.sources });
+const mergedFixture: TribeState = { afterEpisodeId: 4, phase: "individual", tribes: [{ name: "Merged", color: "Blue tribe", hex: "#123456" }], assignments: Object.fromEntries(castaways.map(castaway => [castaway.id, castaway.id === castIds.boot ? castaway.tribe : "Merged"])), sources: tribeSources };
+const playTribeSnapshots = [snapshotRow(mergedFixture)];
 const playEpisodes: Row[] = [...episodes, { ...episodes[3], id: 5, title: "Preview predictions", individual_game_started: false, results_posted: false, results_published: false, lock_at: "2999-01-01T23:00:00Z", air_at: "2999-01-02T00:00:00Z", reveal_at: "2999-01-02T13:00:00Z", bonus_question: "Will an idol be found?" }];
 const playPicks: Row[] = structuredClone(picks);
 const queries: string[] = [];
@@ -64,6 +69,7 @@ function freshResultTables(): Record<string, Row[]> {
     picks: members.map((id, index) => ({ ...picks[0], id: `result-${id}`, user_id: id, episode_id: 8, bonus_pick: ["Yes", "No", ""][index], double_down: index < 2 ? "bonus" : "", favorite_point: 0, immunity_point: 0, boot_point: 0 })),
     episode_results: [],
     cast_status: [],
+    tribe_snapshots: [],
   };
 }
 
@@ -142,7 +148,7 @@ const server = createServer(async (request, response) => {
   if (prematureStatusMode) departedStatuses.push(...[departureCast.hidden, departureCast.early].map(castaway => ({ castaway_id: castaway.id, status: "eliminated" })));
   const departedEpisodes = [...playEpisodes, { ...hidden, id: 98 }, { ...hidden, results_published: true }];
   const departedResults = [...results.map(result => result.episode_id === 1 ? { ...result, departures: revealedDepartures } : result), ...castReviewResults.slice(1)];
-  const tables: Record<string, unknown[]> = { league_update_acknowledgements: serve ? profiles.flatMap(profile => publishedUpdates().map(update => ({ user_id: profile.id, update_id: update.id }))) : [], profiles, cast_status: eliminatedStatusMode ? departedStatuses : serveDepartedCard ? [{ castaway_id: departureCast.voted.id, status: "eliminated" }] : [], episodes: castReviewMode ? castReviewEpisodes : eliminatedStatusMode ? departedEpisodes : emptySeason ? [] : playMode ? playEpisodes : [...episodes, hidden], picks: playMode ? playPicks : [...scoredPicks, { ...picks[0], episode_id: 99, favorite_id: "SECRET_FUTURE_PICK", favorite_point: 99 }], episode_results: castReviewMode ? castReviewResults : eliminatedStatusMode ? departedResults : playMode ? results : [...scoredResults, { ...results[0], episode_id: 99, finale_winner: "SECRET_FUTURE_WINNER" }], private_messages: [] };
+  const tables: Record<string, unknown[]> = { tribe_snapshots: playMode ? playTribeSnapshots : [], league_update_acknowledgements: serve ? profiles.flatMap(profile => publishedUpdates().map(update => ({ user_id: profile.id, update_id: update.id }))) : [], profiles, cast_status: eliminatedStatusMode ? departedStatuses : serveDepartedCard ? [{ castaway_id: departureCast.voted.id, status: "eliminated" }] : [], episodes: castReviewMode ? castReviewEpisodes : eliminatedStatusMode ? departedEpisodes : emptySeason ? [] : playMode ? playEpisodes : [...episodes, hidden], picks: playMode ? playPicks : [...scoredPicks, { ...picks[0], episode_id: 99, favorite_id: "SECRET_FUTURE_PICK", favorite_point: 99 }], episode_results: castReviewMode ? castReviewResults : eliminatedStatusMode ? departedResults : playMode ? results : [...scoredResults, { ...results[0], episode_id: 99, finale_winner: "SECRET_FUTURE_WINNER" }], private_messages: [] };
   Object.assign(tables, resultTables);
   let rows = (tables[table] || []) as Row[];
   for (const [field, filter] of url.searchParams) {
@@ -172,9 +178,10 @@ const server = createServer(async (request, response) => {
       }
       if (request.method === "PATCH" && ["picks", "profiles", "episodes"].includes(table)) {
         rows.forEach(row => Object.assign(row, body));
-      } else if (request.method === "POST" && ["episode_results", "cast_status"].includes(table)) {
+      } else if (request.method === "POST" && ["episode_results", "cast_status", "picks"].includes(table)) {
         const key = table === "episode_results" ? "episode_id" : "castaway_id";
-        const existing = resultTables[table].find(row => row[key] === body[key]);
+        const existing = resultTables[table].find(row => table === "picks" ? row.user_id === body.user_id && row.episode_id === body.episode_id : row[key] === body[key]);
+        if (table === "picks" && !existing) body.id = `fixture-${body.user_id}-${body.episode_id}`;
         if (existing) Object.assign(existing, body);
         else resultTables[table].push(body);
         rows = [existing || body];
@@ -393,7 +400,7 @@ try {
   const castCards = castHtml.match(/<article\b[^>]*>[\s\S]*?<\/article>/g) || [];
   assert.equal(castCards.length, castaways.length, "Cast page keeps every original castaway card");
   const cardFor = (name: string) => {
-    const card = castCards.find(card => card.includes(`<h2>${name}</h2>`));
+    const card = castCards.find(card => card.includes(`<h3>${name}</h3>`));
     assert.ok(card, `Card is present for ${name}`);
     return card;
   };
@@ -528,6 +535,18 @@ try {
   }
   assert.equal(JSON.stringify(resultTables), unchangedResultState, "Rejected void requests never modify results, picks, or totals");
 
+  for (const extra of [{ immunityWinners: [] }, { immunityWinners: [], voidImmunity: true }, { immunityWinners: ["Savu"], voidImmunity: "on" }]) {
+    assert.equal((await submitResult({ ...adminResult, bonusAnswer: "Yes", ...extra })).status, 400, "Immunity void requires the exact explicit checkbox and no conflicting winners");
+  }
+  assert.equal(JSON.stringify(resultTables), unchangedResultState, "Rejected immunity voids never change picks or scores");
+  const explicitImmunityVoid = await submitResult({ ...adminResult, immunityWinners: [], voidImmunity: "on", bonusAnswer: "Yes" });
+  assert.equal(explicitImmunityVoid.status, 200);
+  assert.equal((await explicitImmunityVoid.json()).immunityVoid, true);
+  assert.equal(resultTables.episode_results[0].immunity_void, true);
+  assert.ok(resultTables.picks.every(pick => pick.immunity_point === 0), "An explicit unexpected-format void awards no immunity points");
+  assert.ok(resultTables.picks.every(pick => pick.immunity_pick === "Savu"), "Voiding preserves original player choices");
+  resultTables = freshResultTables();
+
   const normalResult = await submitResult({ ...adminResult, bonusAnswer: "Yes" });
   assert.equal(normalResult.status, 200);
   assert.equal((await normalResult.json()).published, true);
@@ -571,8 +590,74 @@ try {
     assert.equal((await submitResult({ ...adminResult, voidBonusQuestion: "on" })).status, 200, "A commissioner can retry after a prepublication write failure");
     assertVoidedResult();
   }
+  const threeTribes: TribeState = {
+    ...structuredClone(BASELINE_TRIBE_STATE), afterEpisodeId: 7, sources: tribeSources,
+    tribes: [...BASELINE_TRIBE_STATE.tribes, { name: "Dina", color: "Red tribe", hex: "#cf3048" }],
+    assignments: { ...BASELINE_TRIBE_STATE.assignments, "cristian-chavez": "Dina", "daniel-kilby": "Dina", "eric-macksoud": "Dina", "linnea-capobianco": "Dina", "lewis-kelly": "Dina", "sharonda-renee": "Dina" },
+  };
+  resultTables = freshResultTables();
+  const previousTribeEpisode = { ...episodes[0], id: 7, title: "Published tribe fixture", individual_game_started: false };
+  const previousTribeResult = { ...results[0], episode_id: 7, departures: [], finale_winner: null, finalists: [] };
+  resultTables.episodes.unshift(previousTribeEpisode);
+  resultTables.episode_results.push(previousTribeResult);
+  Object.assign(resultTables.episodes[1], { lock_at: "2999-01-01T23:00:00Z", air_at: "2999-01-02T00:00:00Z", reveal_at: "2999-01-02T13:00:00Z" });
+  resultTables.tribe_snapshots.push(snapshotRow(threeTribes));
+  resultTables.picks.forEach((pick, index) => Object.assign(pick, { episode_id: 7, immunity_pick: ["Dina", "Toka", "Savu"][index], double_down: "", bonus_pick: "" }));
+  const previousPicks = JSON.stringify(resultTables.picks);
+  const dynamic = await league();
+  assert.equal(dynamic.episode.id, 8);
+  assert.equal(dynamic.tribeState.afterEpisodeId, 7);
+  assert.deepEqual(dynamic.tribeOptions.map((tribe: { name: string }) => tribe.name).sort(), ["Dina", "Savu", "Toka"], "All verified tribes reach the real league endpoint");
+  assert.equal(dynamic.castaways.find((castaway: { id: string }) => castaway.id === "lewis-kelly").tribe, "Dina");
+  assert.equal(dynamic.pick.immunityPick, "Dina", "A valid third-tribe pick carries forward");
+  assert.equal(dynamic.pick.carriedFromEpisodeId, 7);
+  assert.equal(JSON.stringify(resultTables.picks.filter(pick => pick.episode_id === 7)), previousPicks, "Carrying forward does not rewrite historical selections");
+  const dynamicCore = { episodeId: 8, favoriteId: castIds.safe, immunityPick: "Dina", bootPick: castIds.boot, bonusPick: "" };
+  assert.equal((await savePick(dynamicCore)).status, 200, "Dina can be saved through the authenticated picks endpoint");
+  const beforeUnknownTribe = JSON.stringify(resultTables.picks);
+  assert.equal((await savePick({ ...dynamicCore, immunityPick: "Unknown tribe" })).status, 400);
+  assert.equal(JSON.stringify(resultTables.picks), beforeUnknownTribe, "Unknown tribe rejection preserves saved picks");
+  const automaticResults = (body: object) => fetch(`${appUrl}/api/automation/results`, { method: "POST", headers: { authorization: "Bearer fixture-automation", "content-type": "application/json" }, body: JSON.stringify(body) });
+  Object.assign(resultTables.episodes[1], { lock_at: episodes[0].lock_at, air_at: episodes[0].air_at, reveal_at: episodes[0].reveal_at });
+  const submittedSelections = resultTables.picks.filter(pick => pick.episode_id === 8).map(pick => [pick.user_id, pick.favorite_id, pick.immunity_pick, pick.boot_pick, pick.bonus_pick]);
+  const twoWinners = await automaticResults({ episodeId: 8, departures: [{ castawayId: castIds.boot, type: "vote" }], immunityWinners: ["Dina", "Toka"], bonusAnswer: "Yes" });
+  assert.equal(twoWinners.status, 200);
+  assert.equal((await twoWinners.json()).immunityVoid, false);
+  assert.deepEqual(resultTables.episode_results.find(result => result.episode_id === 8)!.immunity_winners, ["Dina", "Toka"]);
+  assert.deepEqual(resultTables.picks.filter(pick => pick.episode_id === 8).map(pick => [pick.immunity_pick, pick.immunity_point]), [["Dina", 2], ["Toka", 2], ["Savu", 0]], "Both winning tribes earn the existing two-point award");
+  assert.deepEqual(resultTables.picks.filter(pick => pick.episode_id === 8).map(pick => [pick.user_id, pick.favorite_id, pick.immunity_pick, pick.boot_pick, pick.bonus_pick]), submittedSelections);
+  assert.equal(JSON.stringify(resultTables.picks.filter(pick => pick.episode_id === 7)), previousPicks, "Scoring the next episode preserves earlier picks");
+
+  resultTables = freshResultTables();
+  resultTables.episodes.unshift(previousTribeEpisode);
+  resultTables.episode_results.push(previousTribeResult);
+  resultTables.tribe_snapshots.push(snapshotRow({ ...structuredClone(BASELINE_TRIBE_STATE), afterEpisodeId: 7, sources: tribeSources }));
+  const surpriseState = { ...threeTribes, afterEpisodeId: 8 };
+  const surpriseResult = { episodeId: 8, departures: [{ castawayId: castIds.boot, type: "vote" }], immunityWinners: ["Dina", "Toka"], bonusAnswer: "Yes" };
+  const beforeSurprise = JSON.stringify(resultTables);
+  assert.equal((await automaticResults(surpriseResult)).status, 400, "An unknown winning tribe requires the aired episode's full verified roster");
+  assert.equal(JSON.stringify(resultTables), beforeSurprise);
+  const incompleteAssignments = { ...surpriseState.assignments };
+  delete incompleteAssignments[castaways[0].id];
+  assert.equal((await automaticResults({ ...surpriseResult, tribeState: { ...surpriseState, assignments: incompleteAssignments } })).status, 400, "A partial swap roster fails before scoring");
+  assert.equal(JSON.stringify(resultTables), beforeSurprise);
+  const surpriseAccepted = await automaticResults({ ...surpriseResult, tribeState: surpriseState });
+  assert.equal(surpriseAccepted.status, 200, "A sourced full swap roster permits a newly introduced immunity winner");
+  assert.equal((await surpriseAccepted.json()).immunityVoid, false);
+  assert.deepEqual(resultTables.episode_results.find(result => result.episode_id === 8)!.immunity_winners, ["Dina", "Toka"]);
+  assert.equal(resultTables.tribe_snapshots.length, 1, "Result entry leaves roster publication to the separate guarded snapshot step");
+  const needsRoster = await schedule({ episodeId: 9, title: "Roster dependency fixture", airAt: "2999-01-09T00:00:00Z", phase: "tribe" });
+  assert.equal(needsRoster.status, 409, "Next episode stays closed until the newly published result has a verified tribe snapshot");
+  assert.match((await needsRoster.json()).error, /previous episode tribe roster/);
+  assert.ok(!resultTables.episodes.some(episode => episode.id === 9));
+  resultTables.tribe_snapshots.push(snapshotRow(surpriseState));
+  const afterPublishedSwap = await league();
+  assert.equal(afterPublishedSwap.episode.id, 8);
+  assert.equal(afterPublishedSwap.tribeState.afterEpisodeId, 8, "Without an open next episode, Play shows the latest published roster instead of the previous one");
+  assert.deepEqual(afterPublishedSwap.tribeOptions.map((tribe: { name: string }) => tribe.name).sort(), ["Dina", "Savu", "Toka"]);
+  assert.equal(afterPublishedSwap.castaways.find((castaway: { id: string }) => castaway.id === "lewis-kelly").tribe, "Dina");
   resultTables = null;
-  console.log("Season and weekly-pick smoke passed: auth, current home status, scores, member breakdowns, private selections, spoilers, negative totals, revealed cast markers, disabled Favorite card data, eliminated-pick rejection, required Vote-Out, optional advantage save/skip, fresh carryover, unique names, default question, frozen saved questions, commissioner-only explicit voids, strict automation answers, and failed result writes staying unpublished.");
+  console.log("Season and weekly-pick smoke passed: auth, current home status, scores, member breakdowns, private selections, spoilers, negative totals, revealed cast markers, disabled Favorite card data, eliminated-pick rejection, required Vote-Out, optional advantage save/skip, fresh carryover, unique names, default question, frozen saved questions, commissioner-only explicit voids, strict automation answers, failed result writes staying unpublished, dynamic tribe options and carryover, multiple immunity winners, verified surprise swaps, and roster-dependent scheduling.");
   if (serve) {
     // Manual hotfix review uses only these in-memory accounts and an open Episode 2.
     playMode = true;

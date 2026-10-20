@@ -61,3 +61,12 @@ For each new episode, choose a precise Play Your Advantage question from officia
 When no suitable precise preview question can be verified, use the exact shared `DEFAULT_ADVANTAGE_QUESTION` with Yes/No: “Will a valid immunity idol be played at Tribal Council this episode (even if it blocks no votes)? Finds and Shot in the Dark do not count.” Preserve already scheduled questions and choices, including the current episode; these standards apply to new future episodes. The server still freezes scoring fields after picks exist. The automation context returns the shared checklist and default; the saved AI commissioner prompt should follow those supplied values instead of hardcoding an older fallback.
 
 Team names are unique across profiles, ignoring capitalization and extra whitespace. Blank names remain optional. Both joining and Profile editing return a clear conflict message; the database unique index also protects concurrent saves.
+
+
+### Tribe updates after each episode
+
+The weekly turnover order is results, published tribe snapshot, then the next episode. Run `node scripts/auto-tribes.mjs context` after results publication, even when results report `pending:false` or the upcoming episode already exists. Verify the entire roster from aired CBS/Paramount coverage and an independent recap. Submit the exact context payload with `node scripts/auto-tribes.mjs submit-file outputs/auto-tribes.json`, refetch context, and compare every assignment. This does not send player notifications.
+
+Each snapshot records its episode, phase, current tribes/colors, all cast assignments, and evidence URLs. Earlier departures retain their final tribes. Snapshots are append-only and only visible after their episode is published and its reveal time has passed. Repeating identical data is safe; conflicting history or stale context is rejected. Apply the reviewed `episode_tribe_snapshots` migration before deploying this code; startup never creates tables.
+
+For a swap introducing a new immunity winner, include the full verified `tribeState` in the results payload so every winner can be validated. Persist that same state with the tribe endpoint after results publish. Historical picks keep their previous episode's choices; upcoming picks, carry-forward, cast labels, and commissioner controls use the appropriate verified snapshot. New episodes cannot open until the previous published episode's roster is reviewed. The existing Monday 6:30 AM Detroit reveal and recovery windows remain in force.
