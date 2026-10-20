@@ -1,4 +1,6 @@
 import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+import { parseTribeSubmission, readTribeSubmissionFile } from "../lib/tribe-submission.mjs";
 
 // `context` documents the exact target, full roster, previous snapshot and POST payload.
 // Save verified JSON in ignored outputs/, then use `submit-file outputs/auto-tribes.json`.
@@ -14,10 +16,11 @@ const options = { headers: { authorization: `Bearer ${config.AUTO_RESULTS_SECRET
 if (mode !== "context") {
   const argument = process.argv[3];
   if (!argument) throw new Error("Provide verified tribe JSON or a JSON file path");
-  const input = mode === "submit-file" ? fs.readFileSync(argument, "utf8") : argument;
-  JSON.parse(input);
+  const submission = mode === "submit-file"
+    ? readTribeSubmissionFile(argument, fileURLToPath(root))
+    : parseTribeSubmission(argument);
   options.method = "POST";
-  options.body = input;
+  options.body = JSON.stringify(submission);
 }
 const response = await fetch("https://survivor-fan-game.vercel.app/api/automation/tribes", options);
 const output = await response.text();

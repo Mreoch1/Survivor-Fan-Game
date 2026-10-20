@@ -535,6 +535,18 @@ try {
   }
   assert.equal(JSON.stringify(resultTables), unchangedResultState, "Rejected void requests never modify results, picks, or totals");
 
+  for (const extra of [{ immunityWinners: [] }, { immunityWinners: [], voidImmunity: true }, { immunityWinners: ["Savu"], voidImmunity: "on" }]) {
+    assert.equal((await submitResult({ ...adminResult, bonusAnswer: "Yes", ...extra })).status, 400, "Immunity void requires the exact explicit checkbox and no conflicting winners");
+  }
+  assert.equal(JSON.stringify(resultTables), unchangedResultState, "Rejected immunity voids never change picks or scores");
+  const explicitImmunityVoid = await submitResult({ ...adminResult, immunityWinners: [], voidImmunity: "on", bonusAnswer: "Yes" });
+  assert.equal(explicitImmunityVoid.status, 200);
+  assert.equal((await explicitImmunityVoid.json()).immunityVoid, true);
+  assert.equal(resultTables.episode_results[0].immunity_void, true);
+  assert.ok(resultTables.picks.every(pick => pick.immunity_point === 0), "An explicit unexpected-format void awards no immunity points");
+  assert.ok(resultTables.picks.every(pick => pick.immunity_pick === "Savu"), "Voiding preserves original player choices");
+  resultTables = freshResultTables();
+
   const normalResult = await submitResult({ ...adminResult, bonusAnswer: "Yes" });
   assert.equal(normalResult.status, 200);
   assert.equal((await normalResult.json()).published, true);
