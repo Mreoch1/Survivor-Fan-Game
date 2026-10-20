@@ -2,7 +2,8 @@ import { mkdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { homedir } from "node:os";
 import { PublicClientApplication } from "@azure/msal-node";
-import { PersistenceCreator, PersistenceCachePlugin, DataProtectionScope } from "@azure/msal-node-extensions";
+import { PersistenceCachePlugin, DataProtectionScope } from "@azure/msal-node-extensions";
+import { createMailPersistence } from "./mail-persistence.mjs";
 
 export const mailbox = "outlasttorch51@outlook.com";
 export const stateDirectory = join(homedir(), "Library", "Application Support", "Outlast51", "mail");
@@ -13,7 +14,7 @@ export async function mailClient({ interactive = false, deviceCodeCallback } = {
   await mkdir(stateDirectory, { recursive: true, mode: 0o700 });
   const config = JSON.parse(await readFile(join(stateDirectory, "config.json"), "utf8"));
   if (!/^[a-f0-9-]{36}$/i.test(config.clientId)) throw new Error("Outlast Microsoft app registration is missing");
-  const persistence = await PersistenceCreator.createPersistence({
+  const persistence = await createMailPersistence({
     cachePath: join(stateDirectory, "token-cache.lockfile"),
     dataProtectionScope: DataProtectionScope.CurrentUser,
     serviceName: "Outlast51.LeagueMail",
