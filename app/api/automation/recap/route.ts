@@ -20,10 +20,20 @@ const json = (body: unknown, status = 200) => Response.json(body, {
   status, headers: { "cache-control": "no-store" },
 });
 
+// Owner-authorized recovery of the missed October 19 edition on October 20 only.
+// Anchor eligibility and the duplicate-prevention key to Monday, while keeping
+// real time for all published-data visibility and current score calculations.
+function editionTime(now: Date) {
+  return now >= new Date("2026-10-20T04:00:00Z") && now < new Date("2026-10-21T04:00:00Z")
+    ? new Date("2026-10-19T14:00:00Z")
+    : now;
+}
+
 export async function GET(request: Request) {
   if (!authorized(request)) return json({ error: "Automation access required" }, 401);
   const now = new Date();
-  if (!mondayMailWindow(now).open) {
+  const editionAt = editionTime(now);
+  if (!mondayMailWindow(editionAt).open) {
     return json({ pending: false, message: "Tree Mail opens Mondays at 10 AM America/Detroit" });
   }
   const db = createAdminClient();
@@ -31,7 +41,7 @@ export async function GET(request: Request) {
   const episodes = await readAllRows<SeasonEpisode & MailEpisode>((from, to) => db.from("episodes")
     .select("id,title,phase,air_at,lock_at,reveal_at,bonus_question,individual_game_started,results_published")
     .eq("season", 51).order("id").range(from, to));
-  const edition = selectWeeklyEdition(episodes, now);
+  const edition = selectWeeklyEdition(episodes, editionAt);
   if (!edition.pending) return json(edition);
 
   const profiles = await readAllRows<SeasonProfile>((from, to) => db.from("profiles")
