@@ -4,32 +4,11 @@ import { homedir } from "node:os";
 import { PublicClientApplication } from "@azure/msal-node";
 import { PersistenceCachePlugin, DataProtectionScope } from "@azure/msal-node-extensions";
 import { createMailPersistence } from "./mail-persistence.mjs";
+import { microsoftAuthFailureMessage, microsoftGraphFailureMessage } from "./mail-errors.mjs";
 
 export const mailbox = "outlasttorch51@outlook.com";
 export const stateDirectory = join(homedir(), "Library", "Application Support", "Outlast51", "mail");
 const scopes = ["User.Read", "Mail.Send", "Mail.Read"];
-
-export function microsoftAuthFailureMessage(error) {
-  const message = error instanceof Error ? error.message : String(error || "");
-  if (!/AADSTS70000|service abuse mode/i.test(message)) return null;
-  return `Outlast Microsoft account ${mailbox} is blocked by Microsoft for suspected abuse (AADSTS70000). The owner must sign in to Outlook.com and complete Microsoft's account-unblock verification. Do not reconnect, change senders, or retry deliveries while the account is blocked.`;
-}
-
-export function microsoftGraphFailureMessage(status, body) {
-  let code = "";
-  let message = "";
-  try {
-    const parsed = JSON.parse(body);
-    code = typeof parsed?.error?.code === "string" ? parsed.error.code : "";
-    message = typeof parsed?.error?.message === "string" ? parsed.error.message : "";
-  } catch {
-    // Non-JSON responses use the existing status-only fallback.
-  }
-  const safeCode = code.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 80);
-  const safeMessage = message.replace(/\s+/g, " ").trim().slice(0, 300);
-  const detail = [safeCode, safeMessage].filter(Boolean).join(": ");
-  return `Microsoft mail request failed (${status})${detail ? `: ${detail}` : "; check the connection before retrying."}`;
-}
 
 /** @param {{interactive?: boolean, deviceCodeCallback?: (code: import('@azure/msal-node').DeviceCodeResponse) => void}} options */
 export async function mailClient({ interactive = false, deviceCodeCallback } = {}) {

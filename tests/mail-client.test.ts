@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { microsoftAuthFailureMessage, microsoftGraphFailureMessage } from "../scripts/mail-client.mjs";
+import { microsoftAuthFailureMessage, microsoftGraphFailureMessage } from "../scripts/mail-errors.mjs";
 
 test("service-abuse blocks give the owner an explicit recovery action", () => {
   const message = microsoftAuthFailureMessage(new Error("invalid_grant: AADSTS70000: User account is found to be in service abuse mode."));
