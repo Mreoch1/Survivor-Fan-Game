@@ -4,6 +4,7 @@ import { homedir } from "node:os";
 import { PublicClientApplication } from "@azure/msal-node";
 import { PersistenceCachePlugin, DataProtectionScope } from "@azure/msal-node-extensions";
 import { createMailPersistence } from "./mail-persistence.mjs";
+import { microsoftAuthFailureMessage, microsoftGraphFailureMessage } from "./mail-errors.mjs";
 
 export const mailbox = "outlasttorch51@outlook.com";
 export const stateDirectory = join(homedir(), "Library", "Application Support", "Outlast51", "mail");
@@ -35,7 +36,13 @@ export async function mailClient({ interactive = false, deviceCodeCallback } = {
   } else {
     if (!account) throw new Error("Outlast sender is not connected. Run the one-time mail:connect setup.");
     // Never open a browser from a scheduled run. Revoked access requires an owner reconnect.
-    result = await app.acquireTokenSilent({ account, scopes });
+    try {
+      result = await app.acquireTokenSilent({ account, scopes });
+    } catch (error) {
+      const blocked = microsoftAuthFailureMessage(error);
+      if (blocked) throw new Error(blocked, { cause: error });
+      throw error;
+    }
   }
   if (result?.account?.username?.toLowerCase() !== mailbox) {
     if (result?.account) await app.getTokenCache().removeAccount(result.account);
@@ -47,7 +54,10 @@ export async function mailClient({ interactive = false, deviceCodeCallback } = {
       headers: { "content-type": "application/json", ...options.headers, authorization: `Bearer ${result.accessToken}` },
       signal: AbortSignal.timeout(30_000), redirect: "error",
     });
-    if (!response.ok) throw new Error(`Microsoft mail request failed (${response.status}); check the connection before retrying.`);
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(microsoftGraphFailureMessage(response.status, body));
+    }
     return response;
   }
   const profile = await (await graph("/me?$select=mail,userPrincipalName")).json();
