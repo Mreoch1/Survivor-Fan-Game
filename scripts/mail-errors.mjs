@@ -2,7 +2,7 @@ const mailbox = "outlasttorch51@outlook.com";
 
 export function microsoftAuthFailureMessage(error) {
   const message = error instanceof Error ? error.message : String(error || "");
-  if (!/AADSTS70000|service abuse mode/i.test(message)) return null;
+  if (!/service abuse mode/i.test(message)) return null;
   return `Outlast Microsoft account ${mailbox} is blocked by Microsoft for suspected abuse (AADSTS70000). The owner must sign in to Outlook.com and complete Microsoft's account-unblock verification. Do not reconnect, change senders, or retry deliveries while the account is blocked.`;
 }
 

@@ -7,6 +7,7 @@ test("service-abuse blocks give the owner an explicit recovery action", () => {
   assert.match(message || "", /outlasttorch51@outlook\.com/);
   assert.match(message || "", /account-unblock verification/);
   assert.match(message || "", /Do not reconnect/);
+  assert.equal(microsoftAuthFailureMessage(new Error("AADSTS70000: InvalidGrant - Authentication failed.")), null);
   assert.equal(microsoftAuthFailureMessage(new Error("network timeout")), null);
 });
 
