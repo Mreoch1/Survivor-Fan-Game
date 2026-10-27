@@ -9,6 +9,28 @@ export const mailbox = "outlasttorch51@outlook.com";
 export const stateDirectory = join(homedir(), "Library", "Application Support", "Outlast51", "mail");
 const scopes = ["User.Read", "Mail.Send", "Mail.Read"];
 
+export function microsoftAuthFailureMessage(error) {
+  const message = error instanceof Error ? error.message : String(error || "");
+  if (!/AADSTS70000|service abuse mode/i.test(message)) return null;
+  return `Outlast Microsoft account ${mailbox} is blocked by Microsoft for suspected abuse (AADSTS70000). The owner must sign in to Outlook.com and complete Microsoft's account-unblock verification. Do not reconnect, change senders, or retry deliveries while the account is blocked.`;
+}
+
+export function microsoftGraphFailureMessage(status, body) {
+  let code = "";
+  let message = "";
+  try {
+    const parsed = JSON.parse(body);
+    code = typeof parsed?.error?.code === "string" ? parsed.error.code : "";
+    message = typeof parsed?.error?.message === "string" ? parsed.error.message : "";
+  } catch {
+    // Non-JSON responses use the existing status-only fallback.
+  }
+  const safeCode = code.replace(/[^A-Za-z0-9_.-]/g, "").slice(0, 80);
+  const safeMessage = message.replace(/\s+/g, " ").trim().slice(0, 300);
+  const detail = [safeCode, safeMessage].filter(Boolean).join(": ");
+  return `Microsoft mail request failed (${status})${detail ? `: ${detail}` : "; check the connection before retrying."}`;
+}
+
 /** @param {{interactive?: boolean, deviceCodeCallback?: (code: import('@azure/msal-node').DeviceCodeResponse) => void}} options */
 export async function mailClient({ interactive = false, deviceCodeCallback } = {}) {
   await mkdir(stateDirectory, { recursive: true, mode: 0o700 });
@@ -35,7 +57,13 @@ export async function mailClient({ interactive = false, deviceCodeCallback } = {
   } else {
     if (!account) throw new Error("Outlast sender is not connected. Run the one-time mail:connect setup.");
     // Never open a browser from a scheduled run. Revoked access requires an owner reconnect.
-    result = await app.acquireTokenSilent({ account, scopes });
+    try {
+      result = await app.acquireTokenSilent({ account, scopes });
+    } catch (error) {
+      const blocked = microsoftAuthFailureMessage(error);
+      if (blocked) throw new Error(blocked, { cause: error });
+      throw error;
+    }
   }
   if (result?.account?.username?.toLowerCase() !== mailbox) {
     if (result?.account) await app.getTokenCache().removeAccount(result.account);
@@ -47,7 +75,10 @@ export async function mailClient({ interactive = false, deviceCodeCallback } = {
       headers: { "content-type": "application/json", ...options.headers, authorization: `Bearer ${result.accessToken}` },
       signal: AbortSignal.timeout(30_000), redirect: "error",
     });
-    if (!response.ok) throw new Error(`Microsoft mail request failed (${response.status}); check the connection before retrying.`);
+    if (!response.ok) {
+      const body = await response.text().catch(() => "");
+      throw new Error(microsoftGraphFailureMessage(response.status, body));
+    }
     return response;
   }
   const profile = await (await graph("/me?$select=mail,userPrincipalName")).json();
