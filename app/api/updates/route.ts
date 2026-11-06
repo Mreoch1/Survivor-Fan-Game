@@ -1,6 +1,8 @@
 import { getChatGPTUser } from "../../chatgpt-auth";
 import { createAdminClient } from "../../../lib/supabase/admin";
 import { pendingUpdates, validAcknowledgementIds } from "../../../lib/league-updates";
+import { MERGE_WELCOME_ID } from "../../../lib/merge-welcome";
+import { loadMergeWelcome } from "../../../db/merge-welcome";
 
 export const dynamic = "force-dynamic";
 const headers = { "Cache-Control": "private, no-store" };
@@ -9,10 +11,13 @@ export async function GET() {
   try {
     const user = await getChatGPTUser();
     if (!user) return Response.json({ error: "Sign in to see league updates" }, { status: 401, headers });
-    const { data, error } = await createAdminClient().from("league_update_acknowledgements")
+    const db = createAdminClient();
+    const { data, error } = await db.from("league_update_acknowledgements")
       .select("update_id").eq("user_id", user.userId);
     if (error) throw error;
-    return Response.json({ updates: pendingUpdates((data || []).map(row => row.update_id)) }, { headers });
+    const seen = (data || []).map(row => row.update_id);
+    const mergeWelcome = seen.includes(MERGE_WELCOME_ID) ? null : await loadMergeWelcome(db, user.userId);
+    return Response.json({ updates: pendingUpdates(seen), mergeWelcome }, { headers });
   } catch {
     return Response.json({ error: "Updates could not load. Please try again." }, { status: 503, headers });
   }
@@ -28,13 +33,19 @@ export async function POST(request: Request) {
       return Response.json({ error: "Open the league to confirm these updates" }, { status: 403, headers });
     }
     const body = await request.json().catch(() => null);
-    if (!validAcknowledgementIds(body?.updateIds)) {
+    const ids = body?.updateIds;
+    const isMerge = Array.isArray(ids) && ids.length === 1 && ids[0] === MERGE_WELCOME_ID;
+    if (!isMerge && !validAcknowledgementIds(ids)) {
       return Response.json({ error: "Refresh the page to see the latest updates" }, { status: 400, headers });
+    }
+    const db = createAdminClient();
+    if (isMerge && !await loadMergeWelcome(db, user.userId)) {
+      return Response.json({ error: "The Final Torch decision is closed" }, { status: 409, headers });
     }
     // Use the verified account, never a client-supplied user ID or timestamp.
     // Ignore duplicate receipts so retries preserve the first acknowledgement.
-    const { error } = await createAdminClient().from("league_update_acknowledgements").upsert(
-      body.updateIds.map((updateId: string) => ({ user_id: user.userId, update_id: updateId })),
+    const { error } = await db.from("league_update_acknowledgements").upsert(
+      ids.map((updateId: string) => ({ user_id: user.userId, update_id: updateId })),
       { onConflict: "user_id,update_id", ignoreDuplicates: true },
     );
     if (error) throw error;

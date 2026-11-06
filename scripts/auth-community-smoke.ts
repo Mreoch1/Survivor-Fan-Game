@@ -6,6 +6,9 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { REMEMBER_MAX_AGE } from "../lib/supabase/session-cookies";
 import { publishedUpdates } from "../lib/league-updates";
+import { MERGE_WELCOME_ID } from "../lib/merge-welcome";
+import { result } from "../tests/fixtures/season";
+import { castaways } from "../app/data";
 
 const appPort = Number(process.env.AUTH_SMOKE_PORT || 3108);
 const fixturePort = Number(process.env.AUTH_FIXTURE_PORT || 4357);
@@ -32,6 +35,29 @@ const questionId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const hiddenId = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
 const upcomingId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
 const stamp = (delta: number) => new Date(Date.now() + delta).toISOString();
+const mergeEpisode = {
+  id: 7, season: 51, title: "Merge fixture", phase: "tribe", individual_game_started: true,
+  results_posted: true, results_published: true, reveal_at: stamp(-86400000), lock_at: stamp(-432000000),
+};
+const nextEpisode = {
+  id: 8, season: 51, title: "Individual game fixture", phase: "individual", individual_game_started: false,
+  results_posted: false, results_published: false, lock_at: stamp(86400000), air_at: stamp(90000000),
+  reveal_at: stamp(432000000), bonus_question: "Will an idol be played?", bonus_options: ["Yes", "No"],
+};
+const episodes: Row[] = [];
+Object.assign(profiles[0], { individual_game_pick: "maggie-nestor", individual_game_points: 10, endgame_pick: "maggie-nestor", endgame_pick_switched: false });
+Object.assign(profiles[1], { individual_game_pick: "ori-jean-charles", individual_game_points: 0 });
+const episodeResults = [result(1, { departures: [{ castawayId: "ori-jean-charles", type: "vote" }] }), result(7, { immunity_void: true })];
+const tribeSnapshots = [{
+  after_episode_id: 7, phase: "individual", tribes: [{ name: "Merged", color: "Blue", hex: "#305f9b" }],
+  assignments: Object.fromEntries(castaways.map(castaway => [castaway.id, castaway.id === "ori-jean-charles" ? castaway.tribe : "Merged"])),
+  sources: [],
+}];
+const castStatus = [
+  { castaway_id: "maggie-nestor", status: "active" },
+  { castaway_id: "ori-jean-charles", status: "eliminated" },
+];
+const writtenTables: string[] = [];
 const popupQuestions: Row[] = [
   { id: questionId, question: "From Episode 3 through the Season 51 finale, will at least one contestant be permanently removed from the game by the medical team because of an injury?", details: "Official medical evacuations due to injury only. Illness, temporary treatment, voluntary quits, and Episodes 1–2 do not count.", credit_name: "Prost Tosties", opens_at: stamp(-86400000), closes_at: stamp(86400000), points: 3, status: "open", correct_answer: null, resolution_episode_id: null, reveal_at: null, created_at: stamp(-86400000), created_by: a },
   { id: hiddenId, question: "Closed fixture question?", details: "A hidden result.", credit_name: "", opens_at: stamp(-172800000), closes_at: stamp(-86400000), points: 3, status: "resolved", correct_answer: "No", resolution_episode_id: 1, reveal_at: stamp(86400000), created_at: stamp(-172800000), created_by: a },
@@ -46,7 +72,7 @@ function session(expired = false, userId = a) {
   const encode = (value: unknown) => Buffer.from(JSON.stringify(value)).toString("base64url");
   const exp = expired ? 1700000000 : Math.floor(Date.now() / 1000) + 3600;
   const email = userId === a ? "alex@example.test" : "blair@example.test";
-  const value = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: userId, email, aud: "authenticated", role: "authenticated", exp, iat: exp - 3600 })}`;
+  const value = `${encode({ alg: "HS256", typ: "JWT" })}.${encode({ sub: userId, email, aud: "authenticated", role: "authenticated", exp, iat: exp - 3600, jti: randomBytes(12).toString("hex") })}`;
   return { access_token: `${value}.${createHmac("sha256", signingKey).update(value).digest("base64url")}`, refresh_token: expired ? "expired-fixture" : "fresh-fixture", expires_at: exp, expires_in: 3600, token_type: "bearer", user: { id: userId, email } };
 }
 const cookie = (expired = false, userId = a) => `sb-127-auth-token=base64-${Buffer.from(JSON.stringify(session(expired, userId))).toString("base64url")}`;
@@ -107,6 +133,7 @@ const server = createServer(async (request, response) => {
   if (url.pathname === "/sign-in") { response.writeHead(302, { "set-cookie": `${cookie(false, url.searchParams.get("player") === "b" ? b : a)}; Path=/; SameSite=Lax`, location: `${appUrl}/rules` }); return response.end(); }
   if (!url.pathname.startsWith("/rest/v1/")) { response.statusCode = 404; return response.end("{}"); }
   const table = url.pathname.split("/").at(-1)!;
+  if (request.method !== "GET" && request.method !== "HEAD") writtenTables.push(table);
   if (["popup_questions", "popup_votes", "submit_popup_vote", "resolve_popup_question"].includes(table)) {
     assert.equal(request.headers.apikey, "fixture-service");
     if (popupFailure) { response.statusCode = 503; return response.end(JSON.stringify({ message: "Fixture unavailable" })); }
@@ -138,7 +165,8 @@ const server = createServer(async (request, response) => {
       response.statusCode = 201; return response.end();
     }
   }
-  let rows = ({ profiles, posts, private_messages: messages, league_update_acknowledgements: acknowledgements, popup_questions: popupQuestions, popup_votes: popupVotes } as Record<string, Row[]>)[table] || [];
+  let rows = ({ profiles, episodes, episode_results: episodeResults, tribe_snapshots: tribeSnapshots, cast_status: castStatus,
+    posts, private_messages: messages, league_update_acknowledgements: acknowledgements, popup_questions: popupQuestions, popup_votes: popupVotes } as Record<string, Row[]>)[table] || [];
   for (const [field, filter] of url.searchParams) {
     if (!["select", "order", "limit", "offset"].includes(field)) rows = rows.filter(row => matches(row, field, filter));
   }
@@ -254,6 +282,51 @@ try {
   assert.deepEqual(acknowledgements, firstReceipts, "An outage cannot mark a notice confirmed");
   acknowledgementFailure = false;
   assert.equal((await acknowledge({ updateIds }, otherHeaders)).status, 200, "Confirmation can retry after recovery");
+  const mergeReceipt = { updateIds: [MERGE_WELCOME_ID] };
+  const mergeWelcome = async (requestHeaders = headers) => {
+    const response = await fetch(`${appUrl}/api/updates`, { headers: requestHeaders });
+    assert.equal(response.status, 200);
+    return (await response.json()).mergeWelcome;
+  };
+  const assertMergeUnavailable = async (reason: string, requestHeaders = headers) => {
+    assert.equal(await mergeWelcome(requestHeaders), null, reason);
+    assert.equal((await acknowledge(mergeReceipt, requestHeaders)).status, 409, reason);
+  };
+  const beforeMergeWrites = writtenTables.length;
+  await assertMergeUnavailable("The merge has not happened");
+  episodes.push({ ...mergeEpisode, results_published: false }, nextEpisode);
+  await assertMergeUnavailable("Unpublished merge");
+  episodes[0] = { ...mergeEpisode, reveal_at: stamp(60000) };
+  await assertMergeUnavailable("Published flag set before reveal");
+  episodes.splice(0, 2, mergeEpisode);
+  await assertMergeUnavailable("Following episode not scheduled");
+  episodes.push({ ...nextEpisode, lock_at: stamp(-60000) });
+  episodes.push({ ...nextEpisode, id: 9 });
+  await assertMergeUnavailable("Following episode already locked");
+  episodes.pop();
+  episodes[1] = nextEpisode;
+  const guestHeaders = { ...headers, cookie: cookie(false, c) };
+  const joinedAt = profiles[2].league_joined_at;
+  profiles[2].league_joined_at = null;
+  await assertMergeUnavailable("Signed in but not a league member", guestHeaders);
+  profiles[2].league_joined_at = joinedAt;
+  const alexWelcome = { originalName: "Maggie Nestor", originalIsActive: true, individualGamePoints: 10, repickClosesAt: nextEpisode.lock_at };
+  const blairWelcome = { originalName: "Ori Jean-Charles", originalIsActive: false, individualGamePoints: 0, repickClosesAt: nextEpisode.lock_at };
+  assert.deepEqual(await mergeWelcome(), alexWelcome);
+  assert.deepEqual(await mergeWelcome(otherHeaders), blairWelcome);
+  assert.equal(writtenTables.length, beforeMergeWrites, "Reading the welcome or rejecting an early acknowledgement never writes");
+  assert.equal((await acknowledge({ ...mergeReceipt, user_id: b })).status, 200);
+  const firstMergeReceipt = structuredClone(acknowledgements.filter(row => row.update_id === MERGE_WELCOME_ID));
+  assert.equal(firstMergeReceipt.length, 1);
+  assert.equal(firstMergeReceipt[0].user_id, a);
+  const newSessionHeaders = { ...headers, cookie: cookie(false, a) };
+  assert.notEqual(newSessionHeaders.cookie, headers.cookie);
+  const mergeRetries = await Promise.all([acknowledge(mergeReceipt), acknowledge(mergeReceipt, newSessionHeaders)]);
+  assert.ok(mergeRetries.every(response => response.ok));
+  assert.deepEqual(acknowledgements.filter(row => row.update_id === MERGE_WELCOME_ID), firstMergeReceipt, "Retries preserve the original receipt");
+  assert.equal(await mergeWelcome(newSessionHeaders), null, "The same player's next session remembers the welcome");
+  assert.deepEqual(await mergeWelcome(otherHeaders), blairWelcome, "Another player's welcome is independent");
+  assert.deepEqual([...new Set(writtenTables.slice(beforeMergeWrites))], ["league_update_acknowledgements"], "Acknowledging never changes picks or scores");
   const popup = (body: unknown, requestHeaders = headers) => fetch(`${appUrl}/api/popup-questions`, { method: "POST", headers: requestHeaders, body: JSON.stringify(body) });
   const adminPopup = (body: unknown, requestHeaders = headers) => fetch(`${appUrl}/api/admin/popup-questions`, { method: "POST", headers: requestHeaders, body: JSON.stringify(body) });
   assert.equal((await fetch(`${appUrl}/api/popup-questions`)).status, 401);
@@ -311,9 +384,25 @@ try {
     acknowledgements.length = 0;
     popupVotes.length = 0;
     popupQuestions.splice(1);
+    if (process.argv.includes("--merge")) {
+      // Return visits for these existing players should show only their personal merge welcome.
+      episodes.unshift({ ...mergeEpisode, id: 1, title: "Opening fixture", individual_game_started: false });
+      for (const profile of profiles) {
+        for (const updateId of updateIds) acknowledgements.push({ user_id: profile.id, update_id: updateId });
+      }
+      popupQuestions.length = 0;
+      const playResponse = await fetch(`${appUrl}/api/league`, { headers });
+      assert.equal(playResponse.status, 200);
+      const play = await playResponse.json();
+      assert.equal(play.seasonPick.stage, "repick", "The welcome action opens the Final Torch form");
+      assert.equal(play.seasonPick.endgameId, profiles[0].endgame_pick);
+      assert.equal(play.seasonPick.repickClosesAt, nextEpisode.lock_at);
+    } else {
+      episodes.length = 0;
+    }
     profiles[0].campfire_read_at = null;
     messages.forEach(message => { message.read_at = null; });
-    console.log(`Visual fixture: ${appUrl}/login (alex@example.test / any fixture password)`);
+    console.log(`Visual fixture: ${fixtureUrl}/sign-in (Alex) or ${fixtureUrl}/sign-in?player=b (Blair)`);
     await new Promise(() => {});
   }
 } catch (error) { console.error(logs); throw error; }
