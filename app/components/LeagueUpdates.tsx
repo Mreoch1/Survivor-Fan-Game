@@ -1,11 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { LeagueUpdate } from "../../lib/league-updates";
+import { MERGE_WELCOME_ID, type MergeWelcomeData } from "../../lib/merge-welcome";
+import { MergeWelcome } from "./MergeWelcome";
 import { UpdateSections } from "./UpdateSections";
 
 export function LeagueUpdates({ onReadyChange }: { onReadyChange?: (ready: boolean) => void }) {
+  const router = useRouter();
   const [updates, setUpdates] = useState<LeagueUpdate[]>([]);
+  const [mergeWelcome, setMergeWelcome] = useState<MergeWelcomeData | null>(null);
+  const [goingToPick, setGoingToPick] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -18,12 +24,13 @@ export function LeagueUpdates({ onReadyChange }: { onReadyChange?: (ready: boole
     try {
       const response = await fetch("/api/updates", { cache: "no-store" });
       if (request !== requestNumber.current.value) return;
-      if (response.status === 401) { setUpdates([]); setError(""); onReadyChange?.(false); return; }
+      if (response.status === 401) { setUpdates([]); setMergeWelcome(null); setError(""); onReadyChange?.(false); return; }
       if (!response.ok) throw new Error("Updates could not load");
       const data = await response.json();
       if (request !== requestNumber.current.value) return;
       setUpdates(data.updates);
-      onReadyChange?.(data.updates.length === 0);
+      setMergeWelcome(data.mergeWelcome ?? null);
+      onReadyChange?.(!data.mergeWelcome && data.updates.length === 0);
       setError("");
     } catch {
       if (request === requestNumber.current.value) {
@@ -47,9 +54,17 @@ export function LeagueUpdates({ onReadyChange }: { onReadyChange?: (ready: boole
     };
   }, [load]);
 
+  const closesAt = mergeWelcome?.repickClosesAt;
+  useEffect(() => {
+    if (!closesAt) return;
+    const timer = window.setTimeout(() => void load(), Math.max(0, Date.parse(closesAt) - Date.now()) + 100);
+    return () => window.clearTimeout(timer);
+  }, [closesAt, load]);
+
+  const showStandardUpdates = updates.length > 0 && !mergeWelcome && !goingToPick;
   useEffect(() => {
     const element = dialog.current;
-    if (!element || !updates.length) return;
+    if (!element || !showStandardUpdates) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     // Native cancel does not bubble reliably through React's delegated events.
@@ -61,9 +76,9 @@ export function LeagueUpdates({ onReadyChange }: { onReadyChange?: (ready: boole
       element.close();
       document.body.style.overflow = previousOverflow;
     };
-  }, [updates.length]);
+  }, [showStandardUpdates]);
 
-  async function acknowledge() {
+  async function acknowledge(goToPicks = false) {
     if (savingRef.current) return;
     savingRef.current = true;
     requestNumber.current.value++; // An older read must not reopen a confirmed notice.
@@ -72,18 +87,37 @@ export function LeagueUpdates({ onReadyChange }: { onReadyChange?: (ready: boole
     try {
       const response = await fetch("/api/updates", {
         method: "POST", headers: { "content-type": "application/json" },
-        body: JSON.stringify({ updateIds: updates.map(update => update.id) }),
+        body: JSON.stringify({ updateIds: mergeWelcome ? [MERGE_WELCOME_ID] : updates.map(update => update.id) }),
       });
+      if (mergeWelcome && response.status === 409) {
+        setMergeWelcome(null);
+        onReadyChange?.(updates.length === 0);
+        return;
+      }
       if (!response.ok) throw new Error("Confirmation was not saved");
-      setUpdates([]);
-      onReadyChange?.(true);
+      if (mergeWelcome) {
+        setMergeWelcome(null);
+        onReadyChange?.(!goToPicks && updates.length === 0);
+        if (goToPicks) {
+          setGoingToPick(true);
+          if (window.location.pathname === "/play") window.location.hash = "final-torch-pick";
+          else router.push("/play#final-torch-pick");
+        }
+      } else {
+        setUpdates([]);
+        onReadyChange?.(true);
+      }
     } catch {
+      if (mergeWelcome) throw new Error("Your confirmation wasn't saved. Please try again.");
       setError("Your confirmation wasn't saved. Please tap the button to try again.");
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
   }
+
+  if (goingToPick) return null;
+  if (mergeWelcome) return <MergeWelcome welcome={mergeWelcome} onDismiss={acknowledge}/>;
 
   if (!updates.length) return error ? <div className="updates-retry wrap" role="status">
     {error} <button type="button" onClick={() => void load()}>Try again</button> <a href="/updates">Read the updates</a>
@@ -98,7 +132,7 @@ export function LeagueUpdates({ onReadyChange }: { onReadyChange?: (ready: boole
     </div>
     <div className="updates-actions">
       {error && <p role="alert">{error}</p>}
-      <button className="button button-primary" type="button" disabled={saving} onClick={acknowledge}>{saving ? "Saving your confirmation…" : "Got it — continue"}</button>
+      <button className="button button-primary" type="button" disabled={saving} onClick={() => void acknowledge()}>{saving ? "Saving your confirmation…" : "Got it — continue"}</button>
       <small>You can read these again using What&apos;s new at the top of the page.</small>
     </div>
   </dialog>;
