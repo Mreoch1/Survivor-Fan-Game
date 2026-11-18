@@ -68,7 +68,7 @@ export function SeasonView({ data }: { data: SeasonDashboard }) {
         </details>)}</div>}
     </section>
     <section id="popup-score-history" className="season-score-history" aria-labelledby="popup-history-title">
-      <div className="season-heading"><p className="eyebrow">Extra questions. Separate points.</p><h2 id="popup-history-title">Your popup points · {data.popupPoints}</h2><p>Each correct popup answer earns 3 points. A wrong or skipped answer earns 0. These points count toward your season total, separately from episode scores.</p></div>
+      <div className="season-heading"><p className="eyebrow">Extra questions. Separate points.</p><h2 id="popup-history-title">Your popup points · {data.popupPoints}</h2><p>Each question shows its point value. Weekly questions after Episode 9 award 5 points for a correct answer; a wrong or skipped answer earns 0. These points count toward your season total, separately from episode scores.</p></div>
       {data.popupHistory.length ? <PopupLedger rows={data.popupHistory} total={data.popupPoints} caption="Your popup question point breakdown"/> : <p className="episode-note">No revealed popup results yet. See your open questions and saved answers on the <a href="/popup-questions">Popup questions page</a>.</p>}
     </section>
     <EpisodeSpotlight spotlight={data.spotlight}/>

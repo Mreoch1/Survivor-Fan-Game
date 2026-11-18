@@ -7,10 +7,10 @@ type Answer = "Yes" | "No" | "Skip";
 type Vote = { answer: Answer; votedAt: string };
 export type PopupQuestion = {
   id: string; question: string; details: string; creditName: string | null;
-  opensAt: string; closesAt: string; points: 3;
+  opensAt: string; closesAt: string; points: number;
   status: "open" | "closed" | "pending" | "resolved" | "void";
   vote: Vote | null; correctAnswer: "Yes" | "No" | null;
-  earnedPoints: 0 | 3; revealAt: string | null;
+  earnedPoints: number; revealAt: string | null;
 };
 
 function dateLabel(value: string) {
@@ -155,7 +155,7 @@ export function PopupQuestions({ enabled = true, mode = "popup" }: { enabled?: b
   return <>
     {receipt && <p className="popup-question-receipt wrap" role="status">{receipt}</p>}
     <div className="popup-question-bar wrap">
-      <span>{available.length ? `${available.length === 1 ? "A bonus question is" : `${available.length} bonus questions are`} open · +3 for a correct answer` : "View your bonus questions, answers, and points."}</span>
+      <span>{available.length ? available.length === 1 ? `A bonus question is open · +${available[0].points} for a correct answer` : `${available.length} bonus questions are open · each shows its point value` : "View your bonus questions, answers, and points."}</span>
       {available.length > 0 && <button type="button" onClick={() => setDismissed([])} disabled={!enabled}>Answer bonus question</button>}
       <a href="/popup-questions">Bonus questions &amp; history</a>
     </div>
@@ -170,7 +170,7 @@ export function PopupQuestions({ enabled = true, mode = "popup" }: { enabled?: b
 
 function QuestionHeading({ question, titleId }: { question: PopupQuestion; titleId?: string }) {
   return <header className="popup-question-heading">
-    <p className="eyebrow">Season bonus · +3 points</p>
+    <p className="eyebrow">Season bonus · +{question.points} points</p>
     <h2 id={titleId}>{question.question}</h2>
     {question.details && <p className="popup-question-details">{question.details}</p>}
     {question.creditName && <p className="popup-question-credit">Inspired by {question.creditName}&apos; Campfire suggestion.</p>}
@@ -207,7 +207,7 @@ function QuestionVoteForm({ question, submit, rulesId, onLater }: {
   }
 
   return <div className="popup-question-vote">
-    <p id={rulesId}>One final answer per account. Correct: +3 points. Wrong or skipped: 0. This is separate from your weekly picks.</p>
+    <p id={rulesId}>One final answer per account. Correct: +{question.points} points. Wrong or skipped: 0. This is separate from your weekly picks.</p>
     {reviewing ? <div className="popup-question-confirm" aria-live="polite">
       <h3 ref={confirmationTitle} tabIndex={-1}>{answer === "Skip" ? "Skip this question?" : `Submit ${answer} as your final answer?`}</h3>
       <p>{answer === "Skip" ? "You will earn 0 points and cannot answer this question later." : "You cannot change your answer after submitting, even on another device."}</p>
@@ -227,6 +227,6 @@ function QuestionVoteForm({ question, submit, rulesId, onLater }: {
 function QuestionRecord({ question }: { question: PopupQuestion }) {
   return <div className="popup-question-record">
     <p><strong>{question.vote ? question.vote.answer === "Skip" ? "You skipped this question." : `Your final answer: ${question.vote.answer}` : "You did not answer this question."}</strong>{question.vote && <span> Recorded {dateLabel(question.vote.votedAt)}</span>}</p>
-    {question.status === "resolved" ? <p>Correct answer: <strong>{question.correctAnswer}</strong> · <strong>{question.earnedPoints ? "+3 points" : "0 points"}</strong></p> : question.status === "void" ? <p>This question was voided. All answers earn 0 points.</p> : <p>{question.status === "pending" ? `Opens ${dateLabel(question.opensAt)}.` : question.status === "open" ? "Results will appear here after the question is resolved." : "Answers are closed. Results are not available yet."}{question.revealAt && ` Results reveal ${dateLabel(question.revealAt)}.`}</p>}
+    {question.status === "resolved" ? <p>Correct answer: <strong>{question.correctAnswer}</strong> · <strong>{question.earnedPoints ? `+${question.earnedPoints} points` : "0 points"}</strong></p> : question.status === "void" ? <p>This question was voided. All answers earn 0 points.</p> : <p>{question.status === "pending" ? `Opens ${dateLabel(question.opensAt)}.` : question.status === "open" ? "Results will appear here after the question is resolved." : "Answers are closed. Results are not available yet."}{question.revealAt && ` Results reveal ${dateLabel(question.revealAt)}.`}</p>}
   </div>;
 }

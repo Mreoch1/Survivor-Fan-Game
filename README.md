@@ -60,6 +60,8 @@ For each new episode, choose a precise Play Your Advantage question from officia
 
 When no suitable precise preview question can be verified, use the exact shared `DEFAULT_ADVANTAGE_QUESTION` with Yes/No: “Will a valid immunity idol be played at Tribal Council this episode (even if it blocks no votes)? Finds and Shot in the Dark do not count.” Preserve already scheduled questions and choices, including the current episode; these standards apply to new future episodes. The server still freezes scoring fields after picks exist. The automation context returns the shared checklist and default; the saved AI commissioner prompt should follow those supplied values instead of hardcoding an older fallback.
 
+Starting with Episode 10, the Monday turnover also creates one separate popup bonus question for the upcoming episode. It uses an official preview plus a second reputable source, names the target episode, closes at that episode's weekly-pick lock, and awards 5 points for a correct Yes/No answer or 0 for an incorrect answer or skip. The target, wording, scoring, and deadline are immutable after creation. Historical popup questions retain their original 3-point value. The following Monday, automation resolves the prior popup only after that episode's aired result is verified; ambiguous outcomes stop for commissioner review.
+
 Team names are unique across profiles, ignoring capitalization and extra whitespace. Blank names remain optional. Both joining and Profile editing return a clear conflict message; the database unique index also protects concurrent saves.
 
 

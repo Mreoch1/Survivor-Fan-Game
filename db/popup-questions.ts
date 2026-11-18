@@ -3,7 +3,7 @@ import { isCommissioner } from "./runtime";
 import { createAdminClient } from "../lib/supabase/admin";
 
 export const popupHeaders = { "Cache-Control": "private, no-store" };
-export const popupQuestionColumns = "id,question,details,credit_name,opens_at,closes_at,points,status,correct_answer,resolution_episode_id,reveal_at,created_at,created_by,resolved_at,resolved_by";
+export const popupQuestionColumns = "id,question,details,credit_name,opens_at,closes_at,points,status,correct_answer,resolution_episode_id,reveal_at,created_at,created_by,resolved_at,resolved_by,target_episode_id";
 export function popupResponse(body: unknown, status = 200) { return Response.json(body, { status, headers: popupHeaders }); }
 export function validPopupRequest(request: Request) {
   const origin = request.headers.get("origin");
