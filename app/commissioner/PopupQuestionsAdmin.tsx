@@ -95,7 +95,7 @@ export function PopupQuestionsAdmin() {
   }
 
   return <section className="popup-question-admin" aria-labelledby="popup-admin-title">
-    <header><p className="eyebrow">Extra season points</p><h2 id="popup-admin-title">Bonus questions</h2><p>Create a separate Yes/No question worth 3 points for a correct answer and 0 for a wrong answer or skip. Players get one final answer per question. Weekly Play Your Advantage picks keep their existing rules.</p></header>
+    <header><p className="eyebrow">Extra season points</p><h2 id="popup-admin-title">Bonus questions</h2><p>Create a separate Yes/No question worth 5 points for a correct answer and 0 for a wrong answer or skip. Players get one final answer per question. Weekly Play Your Advantage picks keep their existing rules.</p></header>
     {error && <p className="notice" role="alert">{error} <button type="button" onClick={() => void load()}>Try again</button></p>}
     {!data && !error && <p role="status">Loading bonus controls…</p>}
     {data && <div className="popup-question-admin-grid">
@@ -111,7 +111,7 @@ export function PopupQuestionsAdmin() {
           {!draft && <button type="submit" className="button button-primary">Review question</button>}
         </fieldset>
         {draft && <div className="popup-question-admin-review" aria-live="polite">
-          <h4 ref={reviewTitle} tabIndex={-1}>{draft.question}</h4><p className="popup-question-details">{draft.details}</p>{draft.creditName && <p>Credit: {draft.creditName}</p>}<p>Opens {easternDate(draft.opensAt)}<br/>Closes {easternDate(draft.closesAt)}</p><p><strong>Publishing is final.</strong> Players can submit one answer or skip. Correct answers earn +3 points.</p>
+          <h4 ref={reviewTitle} tabIndex={-1}>{draft.question}</h4><p className="popup-question-details">{draft.details}</p>{draft.creditName && <p>Credit: {draft.creditName}</p>}<p>Opens {easternDate(draft.opensAt)}<br/>Closes {easternDate(draft.closesAt)}</p><p><strong>Publishing is final.</strong> Players can submit one answer or skip. Correct answers earn +5 points.</p>
           <div className="popup-question-actions"><button type="button" className="button button-primary" disabled={saving} onClick={() => void publish()}>{saving ? "Publishing…" : uncertain ? "Retry same publication" : "Publish question"}</button><button type="button" className="button button-ghost" disabled={saving || uncertain} onClick={() => setDraft(null)}>Edit before publishing</button></div>
         </div>}
         {message && <p className="popup-question-admin-status" role="status">{message}</p>}
@@ -171,7 +171,7 @@ function ResolveQuestion({ question, episodes, onSaved }: { question: AdminQuest
       <label>Deciding episode<select value={episodeId} required onChange={event => setEpisodeId(event.target.value)}><option value="">Choose an episode with entered results…</option>{episodes.map(item => <option key={item.id} value={item.id}>{item.id} · {item.title}</option>)}</select></label>
       {!reviewing && <button className="button button-primary" type="submit">Review result</button>}
     </fieldset>
-    {reviewing && episode && <div ref={reviewPanel} tabIndex={-1} className="popup-question-admin-review"><p><strong>{answer === "Void" ? "Void this question: everyone earns 0 points." : `Correct answer: ${answer}. Matching answers earn +3 points.`}</strong></p><p>Reveal no earlier than Episode {episode.id}’s reveal: {easternDate(episode.revealAt)}. If entered after that reveal, this waits until the next Monday, or today if it is Monday. This result cannot be changed.</p><div className="popup-question-actions"><button className="button button-primary" type="button" disabled={saving} onClick={() => void resolve()}>{saving ? "Saving…" : uncertain ? "Retry same result" : "Save final result"}</button><button className="button button-ghost" type="button" disabled={saving || uncertain} onClick={() => setReviewing(false)}>Go back</button></div></div>}
+    {reviewing && episode && <div ref={reviewPanel} tabIndex={-1} className="popup-question-admin-review"><p><strong>{answer === "Void" ? "Void this question: everyone earns 0 points." : `Correct answer: ${answer}. Matching answers earn +${question.points} points.`}</strong></p><p>Reveal no earlier than Episode {episode.id}’s reveal: {easternDate(episode.revealAt)}. If entered after that reveal, this waits until the next Monday, or today if it is Monday. This result cannot be changed.</p><div className="popup-question-actions"><button className="button button-primary" type="button" disabled={saving} onClick={() => void resolve()}>{saving ? "Saving…" : uncertain ? "Retry same result" : "Save final result"}</button><button className="button button-ghost" type="button" disabled={saving || uncertain} onClick={() => setReviewing(false)}>Go back</button></div></div>}
     {message && <p role="status" className="popup-question-admin-status">{message}</p>}
   </form>;
 }

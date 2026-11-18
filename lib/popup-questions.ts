@@ -1,4 +1,5 @@
 export type PopupAnswer = "Yes" | "No" | "Skip";
+export const WEEKLY_POPUP_POINTS = 5;
 export type PopupQuestion = {
   id: string;
   question: string;
@@ -15,6 +16,7 @@ export type PopupQuestion = {
   created_by?: string;
   resolved_at?: string | null;
   resolved_by?: string | null;
+  target_episode_id?: number | null;
 };
 export type PopupVote = { question_id: string; user_id: string; answer: PopupAnswer; voted_at: string };
 
@@ -27,7 +29,7 @@ export function isPopupRevealed(question: PopupQuestion, now: Date = new Date())
 export function popupPointsForVote(question: PopupQuestion, vote?: PopupVote, now: Date = new Date()) {
   return isPopupRevealed(question, now) && question.status === "resolved" &&
     (question.correct_answer === "Yes" || question.correct_answer === "No") &&
-    vote?.question_id === question.id && vote.answer === question.correct_answer ? 3 : 0;
+    vote?.question_id === question.id && vote.answer === question.correct_answer ? question.points : 0;
 }
 
 export function publicPopupQuestion(question: PopupQuestion, vote: PopupVote | undefined, episodeRevealed: boolean, now: Date) {
@@ -36,7 +38,7 @@ export function publicPopupQuestion(question: PopupQuestion, vote: PopupVote | u
     new Date(question.opens_at) > now ? "pending" : "open";
   return {
     id: question.id, question: question.question, details: question.details, creditName: question.credit_name,
-    opensAt: question.opens_at, closesAt: question.closes_at, points: 3,
+    opensAt: question.opens_at, closesAt: question.closes_at, points: question.points,
     status, vote: vote ? { answer: vote.answer, votedAt: vote.voted_at } : null,
     correctAnswer: revealed && question.status === "resolved" ? question.correct_answer : null,
     earnedPoints: revealed ? popupPointsForVote(question, vote, now) : 0,
@@ -55,5 +57,5 @@ export function parsePopupDraft(body: Record<string, unknown>, now: Date) {
   const opensAt = new Date(body.opensAt), closesAt = new Date(body.closesAt);
   if (!question || question.length > 400 || !details || details.length > 2000 || creditName.length > 100 ||
     !Number.isFinite(opensAt.getTime()) || !Number.isFinite(closesAt.getTime()) || opensAt >= closesAt || closesAt <= now) return null;
-  return { id: body.id, question, details, credit_name: creditName, opens_at: opensAt.toISOString(), closes_at: closesAt.toISOString(), points: 3 };
+  return { id: body.id, question, details, credit_name: creditName, opens_at: opensAt.toISOString(), closes_at: closesAt.toISOString(), points: WEEKLY_POPUP_POINTS };
 }
